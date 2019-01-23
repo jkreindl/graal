@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -36,12 +36,19 @@ import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.GenerateWrapper;
+import com.oracle.truffle.api.instrumentation.ProbeNode;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.NodeUtil;
 import com.oracle.truffle.llvm.nodes.base.LLVMBasicBlockNode;
 import com.oracle.truffle.llvm.nodes.func.LLVMFunctionStartNode;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMFrameReadObject;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjects;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
@@ -55,6 +62,7 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMPointerVector;
 
 @NodeChild(value = "valueNode", type = LLVMExpressionNode.class)
+@GenerateWrapper
 public abstract class LLVMWriteNode extends LLVMStatementNode {
 
     protected final FrameSlot slot;
@@ -65,7 +73,16 @@ public abstract class LLVMWriteNode extends LLVMStatementNode {
         this.source = source;
     }
 
+    protected LLVMWriteNode(LLVMWriteNode delegate) {
+        this(delegate.slot, delegate.source);
+    }
+
     public abstract void executeWithTarget(VirtualFrame frame, Object value);
+
+    @Override
+    public WrapperNode createWrapper(ProbeNode probeNode) {
+        return new LLVMWriteNodeWrapper(this, this, probeNode);
+    }
 
     @Override
     public LLVMSourceLocation getSourceLocation() {
@@ -83,6 +100,16 @@ public abstract class LLVMWriteNode extends LLVMStatementNode {
         } else {
             return String.format("assignment of %s in basic block %s in function %s", slot.getIdentifier(), basicBlock.getBlockName(), functionStartNode.getBcName());
         }
+    }
+
+    @Override
+    public Object getNodeObject() {
+        return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_SLOT_ID, LLVMNodeObjects.KEY_GET_WRITTEN_VALUE}, new Object[]{String.valueOf(slot.getIdentifier()), new LLVMFrameReadObject(slot)});
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return tag == LLVMTags.SSAWrite.class || super.hasTag(tag);
     }
 
     public abstract static class LLVMWriteI1Node extends LLVMWriteNode {
