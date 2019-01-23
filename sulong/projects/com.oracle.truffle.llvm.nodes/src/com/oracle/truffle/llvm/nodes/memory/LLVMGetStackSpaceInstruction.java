@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -38,9 +38,11 @@ import com.oracle.truffle.api.dsl.NodeFields;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack.UniquesRegion.UniqueSlot;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 import com.oracle.truffle.llvm.runtime.types.Type;
@@ -98,6 +100,11 @@ public abstract class LLVMGetStackSpaceInstruction extends LLVMExpressionNode {
                         @Cached("getLLVMMemory()") LLVMMemory memory) {
             return LLVMNativePointer.create(LLVMStack.allocateStackMemory(frame, memory, getStackPointerSlot(), getSize(), getAlignment()));
         }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.Alloca.class || super.hasTag(tag);
+        }
     }
 
     @NodeField(type = UniqueSlot.class, name = "uniqueSlot")
@@ -124,6 +131,11 @@ public abstract class LLVMGetStackSpaceInstruction extends LLVMExpressionNode {
         protected LLVMNativePointer doOp(VirtualFrame frame, long nr,
                         @Cached("getLLVMMemory()") LLVMMemory memory) {
             return LLVMNativePointer.create(LLVMStack.allocateStackMemory(frame, memory, getStackPointerSlot(), (int) (getSize() * nr), getAlignment()));
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.Alloca.class || super.hasTag(tag);
         }
     }
 }

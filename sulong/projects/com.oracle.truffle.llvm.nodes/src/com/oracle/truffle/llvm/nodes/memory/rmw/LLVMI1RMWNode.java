@@ -30,20 +30,16 @@
 package com.oracle.truffle.llvm.nodes.memory.rmw;
 
 import com.oracle.truffle.api.dsl.Cached;
-import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.llvm.nodes.memory.load.LLVMI1LoadNode;
 import com.oracle.truffle.llvm.nodes.memory.load.LLVMI1LoadNodeGen;
 import com.oracle.truffle.llvm.nodes.memory.store.LLVMI1StoreNode;
 import com.oracle.truffle.llvm.nodes.memory.store.LLVMI1StoreNodeGen;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory;
-import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 
-@NodeChild(type = LLVMExpressionNode.class, value = "pointerNode")
-@NodeChild(type = LLVMExpressionNode.class, value = "valueNode")
-public abstract class LLVMI1RMWNode extends LLVMExpressionNode {
+public abstract class LLVMI1RMWNode extends LLVMRMWNode {
 
     protected static LLVMI1LoadNode createRead() {
         return LLVMI1LoadNodeGen.create(null);
