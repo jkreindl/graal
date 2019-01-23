@@ -33,6 +33,7 @@ import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ControlFlowException;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeUtil;
@@ -40,6 +41,9 @@ import com.oracle.truffle.api.profiles.BranchProfile;
 import com.oracle.truffle.llvm.nodes.func.LLVMFunctionStartNode;
 import com.oracle.truffle.llvm.nodes.others.LLVMUnreachableNode;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjects;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
@@ -175,6 +179,16 @@ public class LLVMBasicBlockNode extends LLVMStatementNode {
     private void incrementCountAtIndex(int successorIndex) {
         assert termInstruction.needsBranchProfiling();
         successorExecutionCount[successorIndex]++;
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return tag == LLVMTags.Block.class || super.hasTag(tag);
+    }
+
+    @Override
+    public Object getNodeObject() {
+        return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_BLOCK_ID}, new Object[]{blockName});
     }
 
     private static final class LazyBlock extends LLVMBasicBlockNode {
