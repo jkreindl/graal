@@ -34,15 +34,25 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.llvm.nodes.op.arith.floating.LLVMArithmeticFactory;
+import com.oracle.truffle.llvm.runtime.ArithmeticFlag;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMArithmetic.LLVMArithmeticOpNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 
 @NodeChild("leftNode")
 @NodeChild("rightNode")
 public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
+
+    protected LLVMArithmeticNode(int flags) {
+        this.flags = flags;
+    }
+
     public abstract Object executeWithTarget(Object left, Object right);
 
     protected static ToComparableValue createToComparable() {
@@ -50,7 +60,36 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         return ToComparableValueNodeGen.create();
     }
 
+    private final int flags;
+
+    public int getFlags() {
+        return flags;
+    }
+
+    @Override
+    @ExplodeLoop
+    public Object getNodeObject() {
+        final ArithmeticFlag[] allFlags = ArithmeticFlag.ALL_VALUES;
+        final String[] keys = new String[allFlags.length];
+        final Object[] values = new Object[allFlags.length];
+        for (int i = 0; i < allFlags.length; i++) {
+            keys[i] = allFlags[i].toString();
+            values[i] = allFlags[i].test(getFlags());
+        }
+        return new LLVMNodeObject(keys, values);
+    }
+
     public abstract static class LLVMAddNode extends LLVMArithmeticNode {
+
+        public LLVMAddNode(int flags) {
+            super(flags);
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.Add.class || super.hasTag(tag);
+        }
+
         @Specialization
         protected boolean add(boolean left, boolean right) {
             return left ^ right;
@@ -103,6 +142,16 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMMulNode extends LLVMArithmeticNode {
+
+        public LLVMMulNode(int flags) {
+            super(flags);
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.Mul.class || super.hasTag(tag);
+        }
+
         @Specialization
         protected boolean mul(boolean left, boolean right) {
             return left & right;
@@ -155,6 +204,16 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMSubNode extends LLVMArithmeticNode {
+
+        public LLVMSubNode(int flags) {
+            super(flags);
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.Sub.class || super.hasTag(tag);
+        }
+
         @Specialization
         protected boolean sub(boolean left, boolean right) {
             return left ^ right;
@@ -207,6 +266,16 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMDivNode extends LLVMArithmeticNode {
+
+        public LLVMDivNode(int flags) {
+            super(flags);
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.Div.class || super.hasTag(tag);
+        }
+
         @Specialization
         protected boolean div(boolean left, boolean right) {
             if (!right) {
@@ -264,6 +333,15 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
 
     public abstract static class LLVMUDivNode extends LLVMArithmeticNode {
 
+        public LLVMUDivNode(int flags) {
+            super(flags);
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.Div.class || super.hasTag(tag);
+        }
+
         @Specialization
         protected boolean udiv(boolean left, boolean right) {
             if (!right) {
@@ -300,6 +378,16 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMRemNode extends LLVMArithmeticNode {
+
+        public LLVMRemNode(int flags) {
+            super(flags);
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.Rem.class || super.hasTag(tag);
+        }
+
         @Specialization
         protected boolean rem(@SuppressWarnings("unused") boolean left, boolean right) {
             if (!right) {
@@ -357,6 +445,15 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
 
     public abstract static class LLVMURemNode extends LLVMArithmeticNode {
 
+        public LLVMURemNode(int flags) {
+            super(flags);
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.Rem.class || super.hasTag(tag);
+        }
+
         @Specialization
         protected byte urem(byte left, byte right) {
             return (byte) (Byte.toUnsignedInt(left) % Byte.toUnsignedInt(right));
@@ -394,6 +491,15 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
 
     public abstract static class LLVMAndNode extends LLVMArithmeticNode {
 
+        public LLVMAndNode() {
+            super(ArithmeticFlag.NO_FLAGS);
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.And.class || super.hasTag(tag);
+        }
+
         @Specialization
         protected boolean and(boolean left, boolean right) {
             return left & right;
@@ -426,6 +532,16 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMOrNode extends LLVMArithmeticNode {
+
+        public LLVMOrNode() {
+            super(ArithmeticFlag.NO_FLAGS);
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.Or.class || super.hasTag(tag);
+        }
+
         @Specialization
         protected short or(short left, short right) {
             return (short) (left | right);
@@ -458,6 +574,16 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMXorNode extends LLVMArithmeticNode {
+
+        public LLVMXorNode() {
+            super(ArithmeticFlag.NO_FLAGS);
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.XOr.class || super.hasTag(tag);
+        }
+
         @Specialization
         protected short xor(short left, short right) {
             return (short) (left ^ right);
@@ -490,6 +616,16 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMShlNode extends LLVMArithmeticNode {
+
+        public LLVMShlNode(int flags) {
+            super(flags);
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.ShiftLeft.class || super.hasTag(tag);
+        }
+
         @Specialization
         protected short shl(short left, short right) {
             return (short) (left << right);
@@ -517,6 +653,16 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMLshrNode extends LLVMArithmeticNode {
+
+        public LLVMLshrNode(int flags) {
+            super(flags);
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.ShiftRight.class || super.hasTag(tag);
+        }
+
         @Specialization
         protected short lshr(short left, short right) {
             return (short) ((left & LLVMExpressionNode.I16_MASK) >>> right);
@@ -544,6 +690,16 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMAshrNode extends LLVMArithmeticNode {
+
+        public LLVMAshrNode(int flags) {
+            super(flags);
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.ShiftRight.class || super.hasTag(tag);
+        }
+
         @Specialization
         protected short ashr(short left, short right) {
             return (short) (left >> right);

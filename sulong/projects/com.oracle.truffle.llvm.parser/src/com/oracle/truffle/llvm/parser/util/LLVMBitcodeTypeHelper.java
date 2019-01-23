@@ -30,7 +30,8 @@
 package com.oracle.truffle.llvm.parser.util;
 
 import com.oracle.truffle.llvm.parser.model.enums.BinaryOperator;
-import com.oracle.truffle.llvm.parser.model.enums.CastOperator;
+import com.oracle.truffle.llvm.runtime.CastOperator;
+import com.oracle.truffle.llvm.runtime.ArithmeticFlag;
 import com.oracle.truffle.llvm.runtime.ArithmeticOperation;
 import com.oracle.truffle.llvm.runtime.NodeFactory;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
@@ -39,8 +40,44 @@ import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class LLVMBitcodeTypeHelper {
 
-    public static LLVMExpressionNode createArithmeticInstruction(NodeFactory nodeFactory, LLVMExpressionNode lhs, LLVMExpressionNode rhs, BinaryOperator operator, Type type) {
-        return nodeFactory.createArithmeticOp(getArithmeticOperation(operator), type, lhs, rhs);
+    public static LLVMExpressionNode createArithmeticInstruction(NodeFactory nodeFactory, LLVMExpressionNode lhs, LLVMExpressionNode rhs, BinaryOperator operator,
+                    com.oracle.truffle.llvm.parser.model.enums.ArithmeticFlag[] flags, Type type) {
+        return nodeFactory.createArithmeticOp(getArithmeticOperation(operator), toFlags(flags), type, lhs, rhs);
+    }
+
+    private static int toFlags(com.oracle.truffle.llvm.parser.model.enums.ArithmeticFlag[] parsedFlags) {
+        if (parsedFlags.length == 0) {
+            return 0;
+        }
+        int flags = 0;
+        for (com.oracle.truffle.llvm.parser.model.enums.ArithmeticFlag parsedFlag : parsedFlags) {
+            switch (parsedFlag) {
+                case INT_EXACT:
+                    break;
+                case INT_NO_UNSIGNED_WRAP:
+                    flags = ArithmeticFlag.INT_NO_UNSIGNED_WRAP.set(flags);
+                    break;
+                case INT_NO_SIGNED_WRAP:
+                    flags = ArithmeticFlag.INT_NO_UNSIGNED_WRAP.set(flags);
+                    break;
+                case FP_NO_NANS:
+                    flags = ArithmeticFlag.INT_NO_UNSIGNED_WRAP.set(flags);
+                    break;
+                case FP_NO_INFINITIES:
+                    flags = ArithmeticFlag.INT_NO_UNSIGNED_WRAP.set(flags);
+                    break;
+                case FP_NO_SIGNED_ZEROES:
+                    flags = ArithmeticFlag.INT_NO_UNSIGNED_WRAP.set(flags);
+                    break;
+                case FP_ALLOW_RECIPROCAL:
+                    flags = ArithmeticFlag.INT_NO_UNSIGNED_WRAP.set(flags);
+                    break;
+                case FP_FAST:
+                    flags = ArithmeticFlag.INT_NO_UNSIGNED_WRAP.set(flags);
+                    break;
+            }
+        }
+        return flags;
     }
 
     private static ArithmeticOperation getArithmeticOperation(BinaryOperator operator) {

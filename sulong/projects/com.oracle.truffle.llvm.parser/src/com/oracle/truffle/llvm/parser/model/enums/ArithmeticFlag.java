@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,7 +29,7 @@
  */
 package com.oracle.truffle.llvm.parser.model.enums;
 
-public enum Flag {
+public enum ArithmeticFlag {
 
     INT_EXACT("exact", 1),
 
@@ -46,9 +46,9 @@ public enum Flag {
 
     private final int mask;
 
-    public static final Flag[] EMPTY_ARRAY = {};
+    public static final ArithmeticFlag[] EMPTY_ARRAY = {};
 
-    Flag(String irString, int mask) {
+    ArithmeticFlag(String irString, int mask) {
         this.irString = irString;
         this.mask = mask;
     }
@@ -69,9 +69,13 @@ public enum Flag {
     /*
      * This method exists because there is ambiguity in the binary operation instruction bitcode
      * encoding. The flags can be one of three sets depending on the type and operation used. This
-     * helper method converts the flagbits into an array of Flag enums.
+     * helper method converts the flagbits into an array of ArithmeticFlag enums.
      */
-    public static Flag[] decode(BinaryOperator opcode, int flagbits) {
+    public static ArithmeticFlag[] decode(BinaryOperator opcode, int flagbits) {
+        if (opcode == null) {
+            return EMPTY_ARRAY;
+        }
+
         switch (opcode) {
             case INT_ADD:
             case INT_SUBTRACT:
@@ -85,7 +89,7 @@ public enum Flag {
             case FP_DIVIDE:
             case FP_REMAINDER:
                 if (FP_FAST.test(flagbits)) {
-                    return new Flag[]{FP_FAST};
+                    return new ArithmeticFlag[]{FP_FAST};
                 }
                 return create(flagbits, FP_NO_NANS, FP_NO_INFINITIES, FP_NO_SIGNED_ZEROES, FP_ALLOW_RECIPROCAL);
 
@@ -94,12 +98,12 @@ public enum Flag {
         }
     }
 
-    private static Flag[] create(long flagbits, Flag... options) {
+    private static ArithmeticFlag[] create(long flagbits, ArithmeticFlag... options) {
         final int count = Long.bitCount(flagbits);
         if (count != 0) {
             int i = 0;
-            final Flag[] flags = new Flag[count];
-            for (Flag option : options) {
+            final ArithmeticFlag[] flags = new ArithmeticFlag[count];
+            for (ArithmeticFlag option : options) {
                 if (option.test(flagbits)) {
                     flags[i++] = option;
                 }

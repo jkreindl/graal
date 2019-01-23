@@ -101,7 +101,7 @@ public interface NodeFactory extends InteropNodeFactory {
 
     LLVMStatementNode createFence();
 
-    LLVMExpressionNode createArithmeticOp(ArithmeticOperation op, Type type, LLVMExpressionNode left, LLVMExpressionNode right);
+    LLVMExpressionNode createArithmeticOp(ArithmeticOperation op, int flags, Type type, LLVMExpressionNode left, LLVMExpressionNode right);
 
     LLVMExpressionNode createLiteral(Object value, Type type);
 
