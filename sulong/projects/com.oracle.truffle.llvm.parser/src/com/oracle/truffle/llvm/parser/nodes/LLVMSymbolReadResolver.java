@@ -37,6 +37,7 @@ import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.llvm.parser.LLVMParserRuntime;
 import com.oracle.truffle.llvm.parser.model.SymbolImpl;
+import com.oracle.truffle.llvm.parser.model.enums.ArithmeticFlag;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDeclaration;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDefinition;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionParameter;
@@ -255,7 +256,7 @@ public final class LLVMSymbolReadResolver {
             final LLVMExpressionNode lhs = resolve(operation.getLHS());
             final LLVMExpressionNode rhs = resolve(operation.getRHS());
 
-            resolvedNode = LLVMBitcodeTypeHelper.createArithmeticInstruction(nodeFactory, lhs, rhs, operation.getOperator(), operation.getType());
+            resolvedNode = LLVMBitcodeTypeHelper.createArithmeticInstruction(nodeFactory, lhs, rhs, operation.getOperator(), ArithmeticFlag.EMPTY_ARRAY, operation.getType());
         }
 
         @Override

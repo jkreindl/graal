@@ -29,18 +29,44 @@
  */
 package com.oracle.truffle.llvm.runtime;
 
-public enum ArithmeticOperation {
-    ADD,
-    SUB,
-    MUL,
-    DIV,
-    UDIV,
-    REM,
-    UREM,
-    AND,
-    OR,
-    XOR,
-    SHL,
-    LSHR,
-    ASHR
+public enum ArithmeticFlag {
+
+    // flags for integer arithmetic and logical shifts
+    INT_NO_UNSIGNED_WRAP("nuw", 1),
+    INT_NO_SIGNED_WRAP("nsw", 1 << 1),
+
+    // flags for floating point arithmetic
+    FP_NO_NANS("nnan", 1 << 2),
+    FP_NO_INFINITIES("ninf", 1 << 3),
+    FP_NO_SIGNED_ZEROES("nsz", 1 << 4),
+    FP_ALLOW_RECIPROCAL("arcp", 1 << 5),
+    FP_FAST("fast", 1 << 6),
+
+    // additional flag for integer div
+    INT_EXACT("exact", 1 << 7);
+
+    public static final int NO_FLAGS = 0;
+    public static final ArithmeticFlag[] ALL_VALUES = values();
+
+    private final String stringValue;
+
+    private final int bitMask;
+
+    ArithmeticFlag(String stringValue, int bitMask) {
+        this.stringValue = stringValue;
+        this.bitMask = bitMask;
+    }
+
+    @Override
+    public String toString() {
+        return stringValue;
+    }
+
+    public int set(int otherFlags) {
+        return otherFlags | bitMask;
+    }
+
+    public boolean test(int flags) {
+        return (flags & bitMask) == bitMask;
+    }
 }
