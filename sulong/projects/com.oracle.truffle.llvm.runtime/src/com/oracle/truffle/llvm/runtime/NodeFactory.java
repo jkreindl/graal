@@ -208,7 +208,7 @@ public interface NodeFactory extends InteropNodeFactory {
 
     LLVMExpressionNode createLLVMBuiltin(Symbol target, LLVMExpressionNode[] args, int callerArgumentCount, LLVMSourceLocation sourceSection);
 
-    LLVMStatementNode createPhi(LLVMExpressionNode[] from, FrameSlot[] to, Type[] types);
+    LLVMStatementNode createPhi(LLVMExpressionNode[] from, FrameSlot[] to, Type[] types, LLVMSourceLocation[] sources);
 
     LLVMExpressionNode createCopyStructByValue(Type type, GetStackSpaceFactory getStackSpaceFactory, LLVMExpressionNode parameterNode);
 
