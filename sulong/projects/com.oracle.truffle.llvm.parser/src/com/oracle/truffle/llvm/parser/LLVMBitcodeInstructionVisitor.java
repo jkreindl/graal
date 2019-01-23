@@ -354,6 +354,8 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         addInstruction(LLVMVoidStatementNodeGen.create(node));
     }
 
+    private static final LLVMSourceLocation[] NO_SOURCES = new LLVMSourceLocation[0];
+
     @Override
     public void visit(InvokeInstruction call) {
         final Type targetType = call.getType();
@@ -388,6 +390,8 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         List<Type> unwindType = new ArrayList<>();
         List<LLVMExpressionNode> normalValue = new ArrayList<>();
         List<LLVMExpressionNode> unwindValue = new ArrayList<>();
+        List<LLVMSourceLocation> normalSources = new ArrayList<>();
+        List<LLVMSourceLocation> unwindSources = new ArrayList<>();
         if (blockPhis != null) {
             for (Phi phi : blockPhis) {
                 FrameSlot slot = getSlot(phi.getPhiValue().getName());
@@ -396,18 +400,20 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
                     normalTo.add(slot);
                     normalType.add(phi.getValue().getType());
                     normalValue.add(value);
+                    normalSources.add(getSourceLocation(phi.getPhiValue()));
                 } else {
                     unwindTo.add(slot);
                     unwindType.add(phi.getValue().getType());
                     unwindValue.add(value);
+                    unwindSources.add(getSourceLocation(phi.getPhiValue()));
 
                 }
             }
         }
         LLVMStatementNode normalPhi = nodeFactory.createPhi(normalValue.toArray(LLVMExpressionNode.NO_EXPRESSIONS), normalTo.toArray(NO_SLOTS),
-                        normalType.toArray(Type.EMPTY_ARRAY));
+                        normalType.toArray(Type.EMPTY_ARRAY), normalSources.toArray(NO_SOURCES));
         LLVMStatementNode unwindPhi = nodeFactory.createPhi(unwindValue.toArray(LLVMExpressionNode.NO_EXPRESSIONS), unwindTo.toArray(NO_SLOTS),
-                        unwindType.toArray(Type.EMPTY_ARRAY));
+                        unwindType.toArray(Type.EMPTY_ARRAY), unwindSources.toArray(NO_SOURCES));
 
         final LLVMSourceLocation source = getSourceLocation(call, false);
         LLVMExpressionNode function = nodeFactory.createLLVMBuiltin(target, argNodes, argCount, null);
@@ -453,6 +459,8 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         List<Type> unwindType = new ArrayList<>();
         List<LLVMExpressionNode> normalValue = new ArrayList<>();
         List<LLVMExpressionNode> unwindValue = new ArrayList<>();
+        List<LLVMSourceLocation> normalSources = new ArrayList<>();
+        List<LLVMSourceLocation> unwindSources = new ArrayList<>();
         if (blockPhis != null) {
             for (Phi phi : blockPhis) {
                 FrameSlot slot = getSlot(phi.getPhiValue().getName());
@@ -461,18 +469,20 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
                     normalTo.add(slot);
                     normalType.add(phi.getValue().getType());
                     normalValue.add(value);
+                    normalSources.add(getSourceLocation(phi.getPhiValue()));
                 } else {
                     unwindTo.add(slot);
                     unwindType.add(phi.getValue().getType());
                     unwindValue.add(value);
+                    unwindSources.add(getSourceLocation(phi.getPhiValue()));
 
                 }
             }
         }
         LLVMStatementNode normalPhi = nodeFactory.createPhi(normalValue.toArray(LLVMExpressionNode.NO_EXPRESSIONS), normalTo.toArray(NO_SLOTS),
-                        normalType.toArray(Type.EMPTY_ARRAY));
+                        normalType.toArray(Type.EMPTY_ARRAY), normalSources.toArray(NO_SOURCES));
         LLVMStatementNode unwindPhi = nodeFactory.createPhi(unwindValue.toArray(LLVMExpressionNode.NO_EXPRESSIONS), unwindTo.toArray(NO_SLOTS),
-                        unwindType.toArray(Type.EMPTY_ARRAY));
+                        unwindType.toArray(Type.EMPTY_ARRAY), unwindSources.toArray(NO_SOURCES));
 
         final LLVMSourceLocation source = getSourceLocation(call, false);
         LLVMExpressionNode function = nodeFactory.createLLVMBuiltin(target, args, argCount, null);
@@ -769,16 +779,19 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
 
         LLVMStatementNode[] result = new LLVMStatementNode[phisPerSuccessor.length];
         for (int i = 0; i < result.length; i++) {
-            LLVMExpressionNode[] from = new LLVMExpressionNode[phisPerSuccessor[i].size()];
-            FrameSlot[] to = new FrameSlot[phisPerSuccessor[i].size()];
-            Type[] types = new Type[phisPerSuccessor[i].size()];
-            for (int j = 0; j < phisPerSuccessor[i].size(); j++) {
+            final int successorCount = phisPerSuccessor[i].size();
+            LLVMExpressionNode[] from = new LLVMExpressionNode[successorCount];
+            FrameSlot[] to = new FrameSlot[successorCount];
+            Type[] types = new Type[successorCount];
+            LLVMSourceLocation[] sources = new LLVMSourceLocation[successorCount];
+            for (int j = 0; j < successorCount; j++) {
                 Phi phi = phisPerSuccessor[i].get(j);
                 to[j] = getSlot(phi.getPhiValue().getName());
                 from[j] = symbols.resolve(phi.getValue());
                 types[j] = phi.getValue().getType();
+                sources[j] = getSourceLocation(phi.getPhiValue());
             }
-            result[i] = nodeFactory.createPhi(from, to, types);
+            result[i] = nodeFactory.createPhi(from, to, types, sources);
         }
         return result;
     }

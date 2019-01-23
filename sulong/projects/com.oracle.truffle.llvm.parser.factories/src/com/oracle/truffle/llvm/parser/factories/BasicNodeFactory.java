@@ -2148,14 +2148,14 @@ public class BasicNodeFactory implements NodeFactory {
     }
 
     @Override
-    public LLVMStatementNode createPhi(LLVMExpressionNode[] from, FrameSlot[] to, Type[] types) {
+    public LLVMStatementNode createPhi(LLVMExpressionNode[] from, FrameSlot[] to, Type[] types, LLVMSourceLocation[] sources) {
         if (to.length > 0) {
             if (to.length == 1) {
-                return createFrameWrite(types[0], from[0], to[0], null);
+                return createFrameWrite(types[0], from[0], to[0], sources[0]);
             }
             LLVMWriteNode[] writes = new LLVMWriteNode[to.length];
             for (int i = 0; i < writes.length; i++) {
-                writes[i] = createFrameWrite(types[i], null, to[i], null);
+                writes[i] = createFrameWrite(types[i], null, to[i], sources[i]);
             }
             return new LLVMWritePhisNode(from, writes);
         }
