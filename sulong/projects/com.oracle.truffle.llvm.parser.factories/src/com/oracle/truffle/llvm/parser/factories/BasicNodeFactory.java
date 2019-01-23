@@ -210,6 +210,7 @@ import com.oracle.truffle.llvm.nodes.memory.AllocateGlobalsBlockNode;
 import com.oracle.truffle.llvm.nodes.memory.AllocateReadOnlyGlobalsBlockNode;
 import com.oracle.truffle.llvm.nodes.memory.FreeReadOnlyGlobalsBlockNode;
 import com.oracle.truffle.llvm.nodes.memory.LLVMCompareExchangeNodeGen;
+import com.oracle.truffle.llvm.nodes.memory.LLVMExtractValueNodeGen;
 import com.oracle.truffle.llvm.nodes.memory.LLVMFenceNodeGen;
 import com.oracle.truffle.llvm.nodes.memory.LLVMGetElementPtrNodeGen;
 import com.oracle.truffle.llvm.nodes.memory.LLVMGetStackSpaceInstruction.LLVMGetStackForConstInstruction;
@@ -479,12 +480,12 @@ public class BasicNodeFactory implements NodeFactory {
                 case DOUBLE:
                     return LLVMDoubleInsertElementNodeGen.create(vector, element, index, vectorLength);
                 default:
-                    throw new AssertionError("vector type " + vectorType + "  not supported!");
+                    throw new AssertionError("vector type " + vectorType + "  is not supported for insertelement");
             }
         } else if (vectorType.getElementType() instanceof PointerType || vectorType.getElementType() instanceof FunctionType) {
             return LLVMI64InsertElementNodeGen.create(vector, element, index, vectorLength);
         }
-        throw new AssertionError(vectorType);
+        throw new AssertionError("vector type " + vectorType + "  is not supported for insertelement");
     }
 
     @Override
@@ -507,12 +508,12 @@ public class BasicNodeFactory implements NodeFactory {
                 case DOUBLE:
                     return LLVMDoubleExtractElementNodeGen.create(vector, index);
                 default:
-                    throw new AssertionError(resultType1 + " not supported!");
+                    throw new AssertionError(resultType1 + " is not supported for extractelement");
             }
         } else if (resultType instanceof PointerType || resultType instanceof FunctionType) {
             return LLVMI64ExtractElementNodeGen.create(vector, index);
         } else {
-            throw new AssertionError(resultType + " not supported!");
+            throw new AssertionError(resultType + " is not supported for extractelement");
         }
     }
 
@@ -538,12 +539,12 @@ public class BasicNodeFactory implements NodeFactory {
                 case DOUBLE:
                     return LLVMShuffleDoubleVectorNodeGen.create(vector1, vector2, mask, resultLength);
                 default:
-                    throw new AssertionError(resultType);
+                    throw new AssertionError(resultType + " is not supported for shufflevector");
             }
         } else if (resultType.getElementType() instanceof PointerType || resultType.getElementType() instanceof FunctionType) {
             return LLVMShuffleI64VectorNodeGen.create(vector1, vector2, mask, resultLength);
         }
-        throw new AssertionError(resultType);
+        throw new AssertionError(resultType + " is not supported for shufflevector");
     }
 
     @Override
@@ -1300,28 +1301,32 @@ public class BasicNodeFactory implements NodeFactory {
     }
 
     @Override
-    public LLVMLoadNode createExtractValue(Type type, LLVMExpressionNode targetAddress) {
+    public LLVMExpressionNode createExtractValue(Type type, LLVMExpressionNode targetAddress) {
+        final LLVMExpressionNode loadNode = createLoadForExtractValue(type, targetAddress);
+        return LLVMExtractValueNodeGen.create(loadNode);
+    }
+
+    private static LLVMExpressionNode createLoadForExtractValue(Type type, LLVMExpressionNode address) {
         if (type instanceof PrimitiveType) {
             switch (((PrimitiveType) type).getPrimitiveKind()) {
                 case I1:
-                    return LLVMI1LoadNodeGen.create(targetAddress);
+                    return LLVMI1LoadNodeGen.create(address);
                 case I8:
-                    return LLVMI8LoadNodeGen.create(targetAddress);
+                    return LLVMI8LoadNodeGen.create(address);
                 case I16:
-                    return LLVMI16LoadNodeGen.create(targetAddress);
+                    return LLVMI16LoadNodeGen.create(address);
                 case I32:
-                    return LLVMI32LoadNodeGen.create(targetAddress);
+                    return LLVMI32LoadNodeGen.create(address);
                 case I64:
-                    return LLVMI64LoadNodeGen.create(targetAddress);
+                    return LLVMI64LoadNodeGen.create(address);
                 case FLOAT:
-                    return LLVMFloatLoadNodeGen.create(targetAddress);
+                    return LLVMFloatLoadNodeGen.create(address);
                 case DOUBLE:
-                    return LLVMDoubleLoadNodeGen.create(targetAddress);
+                    return LLVMDoubleLoadNodeGen.create(address);
                 case X86_FP80:
-                    return LLVM80BitFloatDirectLoadNodeGen.create(targetAddress);
-                default:
-                    throw new AssertionError(type);
+                    return LLVM80BitFloatDirectLoadNodeGen.create(address);
             }
+
         } else if (type instanceof VectorType) {
             VectorType vectorType = (VectorType) type;
             int vectorLength = vectorType.getNumberOfElements();
@@ -1329,32 +1334,31 @@ public class BasicNodeFactory implements NodeFactory {
             if (elementType instanceof PrimitiveType) {
                 switch (((PrimitiveType) elementType).getPrimitiveKind()) {
                     case I1:
-                        return LLVMLoadI1VectorNodeGen.create(targetAddress, vectorLength);
+                        return LLVMLoadI1VectorNodeGen.create(address, vectorLength);
                     case I8:
-                        return LLVMLoadI8VectorNodeGen.create(targetAddress, vectorLength);
+                        return LLVMLoadI8VectorNodeGen.create(address, vectorLength);
                     case I16:
-                        return LLVMLoadI16VectorNodeGen.create(targetAddress, vectorLength);
+                        return LLVMLoadI16VectorNodeGen.create(address, vectorLength);
                     case I32:
-                        return LLVMLoadI32VectorNodeGen.create(targetAddress, vectorLength);
+                        return LLVMLoadI32VectorNodeGen.create(address, vectorLength);
                     case I64:
-                        return LLVMLoadI64VectorNodeGen.create(targetAddress, vectorLength);
+                        return LLVMLoadI64VectorNodeGen.create(address, vectorLength);
                     case FLOAT:
-                        return LLVMLoadFloatVectorNodeGen.create(targetAddress, vectorLength);
+                        return LLVMLoadFloatVectorNodeGen.create(address, vectorLength);
                     case DOUBLE:
-                        return LLVMLoadDoubleVectorNodeGen.create(targetAddress, vectorLength);
+                        return LLVMLoadDoubleVectorNodeGen.create(address, vectorLength);
                     default:
                         throw new AssertionError(type);
                 }
             } else if (elementType instanceof PointerType || elementType instanceof FunctionType) {
-                return LLVMLoadPointerVectorNodeGen.create(targetAddress, vectorLength);
-            } else {
-                throw new AssertionError(type);
+                return LLVMLoadPointerVectorNodeGen.create(address, vectorLength);
             }
+
         } else if (type instanceof PointerType || type instanceof StructureType || type instanceof ArrayType) {
-            return LLVMPointerDirectLoadNodeGen.create(targetAddress);
-        } else {
-            throw new AssertionError(type);
+            return LLVMPointerDirectLoadNodeGen.create(address);
         }
+
+        throw new AssertionError(type + " is not supported for extractvalue");
     }
 
     @Override
@@ -1613,14 +1617,14 @@ public class BasicNodeFactory implements NodeFactory {
                     store = LLVM80BitFloatStoreNodeGen.create(null, null);
                     break;
                 default:
-                    throw new AssertionError(llvmType);
+                    throw new AssertionError(llvmType + " is not supported for insertvalue");
             }
         } else if (llvmType instanceof VectorType) {
             store = LLVMStoreVectorNodeGen.create(null, null, null, ((VectorType) llvmType).getNumberOfElements());
         } else if (llvmType instanceof PointerType) {
             store = LLVMPointerStoreNodeGen.create(null, null);
         } else {
-            throw new AssertionError(llvmType);
+            throw new AssertionError(llvmType + " is not supported for insertvalue");
         }
         return LLVMInsertValueNodeGen.create(store, createMemMove(), size, offset, sourceAggregate, resultAggregate, valueToInsert);
     }
