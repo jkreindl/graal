@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -37,20 +37,39 @@ import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.FrameSlotTypeException;
 import com.oracle.truffle.api.frame.FrameUtil;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.llvm.nodes.vars.LLVMReadNodeFactory.ForeignAttachInteropTypeNodeGen;
 import com.oracle.truffle.llvm.runtime.interop.LLVMTypedForeignObject;
 import com.oracle.truffle.llvm.runtime.interop.access.LLVMInteropType;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMFrameReadObject;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjects;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
 
 public abstract class LLVMReadNode extends LLVMExpressionNode {
 
+    public static boolean isInstance(TruffleObject obj) {
+        return obj instanceof LLVMReadNode;
+    }
+
     protected final FrameSlot slot;
 
     public LLVMReadNode(FrameSlot slot) {
         this.slot = slot;
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return tag == LLVMTags.SSARead.class || super.hasTag(tag);
+    }
+
+    @Override
+    public Object getNodeObject() {
+        return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_SLOT_ID, LLVMNodeObjects.KEY_GET_READ_VALUE}, new Object[]{String.valueOf(slot.getIdentifier()), new LLVMFrameReadObject(slot)});
     }
 
     public abstract static class LLVMI1ReadNode extends LLVMReadNode {
