@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -30,15 +30,24 @@
 package com.oracle.truffle.llvm.nodes.literals;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 
-public class LLVMSimpleLiteralNode {
+public abstract class LLVMSimpleLiteralNode extends LLVMExpressionNode {
 
-    public static final class LLVMIVarBitLiteralNode extends LLVMExpressionNode {
+    // TODO (jkreindl) also mark structured literals
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return tag == LLVMTags.Constant.class || super.hasTag(tag);
+    }
+
+    public static final class LLVMIVarBitLiteralNode extends LLVMSimpleLiteralNode {
 
         private final LLVMIVarBit literal;
 
@@ -57,7 +66,7 @@ public class LLVMSimpleLiteralNode {
         }
     }
 
-    public static final class LLVMI1LiteralNode extends LLVMExpressionNode {
+    public static final class LLVMI1LiteralNode extends LLVMSimpleLiteralNode {
 
         private final boolean literal;
 
@@ -76,7 +85,7 @@ public class LLVMSimpleLiteralNode {
         }
     }
 
-    public static final class LLVMI8LiteralNode extends LLVMExpressionNode {
+    public static final class LLVMI8LiteralNode extends LLVMSimpleLiteralNode {
 
         private final byte literal;
 
@@ -95,7 +104,7 @@ public class LLVMSimpleLiteralNode {
         }
     }
 
-    public static final class LLVMI16LiteralNode extends LLVMExpressionNode {
+    public static final class LLVMI16LiteralNode extends LLVMSimpleLiteralNode {
 
         private final short literal;
 
@@ -114,7 +123,7 @@ public class LLVMSimpleLiteralNode {
         }
     }
 
-    public static final class LLVMI32LiteralNode extends LLVMExpressionNode {
+    public static final class LLVMI32LiteralNode extends LLVMSimpleLiteralNode {
 
         private final int literal;
 
@@ -133,7 +142,7 @@ public class LLVMSimpleLiteralNode {
         }
     }
 
-    public static final class LLVMI64LiteralNode extends LLVMExpressionNode {
+    public static final class LLVMI64LiteralNode extends LLVMSimpleLiteralNode {
 
         private final long literal;
 
@@ -152,7 +161,7 @@ public class LLVMSimpleLiteralNode {
         }
     }
 
-    public static final class LLVMFloatLiteralNode extends LLVMExpressionNode {
+    public static final class LLVMFloatLiteralNode extends LLVMSimpleLiteralNode {
 
         private final float literal;
 
@@ -171,7 +180,7 @@ public class LLVMSimpleLiteralNode {
         }
     }
 
-    public static final class LLVMDoubleLiteralNode extends LLVMExpressionNode {
+    public static final class LLVMDoubleLiteralNode extends LLVMSimpleLiteralNode {
 
         private final double literal;
 
@@ -190,7 +199,7 @@ public class LLVMSimpleLiteralNode {
         }
     }
 
-    public static final class LLVM80BitFloatLiteralNode extends LLVMExpressionNode {
+    public static final class LLVM80BitFloatLiteralNode extends LLVMSimpleLiteralNode {
 
         private final boolean sign;
         private final int exponent;
@@ -213,7 +222,7 @@ public class LLVMSimpleLiteralNode {
         }
     }
 
-    public static final class LLVMManagedPointerLiteralNode extends LLVMExpressionNode {
+    public static final class LLVMManagedPointerLiteralNode extends LLVMSimpleLiteralNode {
 
         private final LLVMManagedPointer address;
 
@@ -227,7 +236,7 @@ public class LLVMSimpleLiteralNode {
         }
     }
 
-    public static final class LLVMNativePointerLiteralNode extends LLVMExpressionNode {
+    public static final class LLVMNativePointerLiteralNode extends LLVMSimpleLiteralNode {
 
         private final long address;
 
