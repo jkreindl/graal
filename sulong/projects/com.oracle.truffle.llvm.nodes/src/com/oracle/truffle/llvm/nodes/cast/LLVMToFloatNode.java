@@ -36,6 +36,7 @@ import com.oracle.truffle.llvm.nodes.cast.LLVMToFloatNodeGen.LLVMBitcastToFloatN
 import com.oracle.truffle.llvm.nodes.cast.LLVMToFloatNodeGen.LLVMSignedCastToFloatNodeGen;
 import com.oracle.truffle.llvm.nodes.cast.LLVMToFloatNodeGen.LLVMUnsignedCastToFloatNodeGen;
 import com.oracle.truffle.llvm.nodes.cast.LLVMToI64Node.LLVMBitcastToI64Node;
+import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.LLVMBoxedPrimitive;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
 import com.oracle.truffle.llvm.runtime.interop.convert.ForeignToLLVM;
@@ -50,7 +51,11 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI32Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMToFloatNode extends LLVMExpressionNode {
+public abstract class LLVMToFloatNode extends LLVMCastNode {
+
+    public LLVMToFloatNode(CastOperator conversionKind) {
+        super(conversionKind);
+    }
 
     protected abstract float executeWith(long value);
 
@@ -77,6 +82,11 @@ public abstract class LLVMToFloatNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMSignedCastToFloatNode extends LLVMToFloatNode {
+
+        public LLVMSignedCastToFloatNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
 
         @Override
         protected LLVMToFloatNode createRecursive() {
@@ -128,6 +138,10 @@ public abstract class LLVMToFloatNode extends LLVMExpressionNode {
 
         private static final float LEADING_BIT = 0x1.0p63f;
 
+        public LLVMUnsignedCastToFloatNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
         @Override
         protected LLVMToFloatNode createRecursive() {
             return LLVMUnsignedCastToFloatNodeGen.create(null);
@@ -169,6 +183,10 @@ public abstract class LLVMToFloatNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMBitcastToFloatNode extends LLVMToFloatNode {
+
+        public LLVMBitcastToFloatNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Override
         protected LLVMToFloatNode createRecursive() {

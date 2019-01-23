@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -31,6 +31,7 @@ package com.oracle.truffle.llvm.nodes.cast;
 
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.LLVMBoxedPrimitive;
 import com.oracle.truffle.llvm.runtime.LLVMVirtualAllocationAddress;
 import com.oracle.truffle.llvm.runtime.interop.access.LLVMInteropType;
@@ -39,7 +40,12 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMToAddressNode extends LLVMExpressionNode {
+public abstract class LLVMToAddressNode extends LLVMCastNode {
+
+    public LLVMToAddressNode(CastOperator conversionKind) {
+        super(conversionKind);
+    }
+
     public abstract Object executeWithTarget(Object from);
 
     @Specialization

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -33,6 +33,7 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.llvm.nodes.cast.LLVMToAddressNode;
 import com.oracle.truffle.llvm.nodes.cast.LLVMToI64Node.LLVMBitcastToI64Node;
+import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.global.LLVMGlobalContainer;
 import com.oracle.truffle.llvm.runtime.interop.convert.ForeignToLLVM.ForeignToLLVMType;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory;
@@ -75,7 +76,7 @@ public final class LLVMGlobalContainerReadNode extends LLVMNode implements LLVMO
     public Object convertToPointer(Object result) {
         if (toPointer == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
-            toPointer = (LLVMToAddressNode) insert(getNodeFactory().createBitcast(null, PointerType.VOID, null));
+            toPointer = (LLVMToAddressNode) insert(getNodeFactory().createBitcast(CastOperator.INTERNAL, null, PointerType.VOID, null));
         }
         return toPointer.executeWithTarget(result);
     }
@@ -83,7 +84,7 @@ public final class LLVMGlobalContainerReadNode extends LLVMNode implements LLVMO
     public Object convertToI64(Object result) {
         if (toI64 == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
-            toI64 = (LLVMBitcastToI64Node) insert(getNodeFactory().createBitcast(null, PrimitiveKind.I64));
+            toI64 = (LLVMBitcastToI64Node) insert(getNodeFactory().createBitcast(CastOperator.INTERNAL, null, PrimitiveKind.I64));
         }
         return toI64.executeWithTarget(result);
     }

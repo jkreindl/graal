@@ -232,6 +232,7 @@ import com.oracle.truffle.llvm.nodes.vars.LLVMWriteNodeFactory.LLVMWriteI1NodeGe
 import com.oracle.truffle.llvm.nodes.vars.LLVMWriteNodeFactory.LLVMWriteI64NodeGen;
 import com.oracle.truffle.llvm.nodes.vars.LLVMWriteNodeFactory.LLVMWritePointerNodeGen;
 import com.oracle.truffle.llvm.nodes.vars.StructLiteralNodeGen;
+import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.NodeFactory;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
@@ -1329,47 +1330,47 @@ class AsmFactory {
                 break;
             case "movsbw":
                 srcA = getOperandLoad(PrimitiveType.I8, a);
-                out = nodeFactory.createSignedCast(srcA, PrimitiveType.I16);
+                out = nodeFactory.createSignedCast(CastOperator.INTERNAL, srcA, PrimitiveType.I16);
                 break;
             case "movsbl":
                 srcA = getOperandLoad(PrimitiveType.I8, a);
-                out = nodeFactory.createSignedCast(srcA, PrimitiveType.I32);
+                out = nodeFactory.createSignedCast(CastOperator.INTERNAL, srcA, PrimitiveType.I32);
                 break;
             case "movsbq":
                 srcA = getOperandLoad(PrimitiveType.I8, a);
-                out = nodeFactory.createSignedCast(srcA, PrimitiveType.I64);
+                out = nodeFactory.createSignedCast(CastOperator.INTERNAL, srcA, PrimitiveType.I64);
                 break;
             case "movswl":
                 srcA = getOperandLoad(PrimitiveType.I16, a);
-                out = nodeFactory.createSignedCast(srcA, PrimitiveType.I32);
+                out = nodeFactory.createSignedCast(CastOperator.INTERNAL, srcA, PrimitiveType.I32);
                 break;
             case "movswq":
                 srcA = getOperandLoad(PrimitiveType.I16, a);
-                out = nodeFactory.createSignedCast(srcA, PrimitiveType.I64);
+                out = nodeFactory.createSignedCast(CastOperator.INTERNAL, srcA, PrimitiveType.I64);
                 break;
             case "movslq":
                 srcA = getOperandLoad(PrimitiveType.I32, a);
-                out = nodeFactory.createSignedCast(srcA, PrimitiveType.I64);
+                out = nodeFactory.createSignedCast(CastOperator.INTERNAL, srcA, PrimitiveType.I64);
                 break;
             case "movzbw":
                 srcA = getOperandLoad(PrimitiveType.I8, a);
-                out = nodeFactory.createUnsignedCast(srcA, PrimitiveType.I16);
+                out = nodeFactory.createUnsignedCast(CastOperator.INTERNAL, srcA, PrimitiveType.I16);
                 break;
             case "movzbl":
                 srcA = getOperandLoad(PrimitiveType.I8, a);
-                out = nodeFactory.createUnsignedCast(srcA, PrimitiveType.I32);
+                out = nodeFactory.createUnsignedCast(CastOperator.INTERNAL, srcA, PrimitiveType.I32);
                 break;
             case "movzbq":
                 srcA = getOperandLoad(PrimitiveType.I8, a);
-                out = nodeFactory.createUnsignedCast(srcA, PrimitiveType.I64);
+                out = nodeFactory.createUnsignedCast(CastOperator.INTERNAL, srcA, PrimitiveType.I64);
                 break;
             case "movzwl":
                 srcA = getOperandLoad(PrimitiveType.I16, a);
-                out = nodeFactory.createUnsignedCast(srcA, PrimitiveType.I32);
+                out = nodeFactory.createUnsignedCast(CastOperator.INTERNAL, srcA, PrimitiveType.I32);
                 break;
             case "movzwq":
                 srcA = getOperandLoad(PrimitiveType.I16, a);
-                out = nodeFactory.createUnsignedCast(srcA, PrimitiveType.I64);
+                out = nodeFactory.createUnsignedCast(CastOperator.INTERNAL, srcA, PrimitiveType.I64);
                 break;
             case "salb":
                 out = LLVMAMD64SalbNodeGen.create(srcB, srcA);
@@ -1678,21 +1679,21 @@ class AsmFactory {
                     if (retType instanceof StructureType) {
                         assert retTypes[arg.getOutIndex()] == arg.getType();
                         if (arg.getType() instanceof PointerType) {
-                            valueNodes[arg.getOutIndex()] = LLVMToAddressNodeGen.create(register);
+                            valueNodes[arg.getOutIndex()] = LLVMToAddressNodeGen.create(CastOperator.INTERNAL, register);
                             writeNodes[arg.getOutIndex()] = LLVMPointerStoreNodeGen.create(null, null);
                         } else {
                             PrimitiveKind primitiveKind = getPrimitiveKind(arg);
                             switch (primitiveKind) {
                                 case I8:
-                                    valueNodes[arg.getOutIndex()] = nodeFactory.createSignedCast(register, PrimitiveType.I8);
+                                    valueNodes[arg.getOutIndex()] = nodeFactory.createSignedCast(CastOperator.INTERNAL, register, PrimitiveType.I8);
                                     writeNodes[arg.getOutIndex()] = LLVMI8StoreNodeGen.create(null, null);
                                     break;
                                 case I16:
-                                    valueNodes[arg.getOutIndex()] = nodeFactory.createSignedCast(register, PrimitiveType.I16);
+                                    valueNodes[arg.getOutIndex()] = nodeFactory.createSignedCast(CastOperator.INTERNAL, register, PrimitiveType.I16);
                                     writeNodes[arg.getOutIndex()] = LLVMI16StoreNodeGen.create(null, null);
                                     break;
                                 case I32:
-                                    valueNodes[arg.getOutIndex()] = nodeFactory.createSignedCast(register, PrimitiveType.I32);
+                                    valueNodes[arg.getOutIndex()] = nodeFactory.createSignedCast(CastOperator.INTERNAL, register, PrimitiveType.I32);
                                     writeNodes[arg.getOutIndex()] = LLVMI32StoreNodeGen.create(null, null);
                                     break;
                                 case I64:
@@ -1727,14 +1728,14 @@ class AsmFactory {
                     } else if (argTypes[arg.getInIndex()] instanceof VectorType) {
                         arguments.add(LLVMWriteNodeFactory.LLVMWriteVectorNodeGen.create(slot, null, argnode));
                     } else {
-                        LLVMExpressionNode node = nodeFactory.createSignedCast(argnode, PrimitiveType.I64);
+                        LLVMExpressionNode node = nodeFactory.createSignedCast(CastOperator.INTERNAL, argnode, PrimitiveType.I64);
                         arguments.add(LLVMWriteI64NodeGen.create(slot, null, node));
                     }
                 }
                 slot = getArgumentSlot(arg.getIndex(), argTypes[arg.getInIndex()]);
                 LLVMExpressionNode argnode = LLVMArgNodeGen.create(arg.getInIndex());
                 if (arg.getType() instanceof PrimitiveType) {
-                    LLVMExpressionNode node = nodeFactory.createSignedCast(argnode, PrimitiveType.I64);
+                    LLVMExpressionNode node = nodeFactory.createSignedCast(CastOperator.INTERNAL, argnode, PrimitiveType.I64);
                     arguments.add(LLVMWriteI64NodeGen.create(slot, null, node));
                 } else if (arg.getType() instanceof VectorType) {
                     arguments.add(LLVMWriteNodeFactory.LLVMWriteVectorNodeGen.create(slot, null, argnode));
@@ -1788,9 +1789,9 @@ class AsmFactory {
 
     private LLVMExpressionNode castResult(LLVMExpressionNode register) {
         if (retType instanceof PointerType) {
-            return LLVMToAddressNodeGen.create(register);
+            return LLVMToAddressNodeGen.create(CastOperator.INTERNAL, register);
         }
-        return nodeFactory.createSignedCast(register, retType);
+        return nodeFactory.createSignedCast(CastOperator.INTERNAL, register, retType);
     }
 
     private boolean isLeaPointer(AsmOperand operand) {
@@ -1902,11 +1903,11 @@ class AsmFactory {
             if (type instanceof PointerType) {
                 switch (((PrimitiveType) op.getType()).getPrimitiveKind()) {
                     case I8:
-                        return nodeFactory.createSignedCast(register, PrimitiveType.I8);
+                        return nodeFactory.createSignedCast(CastOperator.INTERNAL, register, PrimitiveType.I8);
                     case I16:
-                        return nodeFactory.createSignedCast(register, PrimitiveType.I16);
+                        return nodeFactory.createSignedCast(CastOperator.INTERNAL, register, PrimitiveType.I16);
                     case I32:
-                        return nodeFactory.createSignedCast(register, PrimitiveType.I32);
+                        return nodeFactory.createSignedCast(CastOperator.INTERNAL, register, PrimitiveType.I32);
                     case I64:
                         return LLVMAMD64ReadAddressNodeGen.create(frame);
                     default:
@@ -1917,9 +1918,9 @@ class AsmFactory {
                 case I8:
                     return LLVMAMD64I64ToI8NodeGen.create(shift, register);
                 case I16:
-                    return nodeFactory.createSignedCast(register, PrimitiveType.I16);
+                    return nodeFactory.createSignedCast(CastOperator.INTERNAL, register, PrimitiveType.I16);
                 case I32:
-                    return nodeFactory.createSignedCast(register, PrimitiveType.I32);
+                    return nodeFactory.createSignedCast(CastOperator.INTERNAL, register, PrimitiveType.I32);
                 case I64:
                     return register;
                 default:
@@ -1969,18 +1970,18 @@ class AsmFactory {
                     return LLVMAMD64ReadAddressNodeGen.create(frame);
                 }
                 LLVMExpressionNode register = LLVMAMD64ReadRegisterNodeGen.create(frame);
-                return nodeFactory.createSignedCast(register, type);
+                return nodeFactory.createSignedCast(CastOperator.INTERNAL, register, type);
             } else { // constraint "0"-"9"
                 if (type instanceof PointerType) {
                     return LLVMAMD64ReadAddressNodeGen.create(frame);
                 }
                 LLVMExpressionNode register = LLVMAMD64ReadRegisterNodeGen.create(frame);
                 PrimitiveType primitiveType = (PrimitiveType) type;
-                return nodeFactory.createSignedCast(register, primitiveType);
+                return nodeFactory.createSignedCast(CastOperator.INTERNAL, register, primitiveType);
             }
         } else if (operand instanceof AsmMemoryOperand) {
             LLVMExpressionNode address = getOperandAddress(operand);
-            LLVMExpressionNode addr = LLVMToAddressNodeGen.create(address);
+            LLVMExpressionNode addr = LLVMToAddressNodeGen.create(CastOperator.INTERNAL, address);
             if (type instanceof PrimitiveType) {
                 switch (((PrimitiveType) type).getPrimitiveKind()) {
                     case I8:

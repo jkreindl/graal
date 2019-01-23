@@ -129,17 +129,17 @@ public interface NodeFactory extends InteropNodeFactory {
 
     LLVMExpressionNode createComparison(CompareOperator operator, Type type, LLVMExpressionNode lhs, LLVMExpressionNode rhs);
 
-    LLVMExpressionNode createSignedCast(LLVMExpressionNode fromNode, Type targetType);
+    LLVMExpressionNode createSignedCast(CastOperator conversionKind, LLVMExpressionNode fromNode, Type targetType);
 
-    LLVMExpressionNode createSignedCast(LLVMExpressionNode fromNode, PrimitiveKind kind);
+    LLVMExpressionNode createSignedCast(CastOperator conversionKind, LLVMExpressionNode fromNode, PrimitiveKind kind);
 
-    LLVMExpressionNode createUnsignedCast(LLVMExpressionNode fromNode, Type targetType);
+    LLVMExpressionNode createUnsignedCast(CastOperator conversionKind, LLVMExpressionNode fromNode, Type targetType);
 
-    LLVMExpressionNode createUnsignedCast(LLVMExpressionNode fromNode, PrimitiveKind kind);
+    LLVMExpressionNode createUnsignedCast(CastOperator conversionKind, LLVMExpressionNode fromNode, PrimitiveKind kind);
 
-    LLVMExpressionNode createBitcast(LLVMExpressionNode fromNode, Type targetType, Type fromType);
+    LLVMExpressionNode createBitcast(CastOperator conversionKind, LLVMExpressionNode fromNode, Type targetType, Type fromType);
 
-    LLVMExpressionNode createBitcast(LLVMExpressionNode fromNode, PrimitiveKind kind);
+    LLVMExpressionNode createBitcast(CastOperator conversionKind, LLVMExpressionNode fromNode, PrimitiveKind kind);
 
     LLVMExpressionNode createExtractValue(Type type, LLVMExpressionNode targetAddress);
 
