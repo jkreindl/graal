@@ -33,6 +33,7 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.llvm.nodes.cast.LLVMToI64Node.LLVMBitcastToI64Node;
+import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.LLVMBoxedPrimitive;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
@@ -48,7 +49,11 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI32Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMToI32Node extends LLVMExpressionNode {
+public abstract class LLVMToI32Node extends LLVMCastNode {
+
+    public LLVMToI32Node(CastOperator conversionKind) {
+        super(conversionKind);
+    }
 
     @Specialization
     protected int doPointer(LLVMPointer from,
@@ -67,6 +72,10 @@ public abstract class LLVMToI32Node extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMSignedCastToI32Node extends LLVMToI32Node {
+
+        public LLVMSignedCastToI32Node(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         protected int doI32(boolean from) {
@@ -118,6 +127,10 @@ public abstract class LLVMToI32Node extends LLVMExpressionNode {
 
         private static final float MAX_INT_AS_FLOAT = Integer.MAX_VALUE;
         private static final double MAX_INT_AS_DOUBLE = Integer.MAX_VALUE;
+
+        public LLVMUnsignedCastToI32Node(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         protected int doI1(boolean from) {
@@ -179,6 +192,10 @@ public abstract class LLVMToI32Node extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMBitcastToI32Node extends LLVMToI32Node {
+
+        public LLVMBitcastToI32Node(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         protected int doI32(int from) {

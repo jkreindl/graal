@@ -36,6 +36,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.llvm.nodes.cast.LLVMToVarINodeGen.LLVMBitcastToIVarNodeGen;
 import com.oracle.truffle.llvm.nodes.cast.LLVMToVarINodeGen.LLVMSignedCastToIVarNodeGen;
 import com.oracle.truffle.llvm.nodes.cast.LLVMToVarINodeGen.LLVMUnsignedCastToIVarNodeGen;
+import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
@@ -44,9 +45,13 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
 @NodeField(type = int.class, name = "bits")
-public abstract class LLVMToVarINode extends LLVMExpressionNode {
+public abstract class LLVMToVarINode extends LLVMCastNode {
 
     public abstract int getBits();
+
+    public LLVMToVarINode(CastOperator conversionKind) {
+        super(conversionKind);
+    }
 
     protected abstract LLVMIVarBit executeWith(long value);
 
@@ -63,6 +68,10 @@ public abstract class LLVMToVarINode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMSignedCastToIVarNode extends LLVMToVarINode {
+
+        public LLVMSignedCastToIVarNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Override
         protected LLVMToVarINode createRecursive() {
@@ -102,6 +111,10 @@ public abstract class LLVMToVarINode extends LLVMExpressionNode {
 
     public abstract static class LLVMUnsignedCastToIVarNode extends LLVMToVarINode {
 
+        public LLVMUnsignedCastToIVarNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
         @Override
         protected LLVMToVarINode createRecursive() {
             return LLVMUnsignedCastToIVarNodeGen.create(null, getBits());
@@ -134,6 +147,10 @@ public abstract class LLVMToVarINode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMBitcastToIVarNode extends LLVMToVarINode {
+
+        public LLVMBitcastToIVarNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Override
         protected LLVMToVarINode createRecursive() {

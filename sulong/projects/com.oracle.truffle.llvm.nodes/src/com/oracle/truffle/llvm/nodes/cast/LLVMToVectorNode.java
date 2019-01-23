@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -33,6 +33,7 @@ import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.NodeField;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
+import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.vector.LLVMDoubleVector;
@@ -45,7 +46,7 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
 @NodeField(name = "vectorLength", type = int.class)
-public abstract class LLVMToVectorNode extends LLVMExpressionNode {
+public abstract class LLVMToVectorNode extends LLVMCastNode {
 
     protected static final int SHORTS_PER_INT = Integer.BYTES / Short.BYTES;
     protected static final int SHORTS_PER_LONG = Long.BYTES / Short.BYTES;
@@ -58,9 +59,17 @@ public abstract class LLVMToVectorNode extends LLVMExpressionNode {
     protected static final int FLOATS_PER_LONG = Long.BYTES / Float.BYTES;
     protected static final int FLOATS_PER_DOUBLE = Double.BYTES / Float.BYTES;
 
+    public LLVMToVectorNode(CastOperator conversionKind) {
+        super(conversionKind);
+    }
+
     protected abstract int getVectorLength();
 
     public abstract static class LLVMSignedCastToI1VectorNode extends LLVMToVectorNode {
+
+        public LLVMSignedCastToI1VectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         protected LLVMI1Vector doI1(LLVMI1Vector from) {
@@ -137,6 +146,10 @@ public abstract class LLVMToVectorNode extends LLVMExpressionNode {
 
     public abstract static class LLVMSignedCastToI8VectorNode extends LLVMToVectorNode {
 
+        public LLVMSignedCastToI8VectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
         @Specialization
         @ExplodeLoop
         protected LLVMI8Vector doI1(LLVMI1Vector from) {
@@ -211,6 +224,10 @@ public abstract class LLVMToVectorNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMSignedCastToI16VectorNode extends LLVMToVectorNode {
+
+        public LLVMSignedCastToI16VectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         @ExplodeLoop
@@ -287,6 +304,10 @@ public abstract class LLVMToVectorNode extends LLVMExpressionNode {
 
     public abstract static class LLVMSignedCastToI32VectorNode extends LLVMToVectorNode {
 
+        public LLVMSignedCastToI32VectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
         @Specialization
         @ExplodeLoop
         protected LLVMI32Vector doI1(LLVMI1Vector from) {
@@ -361,6 +382,10 @@ public abstract class LLVMToVectorNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMSignedCastToI64VectorNode extends LLVMToVectorNode {
+
+        public LLVMSignedCastToI64VectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         @ExplodeLoop
@@ -437,6 +462,10 @@ public abstract class LLVMToVectorNode extends LLVMExpressionNode {
 
     public abstract static class LLVMSignedCastToFloatVectorNode extends LLVMToVectorNode {
 
+        public LLVMSignedCastToFloatVectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
         @Specialization
         @ExplodeLoop
         protected LLVMFloatVector doI1(LLVMI1Vector from) {
@@ -512,6 +541,10 @@ public abstract class LLVMToVectorNode extends LLVMExpressionNode {
 
     public abstract static class LLVMSignedCastToDoubleVectorNode extends LLVMToVectorNode {
 
+        public LLVMSignedCastToDoubleVectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
         @Specialization
         @ExplodeLoop
         protected LLVMDoubleVector doI1(LLVMI1Vector from) {
@@ -586,6 +619,10 @@ public abstract class LLVMToVectorNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMBitcastToI1VectorNode extends LLVMToVectorNode {
+
+        public LLVMBitcastToI1VectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @ExplodeLoop
         private LLVMI1Vector castFromLong(long from, int elem) {
@@ -722,6 +759,10 @@ public abstract class LLVMToVectorNode extends LLVMExpressionNode {
 
     public abstract static class LLVMBitcastToI8VectorNode extends LLVMToVectorNode {
 
+        public LLVMBitcastToI8VectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
         @ExplodeLoop
         private LLVMI8Vector castFromLong(long from, int elem) {
             assert elem == getVectorLength();
@@ -846,6 +887,10 @@ public abstract class LLVMToVectorNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMBitcastToI16VectorNode extends LLVMToVectorNode {
+
+        public LLVMBitcastToI16VectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @ExplodeLoop
         private LLVMI16Vector castFromLong(long from, int elem) {
@@ -976,6 +1021,10 @@ public abstract class LLVMToVectorNode extends LLVMExpressionNode {
 
     public abstract static class LLVMBitcastToI32VectorNode extends LLVMToVectorNode {
 
+        public LLVMBitcastToI32VectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
         @Specialization
         protected LLVMI32Vector doI32(int from) {
             int[] vector = new int[]{from};
@@ -1087,6 +1136,10 @@ public abstract class LLVMToVectorNode extends LLVMExpressionNode {
 
     public abstract static class LLVMBitcastToI64VectorNode extends LLVMToVectorNode {
 
+        public LLVMBitcastToI64VectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
         @Specialization
         protected LLVMI64Vector doI64(long from) {
             long[] vector = new long[]{from};
@@ -1181,6 +1234,10 @@ public abstract class LLVMToVectorNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMBitcastToFloatVectorNode extends LLVMToVectorNode {
+
+        public LLVMBitcastToFloatVectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         protected LLVMFloatVector doInt(int from) {
@@ -1287,6 +1344,10 @@ public abstract class LLVMToVectorNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMBitcastToDoubleVectorNode extends LLVMToVectorNode {
+
+        public LLVMBitcastToDoubleVectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         protected LLVMDoubleVector doLong(long from) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,43 +27,40 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.model.enums;
+package com.oracle.truffle.llvm.nodes.cast;
 
-public enum CastOperator {
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.CastOperator;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjects;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 
-    TRUNCATE("trunc"),
-    ZERO_EXTEND("zext"),
-    SIGN_EXTEND("sext"),
-    FP_TO_UNSIGNED_INT("fptoui"),
-    FP_TO_SIGNED_INT("fptosi"),
-    UNSIGNED_INT_TO_FP("uitofp"),
-    SIGNED_INT_TO_FP("sitofp"),
-    FP_TRUNCATE("fptrunc"),
-    FP_EXTEND("fpext"),
-    PTR_TO_INT("ptrtoint"),
-    INT_TO_PTR("inttoptr"),
-    BITCAST("bitcast"),
-    ADDRESS_SPACE_CAST("addrspacecast");
+public abstract class LLVMCastNode extends LLVMExpressionNode {
 
-    private static final CastOperator[] VALUES = values();
+    private final CastOperator conversionKind;
 
-    public static CastOperator decode(int code) {
-        if (code >= 0 && code < VALUES.length) {
-            return VALUES[code];
-        }
-        return null;
+    protected LLVMCastNode(CastOperator conversionKind) {
+        assert conversionKind != null : "Cast must have a valid conversionKind";
+        this.conversionKind = conversionKind;
     }
 
-    private final String irString;
-
-    CastOperator(String irString) {
-        this.irString = irString;
+    public CastOperator getConversionKind() {
+        return conversionKind;
     }
 
-    /**
-     * Useful to get the llvm ir equivalent string of the enum.
-     */
-    public String getIrString() {
-        return irString;
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return tag == LLVMTags.Cast.class || super.hasTag(tag);
+    }
+
+    @Override
+    public Object getNodeObject() {
+        return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_CONVERSION_KIND}, new Object[]{conversionKind.getIrString()});
+    }
+
+    @Override
+    public String toString() {
+        return conversionKind.getIrString();
     }
 }

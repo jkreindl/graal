@@ -36,6 +36,7 @@ import com.oracle.truffle.llvm.nodes.cast.LLVMToDoubleNodeGen.LLVMBitcastToDoubl
 import com.oracle.truffle.llvm.nodes.cast.LLVMToDoubleNodeGen.LLVMSignedCastToDoubleNodeGen;
 import com.oracle.truffle.llvm.nodes.cast.LLVMToDoubleNodeGen.LLVMUnsignedCastToDoubleNodeGen;
 import com.oracle.truffle.llvm.nodes.cast.LLVMToI64Node.LLVMBitcastToI64Node;
+import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.LLVMBoxedPrimitive;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
 import com.oracle.truffle.llvm.runtime.interop.convert.ForeignToLLVM;
@@ -52,7 +53,11 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI64Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMToDoubleNode extends LLVMExpressionNode {
+public abstract class LLVMToDoubleNode extends LLVMCastNode {
+
+    public LLVMToDoubleNode(CastOperator conversionKind) {
+        super(conversionKind);
+    }
 
     protected abstract double executeWith(long value);
 
@@ -79,6 +84,10 @@ public abstract class LLVMToDoubleNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMSignedCastToDoubleNode extends LLVMToDoubleNode {
+
+        public LLVMSignedCastToDoubleNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Override
         protected LLVMToDoubleNode createRecursive() {
@@ -130,6 +139,10 @@ public abstract class LLVMToDoubleNode extends LLVMExpressionNode {
 
         private static final double LEADING_BIT = 0x1.0p63;
 
+        public LLVMUnsignedCastToDoubleNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
         @Override
         protected LLVMToDoubleNode createRecursive() {
             return LLVMUnsignedCastToDoubleNodeGen.create(null);
@@ -171,6 +184,10 @@ public abstract class LLVMToDoubleNode extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMBitcastToDoubleNode extends LLVMToDoubleNode {
+
+        public LLVMBitcastToDoubleNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Override
         protected LLVMToDoubleNode createRecursive() {

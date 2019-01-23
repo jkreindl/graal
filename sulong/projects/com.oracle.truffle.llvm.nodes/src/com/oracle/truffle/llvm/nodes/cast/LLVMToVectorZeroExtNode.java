@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2018, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -31,6 +31,7 @@ package com.oracle.truffle.llvm.nodes.cast;
 
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
+import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI16Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI1Vector;
@@ -40,7 +41,15 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 public abstract class LLVMToVectorZeroExtNode extends LLVMToVectorNode {
 
+    public LLVMToVectorZeroExtNode(CastOperator conversionKind) {
+        super(conversionKind);
+    }
+
     public abstract static class LLVMUnsignedCastToI1VectorNode extends LLVMToVectorNode {
+
+        public LLVMUnsignedCastToI1VectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         protected LLVMI1Vector doI1Vector(LLVMI1Vector from) {
@@ -50,6 +59,10 @@ public abstract class LLVMToVectorZeroExtNode extends LLVMToVectorNode {
     }
 
     public abstract static class LLVMUnsignedCastToI8VectorNode extends LLVMToVectorNode {
+
+        public LLVMUnsignedCastToI8VectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         @ExplodeLoop
@@ -70,6 +83,10 @@ public abstract class LLVMToVectorZeroExtNode extends LLVMToVectorNode {
     }
 
     public abstract static class LLVMUnsignedCastToI16VectorNode extends LLVMToVectorNode {
+
+        public LLVMUnsignedCastToI16VectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         @ExplodeLoop
@@ -101,6 +118,10 @@ public abstract class LLVMToVectorZeroExtNode extends LLVMToVectorNode {
     }
 
     public abstract static class LLVMUnsignedCastToI32VectorNode extends LLVMToVectorNode {
+
+        public LLVMUnsignedCastToI32VectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         @ExplodeLoop
@@ -143,6 +164,10 @@ public abstract class LLVMToVectorZeroExtNode extends LLVMToVectorNode {
     }
 
     public abstract static class LLVMUnsignedCastToI64VectorNode extends LLVMToVectorNode {
+
+        public LLVMUnsignedCastToI64VectorNode(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         @ExplodeLoop

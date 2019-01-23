@@ -382,6 +382,7 @@ import com.oracle.truffle.llvm.parser.model.attributes.Attribute.KnownAttribute;
 import com.oracle.truffle.llvm.parser.model.attributes.AttributesGroup;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDeclaration;
 import com.oracle.truffle.llvm.runtime.ArithmeticOperation;
+import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.CompareOperator;
 import com.oracle.truffle.llvm.runtime.GetStackSpaceFactory;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
@@ -1069,7 +1070,7 @@ public class BasicNodeFactory implements NodeFactory {
     }
 
     @Override
-    public LLVMExpressionNode createSignedCast(LLVMExpressionNode fromNode, Type targetType) {
+    public LLVMExpressionNode createSignedCast(CastOperator conversionKind, LLVMExpressionNode fromNode, Type targetType) {
         // does a signed cast (either sign extend or truncate) from (int or FP) to (int or FP). for
         // vectors, the number of elements in source and target must match.
         //
@@ -1078,9 +1079,9 @@ public class BasicNodeFactory implements NodeFactory {
         // target:  [vector] int) |  [vector] sint) |  [vector] FP)   |  [vector] FP) |  int)
         // @formatter:on
         if (targetType instanceof PrimitiveType) {
-            return createSignedCast(fromNode, ((PrimitiveType) targetType).getPrimitiveKind());
+            return createSignedCast(conversionKind, fromNode, ((PrimitiveType) targetType).getPrimitiveKind());
         } else if (targetType instanceof VariableBitWidthType) {
-            return LLVMSignedCastToIVarNodeGen.create(fromNode, targetType.getBitSize());
+            return LLVMSignedCastToIVarNodeGen.create(conversionKind, fromNode, targetType.getBitSize());
         } else if (targetType instanceof VectorType) {
             VectorType vectorType = (VectorType) targetType;
             Type elemType = vectorType.getElementType();
@@ -1088,19 +1089,19 @@ public class BasicNodeFactory implements NodeFactory {
             if (elemType instanceof PrimitiveType) {
                 switch (((PrimitiveType) ((VectorType) targetType).getElementType()).getPrimitiveKind()) {
                     case I1:
-                        return LLVMSignedCastToI1VectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMSignedCastToI1VectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case I8:
-                        return LLVMSignedCastToI8VectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMSignedCastToI8VectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case I16:
-                        return LLVMSignedCastToI16VectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMSignedCastToI16VectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case I32:
-                        return LLVMSignedCastToI32VectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMSignedCastToI32VectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case I64:
-                        return LLVMSignedCastToI64VectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMSignedCastToI64VectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case FLOAT:
-                        return LLVMSignedCastToFloatVectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMSignedCastToFloatVectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case DOUBLE:
-                        return LLVMSignedCastToDoubleVectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMSignedCastToDoubleVectorNodeGen.create(conversionKind, fromNode, vectorLength);
                 }
             }
         }
@@ -1109,31 +1110,31 @@ public class BasicNodeFactory implements NodeFactory {
     }
 
     @Override
-    public LLVMExpressionNode createSignedCast(LLVMExpressionNode fromNode, PrimitiveKind kind) {
+    public LLVMExpressionNode createSignedCast(CastOperator conversionKind, LLVMExpressionNode fromNode, PrimitiveKind kind) {
         switch (kind) {
             case I1:
-                return LLVMSignedCastToI1NodeGen.create(fromNode);
+                return LLVMSignedCastToI1NodeGen.create(conversionKind, fromNode);
             case I8:
-                return LLVMSignedCastToI8NodeGen.create(fromNode);
+                return LLVMSignedCastToI8NodeGen.create(conversionKind, fromNode);
             case I16:
-                return LLVMSignedCastToI16NodeGen.create(fromNode);
+                return LLVMSignedCastToI16NodeGen.create(conversionKind, fromNode);
             case I32:
-                return LLVMSignedCastToI32NodeGen.create(fromNode);
+                return LLVMSignedCastToI32NodeGen.create(conversionKind, fromNode);
             case I64:
-                return LLVMSignedCastToI64NodeGen.create(fromNode);
+                return LLVMSignedCastToI64NodeGen.create(conversionKind, fromNode);
             case FLOAT:
-                return LLVMSignedCastToFloatNodeGen.create(fromNode);
+                return LLVMSignedCastToFloatNodeGen.create(conversionKind, fromNode);
             case DOUBLE:
-                return LLVMSignedCastToDoubleNodeGen.create(fromNode);
+                return LLVMSignedCastToDoubleNodeGen.create(conversionKind, fromNode);
             case X86_FP80:
-                return LLVMSignedCastToLLVM80BitFloatNodeGen.create(fromNode);
+                return LLVMSignedCastToLLVM80BitFloatNodeGen.create(conversionKind, fromNode);
             default:
                 throw unsupportedCast(kind);
         }
     }
 
     @Override
-    public LLVMExpressionNode createUnsignedCast(LLVMExpressionNode fromNode, Type targetType) {
+    public LLVMExpressionNode createUnsignedCast(CastOperator conversionKind, LLVMExpressionNode fromNode, Type targetType) {
         // does an unsigned cast (zero extension or FP to uint). for vectors, the number of elements
         // in source and target must match.
         //
@@ -1142,11 +1143,11 @@ public class BasicNodeFactory implements NodeFactory {
         // target:  [vector] int) |  [vector] FP)   |  [vector] uint |  ptr)
         // @formatter:on
         if (targetType instanceof PrimitiveType) {
-            return createUnsignedCast(fromNode, ((PrimitiveType) targetType).getPrimitiveKind());
+            return createUnsignedCast(conversionKind, fromNode, ((PrimitiveType) targetType).getPrimitiveKind());
         } else if (targetType instanceof PointerType || targetType instanceof FunctionType) {
-            return LLVMToAddressNodeGen.create(fromNode);
+            return LLVMToAddressNodeGen.create(conversionKind, fromNode);
         } else if (targetType instanceof VariableBitWidthType) {
-            return LLVMUnsignedCastToIVarNodeGen.create(fromNode, targetType.getBitSize());
+            return LLVMUnsignedCastToIVarNodeGen.create(conversionKind, fromNode, targetType.getBitSize());
         } else if (targetType instanceof VectorType) {
             VectorType vectorType = (VectorType) targetType;
             Type elemType = vectorType.getElementType();
@@ -1154,15 +1155,15 @@ public class BasicNodeFactory implements NodeFactory {
             if (elemType instanceof PrimitiveType) {
                 switch (((PrimitiveType) elemType).getPrimitiveKind()) {
                     case I1:
-                        return LLVMUnsignedCastToI1VectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMUnsignedCastToI1VectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case I8:
-                        return LLVMUnsignedCastToI8VectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMUnsignedCastToI8VectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case I16:
-                        return LLVMUnsignedCastToI16VectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMUnsignedCastToI16VectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case I32:
-                        return LLVMUnsignedCastToI32VectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMUnsignedCastToI32VectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case I64:
-                        return LLVMUnsignedCastToI64VectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMUnsignedCastToI64VectorNodeGen.create(conversionKind, fromNode, vectorLength);
                 }
             }
         }
@@ -1171,39 +1172,39 @@ public class BasicNodeFactory implements NodeFactory {
     }
 
     @Override
-    public LLVMExpressionNode createUnsignedCast(LLVMExpressionNode fromNode, PrimitiveKind kind) {
+    public LLVMExpressionNode createUnsignedCast(CastOperator conversionKind, LLVMExpressionNode fromNode, PrimitiveKind kind) {
         switch (kind) {
             case I8:
-                return LLVMUnsignedCastToI8NodeGen.create(fromNode);
+                return LLVMUnsignedCastToI8NodeGen.create(conversionKind, fromNode);
             case I16:
-                return LLVMUnsignedCastToI16NodeGen.create(fromNode);
+                return LLVMUnsignedCastToI16NodeGen.create(conversionKind, fromNode);
             case I32:
-                return LLVMUnsignedCastToI32NodeGen.create(fromNode);
+                return LLVMUnsignedCastToI32NodeGen.create(conversionKind, fromNode);
             case I64:
-                return LLVMUnsignedCastToI64NodeGen.create(fromNode);
+                return LLVMUnsignedCastToI64NodeGen.create(conversionKind, fromNode);
             case FLOAT:
-                return LLVMUnsignedCastToFloatNodeGen.create(fromNode);
+                return LLVMUnsignedCastToFloatNodeGen.create(conversionKind, fromNode);
             case DOUBLE:
-                return LLVMUnsignedCastToDoubleNodeGen.create(fromNode);
+                return LLVMUnsignedCastToDoubleNodeGen.create(conversionKind, fromNode);
             case X86_FP80:
-                return LLVMUnsignedCastToLLVM80BitFloatNodeGen.create(fromNode);
+                return LLVMUnsignedCastToLLVM80BitFloatNodeGen.create(conversionKind, fromNode);
             default:
                 throw unsupportedCast(kind);
         }
     }
 
     @Override
-    public LLVMExpressionNode createBitcast(LLVMExpressionNode fromNode, Type targetType, Type fromType) {
+    public LLVMExpressionNode createBitcast(CastOperator conversionKind, LLVMExpressionNode fromNode, Type targetType, Type fromType) {
         // does a reinterpreting cast between pretty much anything as long as source and target have
         // the same bit width.
         assert targetType != null;
 
         if (targetType instanceof PrimitiveType) {
-            return createBitcast(fromNode, ((PrimitiveType) targetType).getPrimitiveKind());
+            return createBitcast(conversionKind, fromNode, ((PrimitiveType) targetType).getPrimitiveKind());
         } else if (targetType instanceof PointerType || targetType instanceof FunctionType) {
-            return LLVMToAddressNodeGen.create(fromNode);
+            return LLVMToAddressNodeGen.create(conversionKind, fromNode);
         } else if (targetType instanceof VariableBitWidthType) {
-            return LLVMBitcastToIVarNodeGen.create(fromNode, targetType.getBitSize());
+            return LLVMBitcastToIVarNodeGen.create(conversionKind, fromNode, targetType.getBitSize());
         } else if (targetType instanceof VectorType) {
             VectorType vectorType = (VectorType) targetType;
             Type elemType = vectorType.getElementType();
@@ -1211,19 +1212,19 @@ public class BasicNodeFactory implements NodeFactory {
             if (elemType instanceof PrimitiveType) {
                 switch (((PrimitiveType) elemType).getPrimitiveKind()) {
                     case I1:
-                        return LLVMBitcastToI1VectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMBitcastToI1VectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case I8:
-                        return LLVMBitcastToI8VectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMBitcastToI8VectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case I16:
-                        return LLVMBitcastToI16VectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMBitcastToI16VectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case I32:
-                        return LLVMBitcastToI32VectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMBitcastToI32VectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case I64:
-                        return LLVMBitcastToI64VectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMBitcastToI64VectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case FLOAT:
-                        return LLVMBitcastToFloatVectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMBitcastToFloatVectorNodeGen.create(conversionKind, fromNode, vectorLength);
                     case DOUBLE:
-                        return LLVMBitcastToDoubleVectorNodeGen.create(fromNode, vectorLength);
+                        return LLVMBitcastToDoubleVectorNodeGen.create(conversionKind, fromNode, vectorLength);
                 }
             }
         }
@@ -1232,24 +1233,24 @@ public class BasicNodeFactory implements NodeFactory {
     }
 
     @Override
-    public LLVMExpressionNode createBitcast(LLVMExpressionNode fromNode, PrimitiveKind kind) {
+    public LLVMExpressionNode createBitcast(CastOperator conversionKind, LLVMExpressionNode fromNode, PrimitiveKind kind) {
         switch (kind) {
             case I1:
-                return LLVMBitcastToI1NodeGen.create(fromNode);
+                return LLVMBitcastToI1NodeGen.create(conversionKind, fromNode);
             case I8:
-                return LLVMBitcastToI8NodeGen.create(fromNode);
+                return LLVMBitcastToI8NodeGen.create(conversionKind, fromNode);
             case I16:
-                return LLVMBitcastToI16NodeGen.create(fromNode);
+                return LLVMBitcastToI16NodeGen.create(conversionKind, fromNode);
             case I32:
-                return LLVMBitcastToI32NodeGen.create(fromNode);
+                return LLVMBitcastToI32NodeGen.create(conversionKind, fromNode);
             case I64:
-                return LLVMBitcastToI64NodeGen.create(fromNode);
+                return LLVMBitcastToI64NodeGen.create(conversionKind, fromNode);
             case FLOAT:
-                return LLVMBitcastToFloatNodeGen.create(fromNode);
+                return LLVMBitcastToFloatNodeGen.create(conversionKind, fromNode);
             case DOUBLE:
-                return LLVMBitcastToDoubleNodeGen.create(fromNode);
+                return LLVMBitcastToDoubleNodeGen.create(conversionKind, fromNode);
             case X86_FP80:
-                return LLVMBitcastToLLVM80BitFloatNodeGen.create(fromNode);
+                return LLVMBitcastToLLVM80BitFloatNodeGen.create(conversionKind, fromNode);
             default:
                 throw unsupportedCast(kind);
         }

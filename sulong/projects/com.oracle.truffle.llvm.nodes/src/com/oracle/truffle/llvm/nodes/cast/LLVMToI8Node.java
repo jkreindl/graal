@@ -33,6 +33,7 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.llvm.nodes.cast.LLVMToI64Node.LLVMBitcastToI64Node;
+import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.LLVMBoxedPrimitive;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
@@ -45,7 +46,11 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI1Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMToI8Node extends LLVMExpressionNode {
+public abstract class LLVMToI8Node extends LLVMCastNode {
+
+    public LLVMToI8Node(CastOperator conversionKind) {
+        super(conversionKind);
+    }
 
     @Specialization
     protected byte doPointer(LLVMPointer from,
@@ -64,6 +69,10 @@ public abstract class LLVMToI8Node extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMSignedCastToI8Node extends LLVMToI8Node {
+
+        public LLVMSignedCastToI8Node(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         protected byte doI8(boolean from) {
@@ -113,6 +122,10 @@ public abstract class LLVMToI8Node extends LLVMExpressionNode {
 
     public abstract static class LLVMUnsignedCastToI8Node extends LLVMToI8Node {
 
+        public LLVMUnsignedCastToI8Node(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
         @Specialization
         protected byte doI1(boolean from) {
             return (byte) (from ? 1 : 0);
@@ -145,6 +158,10 @@ public abstract class LLVMToI8Node extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMBitcastToI8Node extends LLVMToI8Node {
+
+        public LLVMBitcastToI8Node(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         protected byte doI8(byte from) {

@@ -34,6 +34,7 @@ import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.profiles.ConditionProfile;
+import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.LLVMBoxedPrimitive;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
@@ -51,9 +52,14 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI64Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMToI64Node extends LLVMExpressionNode {
+public abstract class LLVMToI64Node extends LLVMCastNode {
+
     private static final float MAX_LONG_AS_FLOAT = Long.MAX_VALUE;
     private static final double MAX_LONG_AS_DOUBLE = Long.MAX_VALUE;
+
+    public LLVMToI64Node(CastOperator conversionKind) {
+        super(conversionKind);
+    }
 
     public abstract Object executeWithTarget(Object o);
 
@@ -74,6 +80,10 @@ public abstract class LLVMToI64Node extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMSignedCastToI64Node extends LLVMToI64Node {
+
+        public LLVMSignedCastToI64Node(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         protected long doI64(boolean from) {
@@ -122,6 +132,11 @@ public abstract class LLVMToI64Node extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMUnsignedCastToI64Node extends LLVMToI64Node {
+
+        public LLVMUnsignedCastToI64Node(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
         @Specialization
         protected long doI1(boolean from) {
             return from ? 1 : 0;
@@ -187,6 +202,11 @@ public abstract class LLVMToI64Node extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMBitcastToI64Node extends LLVMToI64Node {
+
+        public LLVMBitcastToI64Node(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
         @Specialization
         protected long doI64(double from) {
             return Double.doubleToRawLongBits(from);

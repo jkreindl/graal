@@ -32,6 +32,11 @@ package com.oracle.truffle.llvm.nodes.cast;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.interop.ForeignAccess;
+import com.oracle.truffle.api.interop.TruffleObject;
+import com.oracle.truffle.api.interop.UnsupportedMessageException;
+import com.oracle.truffle.api.nodes.Node;
+import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.LLVMBoxedPrimitive;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
@@ -43,7 +48,11 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI1Vector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMToI1Node extends LLVMExpressionNode {
+public abstract class LLVMToI1Node extends LLVMCastNode {
+
+    public LLVMToI1Node(CastOperator conversionKind) {
+        super(conversionKind);
+    }
 
     @Specialization
     protected boolean doPointer(LLVMPointer from,
@@ -62,6 +71,11 @@ public abstract class LLVMToI1Node extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMSignedCastToI1Node extends LLVMToI1Node {
+
+        public LLVMSignedCastToI1Node(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
         @Specialization
         protected boolean doI1(boolean from) {
             return from;
@@ -109,6 +123,10 @@ public abstract class LLVMToI1Node extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMBitcastToI1Node extends LLVMToI1Node {
+
+        public LLVMBitcastToI1Node(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         protected boolean doI1(boolean from) {
