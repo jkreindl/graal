@@ -38,6 +38,7 @@ import com.oracle.truffle.api.instrumentation.StandardTags;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.nodes.Node;
+import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.source.SourceSection;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.LLVMFunctionDescriptor;
@@ -50,6 +51,14 @@ import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
 
 @TypeSystemReference(LLVMTypes.class)
 public abstract class LLVMNode extends Node {
+
+    private static final SourceSection INTERNAL_NODE_SOURCE;
+
+    static {
+        final Source source = Source.newBuilder("llvm", "LLVM internal node!", "<llvm internal>").mimeType("text/plain").internal(true).build();
+        INTERNAL_NODE_SOURCE = source.createUnavailableSection();
+    }
+
     public static final int DOUBLE_SIZE_IN_BYTES = 8;
     public static final int FLOAT_SIZE_IN_BYTES = 4;
 
@@ -94,9 +103,12 @@ public abstract class LLVMNode extends Node {
     }
 
     public boolean hasTag(Class<? extends Tag> tag) {
-        // only nodes that have a SourceSection attached are considered to be tagged by any
-        // anything, for sulong only those nodes that actually represent source language statements
-        // should have one
+        // we provide a default SourceSection for all nodes, so all nodes are instrumentable in
+        // theory, but a debugger should only step on a node with an explicit SourceSection
+        if (getSourceLocation() == null) {
+            return false;
+        }
+
         return tag == StandardTags.StatementTag.class;
     }
 
@@ -111,7 +123,7 @@ public abstract class LLVMNode extends Node {
             return location.getSourceSection();
         }
 
-        return null;
+        return INTERNAL_NODE_SOURCE;
     }
 
     protected static boolean isFunctionDescriptor(TruffleObject object) {
