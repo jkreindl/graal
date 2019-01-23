@@ -29,10 +29,17 @@
  */
 package com.oracle.truffle.llvm.nodes.op;
 
+import java.util.Set;
+
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.instrumentation.InstrumentableNode;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjects;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 
 @NodeChild(type = LLVMExpressionNode.class)
@@ -41,7 +48,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
 
     public abstract boolean executeCompare(Object val1, Object val2);
 
-    public abstract static class LLVMEqNode extends LLVMCompareNode {
+    private abstract static class LLVMIntegerCompareNode extends LLVMCompareNode {
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.ICMP.class || super.hasTag(tag);
+        }
+    }
+
+    public abstract static class LLVMEqNode extends LLVMIntegerCompareNode {
         @Specialization
         protected boolean eq(boolean val1, boolean val2) {
             return val1 == val2;
@@ -71,9 +85,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean eq(LLVMIVarBit val1, LLVMIVarBit val2) {
             return val1.compare(val2) == 0;
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"eq"});
+        }
     }
 
-    public abstract static class LLVMNeNode extends LLVMCompareNode {
+    public abstract static class LLVMNeNode extends LLVMIntegerCompareNode {
         @Specialization
         protected boolean nq(boolean val1, boolean val2) {
             return val1 != val2;
@@ -103,9 +122,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean nq(LLVMIVarBit val1, LLVMIVarBit val2) {
             return val1.compare(val2) != 0;
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"ne"});
+        }
     }
 
-    public abstract static class LLVMSignedLtNode extends LLVMCompareNode {
+    public abstract static class LLVMSignedLtNode extends LLVMIntegerCompareNode {
         @Specialization
         protected boolean slt(short val1, short val2) {
             return val1 < val2;
@@ -130,9 +154,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean slt(byte val1, byte val2) {
             return val1 < val2;
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"slt"});
+        }
     }
 
-    public abstract static class LLVMSignedLeNode extends LLVMCompareNode {
+    public abstract static class LLVMSignedLeNode extends LLVMIntegerCompareNode {
         @Specialization
         protected boolean sle(short val1, short val2) {
             return val1 <= val2;
@@ -157,9 +186,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean sle(byte val1, byte val2) {
             return val1 <= val2;
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"sle"});
+        }
     }
 
-    public abstract static class LLVMUnsignedLtNode extends LLVMCompareNode {
+    public abstract static class LLVMUnsignedLtNode extends LLVMIntegerCompareNode {
         @Specialization
         protected boolean ult(short val1, short val2) {
             return Integer.compareUnsigned(val1, val2) < 0;
@@ -184,9 +218,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean ult(byte val1, byte val2) {
             return Integer.compareUnsigned(val1, val2) < 0;
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"ult"});
+        }
     }
 
-    public abstract static class LLVMUnsignedLeNode extends LLVMCompareNode {
+    public abstract static class LLVMUnsignedLeNode extends LLVMIntegerCompareNode {
         @Specialization
         protected boolean ule(short val1, short val2) {
             return Integer.compareUnsigned(val1, val2) <= 0;
@@ -211,9 +250,21 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean ule(byte val1, byte val2) {
             return Integer.compareUnsigned(val1, val2) <= 0;
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"ule"});
+        }
     }
 
-    public abstract static class LLVMOrderedLtNode extends LLVMCompareNode {
+    private abstract static class LLVMFloatingCompareNode extends LLVMCompareNode {
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.FCMP.class || super.hasTag(tag);
+        }
+    }
+
+    public abstract static class LLVMOrderedLtNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean olt(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return LLVM80BitFloat.areOrdered(val1, val2) && LLVM80BitFloat.compare(val1, val2) < 0;
@@ -237,9 +288,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
             assert !(val1 < val2) || areOrdered(val1, val2);
             return val1 < val2;
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"olt"});
+        }
     }
 
-    public abstract static class LLVMOrderedGtNode extends LLVMCompareNode {
+    public abstract static class LLVMOrderedGtNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean ogt(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return LLVM80BitFloat.areOrdered(val1, val2) && LLVM80BitFloat.compare(val1, val2) > 0;
@@ -263,9 +319,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
             assert !(val1 > val2) || areOrdered(val1, val2);
             return val1 > val2;
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"ogt"});
+        }
     }
 
-    public abstract static class LLVMOrderedGeNode extends LLVMCompareNode {
+    public abstract static class LLVMOrderedGeNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean oge(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return LLVM80BitFloat.areOrdered(val1, val2) && LLVM80BitFloat.compare(val1, val2) >= 0;
@@ -289,9 +350,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
             assert !(val1 >= val2) || areOrdered(val1, val2);
             return val1 >= val2;
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"oge"});
+        }
     }
 
-    public abstract static class LLVMOrderedLeNode extends LLVMCompareNode {
+    public abstract static class LLVMOrderedLeNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean ole(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return LLVM80BitFloat.areOrdered(val1, val2) && LLVM80BitFloat.compare(val1, val2) <= 0;
@@ -315,9 +381,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
             assert !(val1 <= val2) || areOrdered(val1, val2);
             return val1 <= val2;
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"ole"});
+        }
     }
 
-    public abstract static class LLVMOrderedEqNode extends LLVMCompareNode {
+    public abstract static class LLVMOrderedEqNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean oeq(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return LLVM80BitFloat.areOrdered(val1, val2) && LLVM80BitFloat.compare(val1, val2) == 0;
@@ -341,9 +412,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
             assert !(val1 == val2) || areOrdered(val1, val2);
             return val1 == val2;
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"oeq"});
+        }
     }
 
-    public abstract static class LLVMOrderedNeNode extends LLVMCompareNode {
+    public abstract static class LLVMOrderedNeNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean one(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return LLVM80BitFloat.areOrdered(val1, val2) && LLVM80BitFloat.compare(val1, val2) != 0;
@@ -374,9 +450,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
                 return false;
             }
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"one"});
+        }
     }
 
-    public abstract static class LLVMOrderedNode extends LLVMCompareNode {
+    public abstract static class LLVMOrderedNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean ord(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return LLVM80BitFloat.areOrdered(val1, val2);
@@ -391,9 +472,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean ord(float val1, float val2) {
             return areOrdered(val1, val2);
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"ord"});
+        }
     }
 
-    public abstract static class LLVMUnorderedLtNode extends LLVMCompareNode {
+    public abstract static class LLVMUnorderedLtNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean ult(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return !LLVM80BitFloat.areOrdered(val1, val2) || LLVM80BitFloat.compare(val1, val2) < 0;
@@ -408,9 +494,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean ult(float val1, float val2) {
             return !(val1 >= val2);
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"ult"});
+        }
     }
 
-    public abstract static class LLVMUnorderedLeNode extends LLVMCompareNode {
+    public abstract static class LLVMUnorderedLeNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean ule(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return !LLVM80BitFloat.areOrdered(val1, val2) || LLVM80BitFloat.compare(val1, val2) <= 0;
@@ -425,9 +516,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean ule(float val1, float val2) {
             return !(val1 > val2);
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"ule"});
+        }
     }
 
-    public abstract static class LLVMUnorderedGtNode extends LLVMCompareNode {
+    public abstract static class LLVMUnorderedGtNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean ugt(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return !LLVM80BitFloat.areOrdered(val1, val2) || LLVM80BitFloat.compare(val1, val2) > 0;
@@ -442,9 +538,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean ugt(float val1, float val2) {
             return !(val1 <= val2);
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"ugt"});
+        }
     }
 
-    public abstract static class LLVMUnorderedGeNode extends LLVMCompareNode {
+    public abstract static class LLVMUnorderedGeNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean uge(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return !LLVM80BitFloat.areOrdered(val1, val2) || LLVM80BitFloat.compare(val1, val2) >= 0;
@@ -459,9 +560,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean uge(float val1, float val2) {
             return !(val1 < val2);
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"uge"});
+        }
     }
 
-    public abstract static class LLVMUnorderedEqNode extends LLVMCompareNode {
+    public abstract static class LLVMUnorderedEqNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean ueq(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return !LLVM80BitFloat.areOrdered(val1, val2) || LLVM80BitFloat.compare(val1, val2) == 0;
@@ -476,9 +582,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean ueq(float val1, float val2) {
             return !areOrdered(val1, val2) || val1 == val2;
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"ueq"});
+        }
     }
 
-    public abstract static class LLVMUnorderedNeNode extends LLVMCompareNode {
+    public abstract static class LLVMUnorderedNeNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean une(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return !LLVM80BitFloat.areOrdered(val1, val2) || LLVM80BitFloat.compare(val1, val2) != 0;
@@ -501,9 +612,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         private static boolean floatCompare(float val1, float val2) {
             return !(val1 == val2);
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"une"});
+        }
     }
 
-    public abstract static class LLVMUnorderedNode extends LLVMCompareNode {
+    public abstract static class LLVMUnorderedNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean uno(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return !LLVM80BitFloat.areOrdered(val1, val2);
@@ -518,21 +634,95 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean uno(float val1, float val2) {
             return !areOrdered(val1, val2);
         }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"uno"});
+        }
     }
 
-    public abstract static class LLVMTrueCmpNode extends LLVMCompareNode {
+    private abstract static class LLVMUnifiedCmpNode extends LLVMCompareNode {
+
+        private final boolean isICMP;
+
+        private final LLVMExpressionNode actualLHS;
+        private final LLVMExpressionNode actualRHS;
+
+        protected LLVMUnifiedCmpNode(boolean isICMP, LLVMExpressionNode actualLHS, LLVMExpressionNode actualRHS) {
+            this.isICMP = isICMP;
+            this.actualLHS = actualLHS;
+            this.actualRHS = actualRHS;
+        }
+
+        protected boolean isICMP() {
+            return isICMP;
+        }
+
+        protected LLVMExpressionNode getActualLHS() {
+            return actualLHS;
+        }
+
+        protected LLVMExpressionNode getActualRHS() {
+            return actualRHS;
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            if (isICMP && tag == LLVMTags.ICMP.class) {
+                return true;
+            }
+
+            if (!isICMP && tag == LLVMTags.FCMP.class) {
+                return true;
+            }
+
+            return super.hasTag(tag);
+        }
+    }
+
+    public abstract static class LLVMFalseCmpNode extends LLVMUnifiedCmpNode {
+
+        protected LLVMFalseCmpNode(boolean isICMP, LLVMExpressionNode actualLHS, LLVMExpressionNode actualRHS) {
+            super(isICMP, actualLHS, actualRHS);
+        }
+
+        @Specialization
+        @SuppressWarnings("unused")
+        protected boolean op(Object val1, Object val2) {
+            return false;
+        }
+
+        @Override
+        public InstrumentableNode materializeInstrumentableNodes(Set<Class<? extends Tag>> materializedTags) {
+            return LLVMCompareNodeFactory.LLVMFalseCmpNodeGen.create(isICMP(), getActualLHS(), getActualRHS(), getActualLHS(), getActualRHS());
+        }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"false"});
+        }
+    }
+
+    public abstract static class LLVMTrueCmpNode extends LLVMUnifiedCmpNode {
+
+        protected LLVMTrueCmpNode(boolean isICMP, LLVMExpressionNode actualLHS, LLVMExpressionNode actualRHS) {
+            super(isICMP, actualLHS, actualRHS);
+        }
+
         @Specialization
         @SuppressWarnings("unused")
         protected boolean op(Object val1, Object val2) {
             return true;
         }
-    }
 
-    public abstract static class LLVMFalseCmpNode extends LLVMCompareNode {
-        @Specialization
-        @SuppressWarnings("unused")
-        protected boolean op(Object val1, Object val2) {
-            return false;
+        @Override
+        public InstrumentableNode materializeInstrumentableNodes(Set<Class<? extends Tag>> materializedTags) {
+            return LLVMCompareNodeFactory.LLVMTrueCmpNodeGen.create(isICMP(), getActualLHS(), getActualRHS(), getActualLHS(), getActualRHS());
+        }
+
+        @Override
+        public Object getNodeObject() {
+            return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_COMPARISON_KIND}, new Object[]{"true"});
         }
     }
 
