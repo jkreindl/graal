@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,12 +29,10 @@
  */
 package com.oracle.truffle.llvm.nodes.vars;
 
-import com.oracle.truffle.api.dsl.NodeField;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameUtil;
 import com.oracle.truffle.api.frame.VirtualFrame;
-import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.vector.LLVMDoubleVector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMFloatVector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI16Vector;
@@ -44,84 +42,95 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI64Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMPointerVector;
 
-public class LLVMReadVectorNode {
+public abstract class LLVMReadVectorNode extends LLVMReadNode {
 
-    @NodeField(name = "slot", type = FrameSlot.class)
-    public abstract static class LLVMI1VectorReadNode extends LLVMExpressionNode {
+    public LLVMReadVectorNode(FrameSlot slot) {
+        super(slot);
+    }
 
-        protected abstract FrameSlot getSlot();
+    public abstract static class LLVMI1VectorReadNode extends LLVMReadVectorNode {
+
+        public LLVMI1VectorReadNode(FrameSlot slot) {
+            super(slot);
+        }
 
         @Specialization
         protected LLVMI1Vector readI1Vector(VirtualFrame frame) {
-            return (LLVMI1Vector) FrameUtil.getObjectSafe(frame, getSlot());
+            return (LLVMI1Vector) FrameUtil.getObjectSafe(frame, slot);
         }
     }
 
-    @NodeField(name = "slot", type = FrameSlot.class)
-    public abstract static class LLVMI8VectorReadNode extends LLVMExpressionNode {
+    public abstract static class LLVMI8VectorReadNode extends LLVMReadVectorNode {
 
-        protected abstract FrameSlot getSlot();
+        public LLVMI8VectorReadNode(FrameSlot slot) {
+            super(slot);
+        }
 
         @Specialization
         protected LLVMI8Vector readI8Vector(VirtualFrame frame) {
-            return (LLVMI8Vector) FrameUtil.getObjectSafe(frame, getSlot());
+            return (LLVMI8Vector) FrameUtil.getObjectSafe(frame, slot);
         }
     }
 
-    @NodeField(name = "slot", type = FrameSlot.class)
-    public abstract static class LLVMI16VectorReadNode extends LLVMExpressionNode {
+    public abstract static class LLVMI16VectorReadNode extends LLVMReadVectorNode {
 
-        protected abstract FrameSlot getSlot();
+        public LLVMI16VectorReadNode(FrameSlot slot) {
+            super(slot);
+        }
 
         @Specialization
         protected LLVMI16Vector readI16Vector(VirtualFrame frame) {
-            return (LLVMI16Vector) FrameUtil.getObjectSafe(frame, getSlot());
+            return (LLVMI16Vector) FrameUtil.getObjectSafe(frame, slot);
         }
     }
 
-    @NodeField(name = "slot", type = FrameSlot.class)
-    public abstract static class LLVMI32VectorReadNode extends LLVMExpressionNode {
+    public abstract static class LLVMI32VectorReadNode extends LLVMReadVectorNode {
 
-        protected abstract FrameSlot getSlot();
+        public LLVMI32VectorReadNode(FrameSlot slot) {
+            super(slot);
+        }
 
         @Specialization
         protected LLVMI32Vector readI32Vector(VirtualFrame frame) {
-            return (LLVMI32Vector) FrameUtil.getObjectSafe(frame, getSlot());
+            return (LLVMI32Vector) FrameUtil.getObjectSafe(frame, slot);
         }
     }
 
-    @NodeField(name = "slot", type = FrameSlot.class)
-    public abstract static class LLVMI64VectorReadNode extends LLVMExpressionNode {
+    public abstract static class LLVMI64VectorReadNode extends LLVMReadVectorNode {
 
-        protected abstract FrameSlot getSlot();
+        public LLVMI64VectorReadNode(FrameSlot slot) {
+            super(slot);
+        }
 
         @Specialization
         protected Object readVector(VirtualFrame frame) {
-            Object result = FrameUtil.getObjectSafe(frame, getSlot());
+            Object result = FrameUtil.getObjectSafe(frame, slot);
             assert result instanceof LLVMI64Vector || result instanceof LLVMPointerVector;
             return result;
         }
     }
 
-    @NodeField(name = "slot", type = FrameSlot.class)
-    public abstract static class LLVMFloatVectorReadNode extends LLVMExpressionNode {
+    public abstract static class LLVMFloatVectorReadNode extends LLVMReadVectorNode {
 
-        protected abstract FrameSlot getSlot();
+        public LLVMFloatVectorReadNode(FrameSlot slot) {
+            super(slot);
+        }
 
         @Specialization
         protected LLVMFloatVector readFloatVector(VirtualFrame frame) {
-            return (LLVMFloatVector) FrameUtil.getObjectSafe(frame, getSlot());
+            return (LLVMFloatVector) FrameUtil.getObjectSafe(frame, slot);
         }
     }
 
-    @NodeField(name = "slot", type = FrameSlot.class)
-    public abstract static class LLVMDoubleVectorReadNode extends LLVMExpressionNode {
+    public abstract static class LLVMDoubleVectorReadNode extends LLVMReadVectorNode {
 
-        protected abstract FrameSlot getSlot();
+        public LLVMDoubleVectorReadNode(FrameSlot slot) {
+            super(slot);
+        }
 
         @Specialization
         protected LLVMDoubleVector readDoubleVector(VirtualFrame frame) {
-            return (LLVMDoubleVector) FrameUtil.getObjectSafe(frame, getSlot());
+            return (LLVMDoubleVector) FrameUtil.getObjectSafe(frame, slot);
         }
     }
 }
