@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -30,9 +30,16 @@
 package com.oracle.truffle.llvm.runtime.nodes.api;
 
 import com.oracle.truffle.api.dsl.NodeChild;
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 
 @NodeChild(value = "address", type = LLVMExpressionNode.class)
 public abstract class LLVMLoadNode extends LLVMExpressionNode {
 
     public abstract Object executeWithTarget(Object address);
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return tag == LLVMTags.Load.class || super.hasTag(tag);
+    }
 }
