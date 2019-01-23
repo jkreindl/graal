@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -30,7 +30,7 @@
 package com.oracle.truffle.llvm.nodes.func;
 
 import com.oracle.truffle.api.CompilerAsserts;
-import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
@@ -42,6 +42,7 @@ import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.profiles.ConditionProfile;
 import com.oracle.truffle.llvm.nodes.others.LLVMValueProfilingNode;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
@@ -61,8 +62,6 @@ public abstract class LLVMInvokeNode extends LLVMControlFlowNode implements Inst
         @Child protected LLVMValueProfilingNode returnValueProfile;
 
         protected final FunctionType type;
-
-        @CompilationFinal private FrameSlot stackPointer;
 
         private final int normalSuccessor;
         private final int unwindSuccessor;
@@ -102,6 +101,7 @@ public abstract class LLVMInvokeNode extends LLVMControlFlowNode implements Inst
         public void execute(VirtualFrame frame) {
             // checkstyle complains if the class is abstract, so we need to provide a default
             // implementation here
+            CompilerDirectives.transferToInterpreter();
             throw new UnsupportedOperationException("Unimplemented LLVMInvokeNode");
         }
 
@@ -212,6 +212,13 @@ public abstract class LLVMInvokeNode extends LLVMControlFlowNode implements Inst
 
     @Override
     public boolean hasTag(Class<? extends Tag> tag) {
+        if (tag == LLVMTags.Invoke.class) {
+            return true;
+        }
+
+        if (getSourceLocation() == null) {
+            return false;
+        }
         return tag == StandardTags.StatementTag.class || tag == StandardTags.CallTag.class || super.hasTag(tag);
     }
 
