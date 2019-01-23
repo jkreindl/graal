@@ -27,28 +27,51 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.nodes.asm.support;
+package com.oracle.truffle.llvm.runtime;
 
-import com.oracle.truffle.api.dsl.NodeChild;
-import com.oracle.truffle.api.dsl.Specialization;
-import com.oracle.truffle.llvm.nodes.cast.LLVMToI8Node;
-import com.oracle.truffle.llvm.runtime.CastOperator;
-import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
+public enum CastOperator {
 
-public class LLVMAMD64ToI8Node {
-    @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-    public abstract static class LLVMAMD64I64ToI8Node extends LLVMToI8Node {
+    TRUNCATE("trunc"),
+    ZERO_EXTEND("zext"),
+    SIGN_EXTEND("sext"),
+    FP_TO_UNSIGNED_INT("fptoui"),
+    FP_TO_SIGNED_INT("fptosi"),
+    UNSIGNED_INT_TO_FP("uitofp"),
+    SIGNED_INT_TO_FP("sitofp"),
+    FP_TRUNCATE("fptrunc"),
+    FP_EXTEND("fpext"),
+    PTR_TO_INT("ptrtoint"),
+    INT_TO_PTR("inttoptr"),
+    BITCAST("bitcast"),
+    ADDRESS_SPACE_CAST("addrspacecast"),
 
-        private final int shift;
+    // for internal nodes
+    INTERNAL("<internal>");
 
-        public LLVMAMD64I64ToI8Node(int shift) {
-            super(CastOperator.INTERNAL);
-            this.shift = shift;
+    private static final CastOperator[] VALUES = values();
+
+    public static CastOperator decode(int code) {
+        if (code >= 0 && code < VALUES.length) {
+            return VALUES[code];
         }
+        return null;
+    }
 
-        @Specialization
-        protected byte doI8(long from) {
-            return (byte) (from >> shift);
-        }
+    private final String irString;
+
+    CastOperator(String irString) {
+        this.irString = irString;
+    }
+
+    /**
+     * Useful to get the llvm ir equivalent string of the enum.
+     */
+    public String getIrString() {
+        return irString;
+    }
+
+    @Override
+    public String toString() {
+        return getIrString();
     }
 }

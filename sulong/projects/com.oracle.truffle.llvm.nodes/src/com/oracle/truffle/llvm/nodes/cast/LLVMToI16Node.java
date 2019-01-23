@@ -33,6 +33,7 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.llvm.nodes.cast.LLVMToI64Node.LLVMBitcastToI64Node;
+import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.LLVMBoxedPrimitive;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
@@ -46,7 +47,11 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI1Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMToI16Node extends LLVMExpressionNode {
+public abstract class LLVMToI16Node extends LLVMCastNode {
+
+    public LLVMToI16Node(CastOperator conversionKind) {
+        super(conversionKind);
+    }
 
     @Specialization
     protected short doPointer(LLVMPointer from,
@@ -65,6 +70,10 @@ public abstract class LLVMToI16Node extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMSignedCastToI16Node extends LLVMToI16Node {
+
+        public LLVMSignedCastToI16Node(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         protected short doI16(boolean from) {
@@ -114,6 +123,10 @@ public abstract class LLVMToI16Node extends LLVMExpressionNode {
 
     public abstract static class LLVMUnsignedCastToI16Node extends LLVMToI16Node {
 
+        public LLVMUnsignedCastToI16Node(CastOperator conversionKind) {
+            super(conversionKind);
+        }
+
         @Specialization
         protected short doI1(boolean from) {
             return (short) (from ? 1 : 0);
@@ -151,6 +164,10 @@ public abstract class LLVMToI16Node extends LLVMExpressionNode {
     }
 
     public abstract static class LLVMBitcastToI16Node extends LLVMToI16Node {
+
+        public LLVMBitcastToI16Node(CastOperator conversionKind) {
+            super(conversionKind);
+        }
 
         @Specialization
         protected short doI16(short from) {

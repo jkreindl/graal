@@ -81,13 +81,13 @@ public final class LLVMBitcodeTypeHelper {
         }
     }
 
-    public static LLVMExpressionNode createCast(NodeFactory nodeFactory, LLVMExpressionNode fromNode, Type targetType, Type fromType, CastOperator operator) {
-        switch (operator) {
+    public static LLVMExpressionNode createCast(NodeFactory nodeFactory, LLVMExpressionNode fromNode, Type targetType, Type fromType, CastOperator conversionKind) {
+        switch (conversionKind) {
             case ZERO_EXTEND:
             case UNSIGNED_INT_TO_FP:
             case INT_TO_PTR:
             case FP_TO_UNSIGNED_INT:
-                return nodeFactory.createUnsignedCast(fromNode, targetType);
+                return nodeFactory.createUnsignedCast(conversionKind, fromNode, targetType);
             case SIGN_EXTEND:
             case TRUNCATE:
             case FP_TO_SIGNED_INT:
@@ -95,9 +95,9 @@ public final class LLVMBitcodeTypeHelper {
             case FP_TRUNCATE:
             case PTR_TO_INT:
             case SIGNED_INT_TO_FP:
-                return nodeFactory.createSignedCast(fromNode, targetType);
+                return nodeFactory.createSignedCast(conversionKind, fromNode, targetType);
             case BITCAST:
-                return nodeFactory.createBitcast(fromNode, targetType, fromType);
+                return nodeFactory.createBitcast(conversionKind, fromNode, targetType, fromType);
             case ADDRESS_SPACE_CAST:
             default:
                 return null;
