@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2018, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -57,6 +57,9 @@ public class LLVMDebugTrapNode extends LLVMStatementNode {
 
     @Override
     public boolean hasTag(Class<? extends Tag> tag) {
+        if (getSourceLocation() == null) {
+            return false;
+        }
         return tag == DebuggerTags.AlwaysHalt.class || tag == StandardTags.StatementTag.class || super.hasTag(tag);
     }
 }
