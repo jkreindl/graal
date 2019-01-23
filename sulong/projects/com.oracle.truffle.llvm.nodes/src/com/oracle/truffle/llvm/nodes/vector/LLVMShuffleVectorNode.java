@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -32,8 +32,10 @@ package com.oracle.truffle.llvm.nodes.vector;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.NodeField;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.profiles.ConditionProfile;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
@@ -55,6 +57,11 @@ public abstract class LLVMShuffleVectorNode extends LLVMExpressionNode {
     protected final ConditionProfile conditionProfile = ConditionProfile.createCountingProfile();
 
     protected abstract int getVectorLength();
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return tag == LLVMTags.ShuffleVector.class || super.hasTag(tag);
+    }
 
     public abstract static class LLVMShuffleI1VectorNode extends LLVMShuffleVectorNode {
         @Specialization

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,11 +27,12 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.nodes.vector;
+package com.oracle.truffle.llvm.nodes.memory;
 
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
@@ -44,73 +45,96 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI64Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMPointerVector;
 
-@NodeChild(value = "vector", type = LLVMExpressionNode.class)
-@NodeChild(value = "index", type = LLVMExpressionNode.class)
-public abstract class LLVMExtractElementNode extends LLVMExpressionNode {
+@NodeChild(value = "loadedValue", type = LLVMExpressionNode.class)
+public abstract class LLVMExtractValue extends LLVMExpressionNode {
 
     @Override
     public boolean hasTag(Class<? extends Tag> tag) {
-        return tag == LLVMTags.ExtractElement.class || super.hasTag(tag);
+        return tag == LLVMTags.ExtractValue.class || super.hasTag(tag);
     }
 
-    public abstract static class LLVMI1ExtractElementNode extends LLVMExtractElementNode {
-
-        @Specialization
-        protected boolean doI1(LLVMI1Vector vector, int index) {
-            return vector.getValue(index);
-        }
+    @Specialization
+    protected boolean doI1(boolean loadedValue) {
+        return loadedValue;
     }
 
-    public abstract static class LLVMI8ExtractElementNode extends LLVMExtractElementNode {
-
-        @Specialization
-        protected byte doI8(LLVMI8Vector vector, int index) {
-            return vector.getValue(index);
-        }
+    @Specialization
+    protected byte doI8(byte loadedValue) {
+        return loadedValue;
     }
 
-    public abstract static class LLVMI16ExtractElementNode extends LLVMExtractElementNode {
-
-        @Specialization
-        protected short doI16(LLVMI16Vector vector, int index) {
-            return vector.getValue(index);
-        }
+    @Specialization
+    protected short doI16(short loadedValue) {
+        return loadedValue;
     }
 
-    public abstract static class LLVMI32ExtractElementNode extends LLVMExtractElementNode {
-
-        @Specialization
-        protected int doI32(LLVMI32Vector vector, int index) {
-            return vector.getValue(index);
-        }
+    @Specialization
+    protected int doI32(int loadedValue) {
+        return loadedValue;
     }
 
-    public abstract static class LLVMI64ExtractElementNode extends LLVMExtractElementNode {
-
-        @Specialization
-        protected long doI64(LLVMI64Vector vector, int index) {
-            return vector.getValue(index);
-        }
-
-        @Specialization
-        protected LLVMPointer doPointer(LLVMPointerVector vector, int index) {
-            return vector.getValue(index);
-        }
+    @Specialization
+    protected long doI64(long loadedValue) {
+        return loadedValue;
     }
 
-    public abstract static class LLVMFloatExtractElementNode extends LLVMExtractElementNode {
-
-        @Specialization
-        protected float doFloat(LLVMFloatVector vector, int index) {
-            return vector.getValue(index);
-        }
+    @Specialization
+    protected LLVMPointer doLLVMPointer(LLVMPointer loadedValue) {
+        return loadedValue;
     }
 
-    public abstract static class LLVMDoubleExtractElementNode extends LLVMExtractElementNode {
+    @Specialization
+    protected float doFloat(float loadedValue) {
+        return loadedValue;
+    }
 
-        @Specialization
-        protected double doDouble(LLVMDoubleVector vector, int index) {
-            return vector.getValue(index);
-        }
+    @Specialization
+    protected double doDouble(double loadedValue) {
+        return loadedValue;
+    }
+
+    @Specialization
+    protected LLVM80BitFloat doLLVM80BitFloat(LLVM80BitFloat loadedValue) {
+        return loadedValue;
+    }
+
+    @Specialization
+    protected LLVMI1Vector doLLVMI1Vector(LLVMI1Vector loadedValue) {
+        return loadedValue;
+    }
+
+    @Specialization
+    protected LLVMI8Vector doLLVMI8Vector(LLVMI8Vector loadedValue) {
+        return loadedValue;
+    }
+
+    @Specialization
+    protected LLVMI16Vector doLLVMI16Vector(LLVMI16Vector loadedValue) {
+        return loadedValue;
+    }
+
+    @Specialization
+    protected LLVMI32Vector doLLVMI32Vector(LLVMI32Vector loadedValue) {
+        return loadedValue;
+    }
+
+    @Specialization
+    protected LLVMI64Vector doLLVMI64Vector(LLVMI64Vector loadedValue) {
+        return loadedValue;
+    }
+
+    @Specialization
+    protected LLVMFloatVector doLLVMFloatVector(LLVMFloatVector loadedValue) {
+        return loadedValue;
+    }
+
+    @Specialization
+    protected LLVMDoubleVector doLLVMDoubleVector(LLVMDoubleVector loadedValue) {
+        return loadedValue;
+    }
+
+    @Specialization
+    protected LLVMPointerVector doLLVMPointerVector(LLVMPointerVector loadedValue) {
+        return loadedValue;
     }
 }

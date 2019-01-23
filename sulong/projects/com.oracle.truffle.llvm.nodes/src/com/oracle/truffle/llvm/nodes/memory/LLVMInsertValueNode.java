@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -31,14 +31,16 @@ package com.oracle.truffle.llvm.nodes.memory;
 
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemMoveNode;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStoreNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 
-@NodeChild
-@NodeChild
-@NodeChild
+@NodeChild(value = "sourceAggregate", type = LLVMExpressionNode.class)
+@NodeChild(value = "targetAggregate", type = LLVMExpressionNode.class)
+@NodeChild(value = "value", type = LLVMExpressionNode.class)
 public abstract class LLVMInsertValueNode extends LLVMExpressionNode {
 
     protected final long sourceAggregateSize;
@@ -58,5 +60,10 @@ public abstract class LLVMInsertValueNode extends LLVMExpressionNode {
         memMove.executeWithTarget(targetAggr, sourceAggr, sourceAggregateSize);
         store.executeWithTarget(targetAggr.increment(offset), element);
         return targetAggr;
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return tag == LLVMTags.InsertValue.class || super.hasTag(tag);
     }
 }
