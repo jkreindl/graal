@@ -1255,33 +1255,33 @@ public class BasicNodeFactory implements NodeFactory {
     }
 
     @Override
-    public LLVMExpressionNode createArithmeticOp(ArithmeticOperation op, Type type, LLVMExpressionNode left, LLVMExpressionNode right) {
+    public LLVMExpressionNode createArithmeticOp(ArithmeticOperation op, int flags, Type type, LLVMExpressionNode left, LLVMExpressionNode right) {
         if (type instanceof VectorType) {
             VectorType vectorType = (VectorType) type;
-            LLVMArithmeticNode arithmeticNode = createScalarArithmeticOp(op, vectorType.getElementType(), null, null);
+            LLVMArithmeticNode arithmeticNode = createScalarArithmeticOp(op, flags, vectorType.getElementType(), null, null);
             return LLVMVectorArithmeticNodeGen.create(vectorType.getNumberOfElements(), arithmeticNode, left, right);
         } else {
-            return createScalarArithmeticOp(op, type, left, right);
+            return createScalarArithmeticOp(op, flags, type, left, right);
         }
     }
 
-    protected LLVMArithmeticNode createScalarArithmeticOp(ArithmeticOperation op, Type type, LLVMExpressionNode left, LLVMExpressionNode right) {
+    protected LLVMArithmeticNode createScalarArithmeticOp(ArithmeticOperation op, int flags, Type type, LLVMExpressionNode left, LLVMExpressionNode right) {
         assert !(type instanceof VectorType);
         switch (op) {
             case ADD:
-                return LLVMAddNodeGen.create(left, right);
+                return LLVMAddNodeGen.create(flags, left, right);
             case SUB:
-                return LLVMSubNodeGen.create(left, right);
+                return LLVMSubNodeGen.create(flags, left, right);
             case MUL:
-                return LLVMMulNodeGen.create(left, right);
+                return LLVMMulNodeGen.create(flags, left, right);
             case DIV:
-                return LLVMDivNodeGen.create(left, right);
+                return LLVMDivNodeGen.create(flags, left, right);
             case UDIV:
-                return LLVMUDivNodeGen.create(left, right);
+                return LLVMUDivNodeGen.create(flags, left, right);
             case REM:
-                return LLVMRemNodeGen.create(left, right);
+                return LLVMRemNodeGen.create(flags, left, right);
             case UREM:
-                return LLVMURemNodeGen.create(left, right);
+                return LLVMURemNodeGen.create(flags, left, right);
             case AND:
                 return LLVMAndNodeGen.create(left, right);
             case OR:
@@ -1289,11 +1289,11 @@ public class BasicNodeFactory implements NodeFactory {
             case XOR:
                 return LLVMXorNodeGen.create(left, right);
             case SHL:
-                return LLVMShlNodeGen.create(left, right);
+                return LLVMShlNodeGen.create(flags, left, right);
             case LSHR:
-                return LLVMLshrNodeGen.create(left, right);
+                return LLVMLshrNodeGen.create(flags, left, right);
             case ASHR:
-                return LLVMAshrNodeGen.create(left, right);
+                return LLVMAshrNodeGen.create(flags, left, right);
             default:
                 throw new AssertionError(type);
         }
