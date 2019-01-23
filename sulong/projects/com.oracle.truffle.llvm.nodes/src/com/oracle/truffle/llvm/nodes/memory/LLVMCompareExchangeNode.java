@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -36,6 +36,7 @@ import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.llvm.nodes.memory.LLVMCompareExchangeNodeGen.LLVMCMPXCHInternalNodeGen;
 import com.oracle.truffle.llvm.nodes.memory.load.LLVMI16LoadNode;
 import com.oracle.truffle.llvm.nodes.memory.load.LLVMI16LoadNodeGen;
@@ -60,6 +61,7 @@ import com.oracle.truffle.llvm.runtime.memory.LLVMMemory.CMPXCHGI32;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory.CMPXCHGI64;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory.CMPXCHGI8;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
@@ -83,6 +85,11 @@ public abstract class LLVMCompareExchangeNode extends LLVMExpressionNode {
     @Specialization
     protected Object doOp(VirtualFrame frame, LLVMPointer address, Object comparisonValue, Object newValue) {
         return cmpxch.executeWithTarget(frame, address, comparisonValue, newValue);
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return tag == LLVMTags.CmpXchg.class || super.hasTag(tag);
     }
 
     abstract static class LLVMCMPXCHInternalNode extends LLVMNode {

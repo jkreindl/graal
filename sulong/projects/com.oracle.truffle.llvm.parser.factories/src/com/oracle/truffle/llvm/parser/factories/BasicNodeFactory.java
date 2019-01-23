@@ -976,7 +976,7 @@ public class BasicNodeFactory implements NodeFactory {
         if (usePointerComparison(type)) {
             return createPointerComparison(operator, lhs, rhs);
         } else {
-            return createPrimitiveComparison(operator, lhs, rhs);
+            return createPrimitiveComparison(operator, type, lhs, rhs);
         }
     }
 
@@ -1007,10 +1007,10 @@ public class BasicNodeFactory implements NodeFactory {
         }
     }
 
-    private static LLVMAbstractCompareNode createPrimitiveComparison(CompareOperator operator, LLVMExpressionNode lhs, LLVMExpressionNode rhs) {
+    private static LLVMAbstractCompareNode createPrimitiveComparison(CompareOperator operator, Type type, LLVMExpressionNode lhs, LLVMExpressionNode rhs) {
         switch (operator) {
             case FP_FALSE:
-                return LLVMFalseCmpNodeGen.create(null, null);
+                return LLVMFalseCmpNodeGen.create(Type.isIntegerType(type), lhs, rhs, null, null);
             case FP_ORDERED_EQUAL:
                 return LLVMOrderedEqNodeGen.create(lhs, rhs);
             case FP_ORDERED_GREATER_THAN:
@@ -1040,7 +1040,7 @@ public class BasicNodeFactory implements NodeFactory {
             case FP_UNORDERED_NOT_EQUAL:
                 return LLVMUnorderedNeNodeGen.create(lhs, rhs);
             case FP_TRUE:
-                return LLVMTrueCmpNodeGen.create(null, null);
+                return LLVMTrueCmpNodeGen.create(Type.isIntegerType(type), lhs, rhs, null, null);
             case INT_EQUAL:
                 return LLVMEqNodeGen.create(lhs, rhs);
             case INT_NOT_EQUAL:
