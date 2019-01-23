@@ -68,7 +68,7 @@ public abstract class LLVMExpressionNode extends LLVMNode implements Instrumenta
 
     @Override
     public boolean isInstrumentable() {
-        return getSourceLocation() != null;
+        return getSourceSection() != null;
     }
 
     public static final LLVMExpressionNode[] NO_EXPRESSIONS = {};

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -47,7 +47,7 @@ public abstract class LLVMStatementNode extends LLVMNode implements Instrumentab
 
     @Override
     public boolean isInstrumentable() {
-        return getSourceLocation() != null;
+        return getSourceSection() != null;
     }
 
     public static final LLVMStatementNode[] NO_STATEMENTS = {};

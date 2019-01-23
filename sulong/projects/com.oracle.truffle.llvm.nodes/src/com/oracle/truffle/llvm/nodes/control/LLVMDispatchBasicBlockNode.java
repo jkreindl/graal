@@ -294,6 +294,9 @@ public final class LLVMDispatchBasicBlockNode extends LLVMExpressionNode {
 
     @Override
     public boolean hasTag(Class<? extends Tag> tag) {
+        if (getSourceLocation() == null) {
+            return false;
+        }
         return tag == StandardTags.RootTag.class;
     }
 
