@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,22 +27,21 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.runtime.nodes.api;
+package com.oracle.truffle.llvm.nodes.memory.rmw;
 
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 
-@NodeChild(value = "address", type = LLVMExpressionNode.class)
-@NodeChild(value = "value", type = LLVMExpressionNode.class)
-public abstract class LLVMStoreNode extends LLVMStatementNode {
+@NodeChild(type = LLVMExpressionNode.class, value = "pointerNode")
+@NodeChild(type = LLVMExpressionNode.class, value = "valueNode")
+public abstract class LLVMRMWNode extends LLVMExpressionNode {
 
-    public static final LLVMStoreNode[] NO_STORES = {};
-
-    public abstract void executeWithTarget(Object address, Object value);
+    // TODO (jkreindl) provide operation tag in NodeObject
 
     @Override
     public boolean hasTag(Class<? extends Tag> tag) {
-        return tag == LLVMTags.Store.class || super.hasTag(tag);
+        return tag == LLVMTags.AtomicRMW.class || super.hasTag(tag);
     }
 }

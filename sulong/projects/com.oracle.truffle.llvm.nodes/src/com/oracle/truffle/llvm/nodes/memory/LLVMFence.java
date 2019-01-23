@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -31,7 +31,9 @@ package com.oracle.truffle.llvm.nodes.memory;
 
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 
 public abstract class LLVMFence extends LLVMStatementNode {
@@ -39,5 +41,10 @@ public abstract class LLVMFence extends LLVMStatementNode {
     @Specialization
     protected void doOp(@Cached("getLLVMMemory()") LLVMMemory memory) {
         memory.fullFence();
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return tag == LLVMTags.Fence.class || super.hasTag(tag);
     }
 }
