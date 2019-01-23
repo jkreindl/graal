@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -42,6 +42,7 @@ import com.oracle.truffle.llvm.nodes.func.LLVMCallNodeFactory.ArgumentNodeGen;
 import com.oracle.truffle.llvm.runtime.LLVMFunctionDescriptor;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.except.LLVMPolyglotException;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
@@ -74,7 +75,7 @@ public final class LLVMCallNode extends LLVMExpressionNode {
 
     @Children private final LLVMExpressionNode[] argumentNodes;
     @Children private ArgumentNode[] prepareArgumentNodes;
-    @Child private LLVMLookupDispatchTargetNode dispatchTargetNode;
+    @Child private LLVMExpressionNode dispatchTargetNode;
     @Child private LLVMDispatchNode dispatchNode;
     @Child private IntrinsicDispatch intrinsicDispatch;
 
@@ -157,6 +158,13 @@ public final class LLVMCallNode extends LLVMExpressionNode {
 
     @Override
     public boolean hasTag(Class<? extends Tag> tag) {
+        if (tag == LLVMTags.Call.class) {
+            return true;
+        }
+
+        if (getSourceLocation() == null) {
+            return false;
+        }
         return tag == StandardTags.StatementTag.class || tag == StandardTags.CallTag.class || super.hasTag(tag);
     }
 }
