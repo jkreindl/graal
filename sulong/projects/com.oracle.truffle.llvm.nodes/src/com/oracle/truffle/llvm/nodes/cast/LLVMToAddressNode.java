@@ -32,6 +32,8 @@ package com.oracle.truffle.llvm.nodes.cast;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.GenerateWrapper;
+import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.LLVMBoxedPrimitive;
 import com.oracle.truffle.llvm.runtime.LLVMVirtualAllocationAddress;
@@ -41,10 +43,15 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
+@GenerateWrapper
 public abstract class LLVMToAddressNode extends LLVMCastNode {
 
     public LLVMToAddressNode(CastOperator conversionKind) {
         super(conversionKind);
+    }
+
+    public LLVMToAddressNode(LLVMToAddressNode other) {
+        super(other.getConversionKind());
     }
 
     public abstract Object executeWithTarget(VirtualFrame frame, Object from);
@@ -97,5 +104,10 @@ public abstract class LLVMToAddressNode extends LLVMCastNode {
     @Specialization
     protected LLVMBoxedPrimitive doLLVMBoxedPrimitive(LLVMBoxedPrimitive from) {
         return from;
+    }
+
+    @Override
+    public WrapperNode createWrapper(ProbeNode probe) {
+        return new LLVMToAddressNodeWrapper(this, this, probe);
     }
 }
