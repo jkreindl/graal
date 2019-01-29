@@ -40,6 +40,7 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.CachedContext;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.LanguageInfo;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.llvm.nodes.intrinsics.interop.LLVMPolyglotEvalNodeGen.GetSourceFileNodeGen;
@@ -72,12 +73,12 @@ public abstract class LLVMPolyglotEval extends LLVMIntrinsic {
     }
 
     @Specialization
-    protected Object doEval(Object idPointer, Object srcPointer,
+    protected Object doEval(VirtualFrame frame, Object idPointer, Object srcPointer,
                     @Cached("createReadString()") LLVMReadStringNode readId,
                     @Cached("createReadString()") LLVMReadStringNode readSrc,
                     @Cached("createForeignToLLVM()") ForeignToLLVM toLLVM) {
         try {
-            CallTarget callTarget = getSource.execute(readId.executeWithTarget(idPointer), readSrc.executeWithTarget(srcPointer));
+            CallTarget callTarget = getSource.execute(readId.executeWithTarget(frame, idPointer), readSrc.executeWithTarget(frame, srcPointer));
             Object foreign = callTarget.call();
             return toLLVM.executeWithTarget(foreign);
         } catch (IllegalStateException e) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -33,6 +33,7 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.NodeField;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.llvm.runtime.LLVMBoxedPrimitive;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
@@ -57,16 +58,16 @@ public abstract class LLVMDirectLoadNode {
         }
 
         @Specialization(guards = "isAutoDerefHandle(addr)")
-        protected Object doIVarBitDerefHandle(LLVMNativePointer addr) {
-            return doForeign(getDerefHandleGetReceiverNode().execute(addr));
+        protected Object doIVarBitDerefHandle(VirtualFrame frame, LLVMNativePointer addr) {
+            return doForeign(frame, getDerefHandleGetReceiverNode().execute(addr));
         }
 
         @Specialization
-        protected Object doForeign(LLVMManagedPointer addr) {
+        protected Object doForeign(VirtualFrame frame, LLVMManagedPointer addr) {
             byte[] result = new byte[getByteSize()];
             LLVMManagedPointer currentPtr = addr;
             for (int i = result.length - 1; i >= 0; i--) {
-                result[i] = (Byte) getForeignReadNode().executeRead(currentPtr.getObject(), currentPtr.getOffset(), ForeignToLLVMType.I8);
+                result[i] = (Byte) getForeignReadNode().executeRead(frame, currentPtr.getObject(), currentPtr.getOffset(), ForeignToLLVMType.I8);
                 currentPtr = currentPtr.increment(I8_SIZE_IN_BYTES);
             }
             return LLVMIVarBit.create(getBitWidth(), result, getBitWidth(), false);
@@ -86,17 +87,17 @@ public abstract class LLVMDirectLoadNode {
         }
 
         @Specialization(guards = "isAutoDerefHandle(addr)")
-        protected Object do80BitFloatDerefHandle(LLVMNativePointer addr) {
-            return doForeign(getDerefHandleGetReceiverNode().execute(addr));
+        protected Object do80BitFloatDerefHandle(VirtualFrame frame, LLVMNativePointer addr) {
+            return doForeign(frame, getDerefHandleGetReceiverNode().execute(addr));
         }
 
         @Specialization
         @ExplodeLoop
-        protected LLVM80BitFloat doForeign(LLVMManagedPointer addr) {
+        protected LLVM80BitFloat doForeign(VirtualFrame frame, LLVMManagedPointer addr) {
             byte[] result = new byte[LLVM80BitFloat.BYTE_WIDTH];
             LLVMManagedPointer currentPtr = addr;
             for (int i = 0; i < result.length; i++) {
-                result[i] = (byte) getForeignReadNode().executeRead(currentPtr.getObject(), currentPtr.getOffset(), ForeignToLLVMType.I8);
+                result[i] = (byte) getForeignReadNode().executeRead(frame, currentPtr.getObject(), currentPtr.getOffset(), ForeignToLLVMType.I8);
                 currentPtr = currentPtr.increment(I8_SIZE_IN_BYTES);
             }
             return LLVM80BitFloat.fromBytes(result);
@@ -111,8 +112,8 @@ public abstract class LLVMDirectLoadNode {
         }
 
         @Specialization(guards = "isAutoDerefHandle(addr)")
-        protected Object doDerefHandle(LLVMNativePointer addr) {
-            return doIndirectedForeign(getDerefHandleGetReceiverNode().execute(addr));
+        protected Object doDerefHandle(VirtualFrame frame, LLVMNativePointer addr) {
+            return doIndirectedForeign(frame, getDerefHandleGetReceiverNode().execute(addr));
         }
 
         @Specialization
@@ -132,8 +133,8 @@ public abstract class LLVMDirectLoadNode {
         }
 
         @Specialization
-        protected Object doIndirectedForeign(LLVMManagedPointer addr) {
-            return getForeignReadNode().executeRead(addr.getObject(), addr.getOffset(), ForeignToLLVMType.POINTER);
+        protected Object doIndirectedForeign(VirtualFrame frame, LLVMManagedPointer addr) {
+            return getForeignReadNode().executeRead(frame, addr.getObject(), addr.getOffset(), ForeignToLLVMType.POINTER);
         }
     }
 

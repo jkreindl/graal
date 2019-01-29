@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -32,6 +32,7 @@ package com.oracle.truffle.llvm.nodes.memory.load;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.profiles.FloatValueProfile;
 import com.oracle.truffle.llvm.runtime.LLVMBoxedPrimitive;
 import com.oracle.truffle.llvm.runtime.LLVMVirtualAllocationAddress;
@@ -56,13 +57,13 @@ public abstract class LLVMFloatLoadNode extends LLVMAbstractLoadNode {
     }
 
     @Specialization(guards = "isAutoDerefHandle(addr)")
-    protected float doFloatDerefHandle(LLVMNativePointer addr) {
-        return doFloatManaged(getDerefHandleGetReceiverNode().execute(addr));
+    protected float doFloatDerefHandle(VirtualFrame frame, LLVMNativePointer addr) {
+        return doFloatManaged(frame, getDerefHandleGetReceiverNode().execute(addr));
     }
 
     @Specialization
-    protected float doFloatManaged(LLVMManagedPointer addr) {
-        return (float) getForeignReadNode().executeRead(addr.getObject(), addr.getOffset(), ForeignToLLVMType.FLOAT);
+    protected float doFloatManaged(VirtualFrame frame, LLVMManagedPointer addr) {
+        return (float) getForeignReadNode().executeRead(frame, addr.getObject(), addr.getOffset(), ForeignToLLVMType.FLOAT);
     }
 
     @Specialization

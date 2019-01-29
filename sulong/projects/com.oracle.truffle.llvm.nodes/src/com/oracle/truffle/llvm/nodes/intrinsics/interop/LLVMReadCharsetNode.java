@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2018, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -50,23 +50,23 @@ public abstract class LLVMReadCharsetNode extends LLVMNode {
 
     @Specialization(guards = "cachedPointer.equals(pointer)")
     @SuppressWarnings("unused")
-    protected LLVMCharset doCachedPointer(LLVMPointer pointer,
+    protected LLVMCharset doCachedPointer(VirtualFrame frame, LLVMPointer pointer,
                     @Cached("pointer") LLVMPointer cachedPointer,
-                    @Cached("doGeneric(cachedPointer)") LLVMCharset cachedCharset) {
+                    @Cached("doGeneric(frame, cachedPointer)") LLVMCharset cachedCharset) {
         return cachedCharset;
     }
 
     @Specialization(guards = "address == cachedAddress")
     @SuppressWarnings("unused")
-    protected LLVMCharset doCachedOther(Object address,
+    protected LLVMCharset doCachedOther(VirtualFrame frame, Object address,
                     @Cached("address") Object cachedAddress,
-                    @Cached("doGeneric(cachedAddress)") LLVMCharset cachedCharset) {
+                    @Cached("doGeneric(frame, cachedAddress)") LLVMCharset cachedCharset) {
         return cachedCharset;
     }
 
     @Specialization(replaces = {"doCachedPointer", "doCachedOther"})
-    protected LLVMCharset doGeneric(Object strPtr) {
-        String string = readString.executeWithTarget(strPtr);
+    protected LLVMCharset doGeneric(VirtualFrame frame, Object strPtr) {
+        String string = readString.executeWithTarget(frame, strPtr);
         return lookup(string);
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2018, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -88,12 +88,12 @@ public abstract class LLVMPolyglotFromString extends LLVMIntrinsic {
         @Child private LLVMIncrementPointerNode inc = LLVMIncrementPointerNodeGen.create();
 
         @Specialization
-        ByteBuffer doRead(@SuppressWarnings("unused") LLVMCharset charset, Object string, long len) {
+        ByteBuffer doRead(VirtualFrame frame, @SuppressWarnings("unused") LLVMCharset charset, Object string, long len) {
             ByteBuffer buffer = ByteBuffer.allocate((int) len);
 
             Object ptr = string;
             for (int i = 0; i < len; i++) {
-                byte value = (byte) load.executeWithTarget(ptr);
+                byte value = (byte) load.executeWithTarget(frame, ptr);
                 ptr = inc.executeWithTarget(ptr, Byte.BYTES);
                 buffer.put(value);
             }
@@ -112,7 +112,7 @@ public abstract class LLVMPolyglotFromString extends LLVMIntrinsic {
         @Child private LLVMIncrementPointerNode inc = LLVMIncrementPointerNodeGen.create();
 
         @Specialization(limit = "4", guards = "charset.zeroTerminatorLen == increment")
-        ByteBuffer doRead(@SuppressWarnings("unused") LLVMCharset charset, Object string,
+        ByteBuffer doRead(VirtualFrame frame, @SuppressWarnings("unused") LLVMCharset charset, Object string,
                         @Cached("charset.zeroTerminatorLen") int increment,
                         @Cached("createLoad(increment)") LLVMLoadNode load,
                         @Cached("create()") PutCharNode put) {
@@ -122,7 +122,7 @@ public abstract class LLVMPolyglotFromString extends LLVMIntrinsic {
             Object ptr = string;
             Object value;
             do {
-                value = load.executeWithTarget(ptr);
+                value = load.executeWithTarget(frame, ptr);
                 ptr = inc.executeWithTarget(ptr, increment);
 
                 if (result.remaining() < increment) {

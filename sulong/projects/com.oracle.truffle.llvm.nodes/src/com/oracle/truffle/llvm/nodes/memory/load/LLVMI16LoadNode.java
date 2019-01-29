@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -32,6 +32,7 @@ package com.oracle.truffle.llvm.nodes.memory.load;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.llvm.runtime.LLVMBoxedPrimitive;
 import com.oracle.truffle.llvm.runtime.LLVMVirtualAllocationAddress;
 import com.oracle.truffle.llvm.runtime.interop.convert.ForeignToLLVM.ForeignToLLVMType;
@@ -47,8 +48,8 @@ public abstract class LLVMI16LoadNode extends LLVMAbstractLoadNode {
     }
 
     @Specialization(guards = "isAutoDerefHandle(addr)")
-    protected short doShortDerefHandle(LLVMNativePointer addr) {
-        return doShortManaged(getDerefHandleGetReceiverNode().execute(addr));
+    protected short doShortDerefHandle(VirtualFrame frame, LLVMNativePointer addr) {
+        return doShortManaged(frame, getDerefHandleGetReceiverNode().execute(addr));
     }
 
     @Specialization
@@ -58,8 +59,8 @@ public abstract class LLVMI16LoadNode extends LLVMAbstractLoadNode {
     }
 
     @Specialization
-    protected short doShortManaged(LLVMManagedPointer addr) {
-        return (short) getForeignReadNode().executeRead(addr.getObject(), addr.getOffset(), ForeignToLLVMType.I16);
+    protected short doShortManaged(VirtualFrame frame, LLVMManagedPointer addr) {
+        return (short) getForeignReadNode().executeRead(frame, addr.getObject(), addr.getOffset(), ForeignToLLVMType.I16);
     }
 
     @Specialization
