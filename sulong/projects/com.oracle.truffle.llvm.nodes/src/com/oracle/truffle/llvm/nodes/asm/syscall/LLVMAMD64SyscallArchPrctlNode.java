@@ -34,6 +34,7 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.CachedContext;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.profiles.IntValueProfile;
 import com.oracle.truffle.llvm.nodes.memory.store.LLVMPointerStoreNode;
 import com.oracle.truffle.llvm.nodes.memory.store.LLVMPointerStoreNodeGen;
@@ -51,17 +52,17 @@ public abstract class LLVMAMD64SyscallArchPrctlNode extends LLVMSyscallOperation
     }
 
     @Specialization
-    protected long doOp(long code, long addr,
+    protected long doOp(VirtualFrame frame, long code, long addr,
                     @CachedContext(LLVMLanguage.class) LLVMContext context,
                     @Cached("createAddressStoreNode()") LLVMPointerStoreNode store) {
-        return exec(code, addr, context, store);
+        return exec(frame, code, addr, context, store);
     }
 
     @Specialization
-    protected long doOp(long code, LLVMPointer addr,
+    protected long doOp(VirtualFrame frame, long code, LLVMPointer addr,
                     @CachedContext(LLVMLanguage.class) LLVMContext context,
                     @Cached("createAddressStoreNode()") LLVMPointerStoreNode store) {
-        return exec(code, addr, context, store);
+        return exec(frame, code, addr, context, store);
     }
 
     protected LLVMPointerStoreNode createAddressStoreNode() {
@@ -69,14 +70,14 @@ public abstract class LLVMAMD64SyscallArchPrctlNode extends LLVMSyscallOperation
         return LLVMPointerStoreNodeGen.create(null, null);
     }
 
-    private long exec(long code, Object addr, LLVMContext context, LLVMPointerStoreNode store) throws AssertionError {
+    private long exec(VirtualFrame frame, long code, Object addr, LLVMContext context, LLVMPointerStoreNode store) throws AssertionError {
         switch (profile.profile((int) code)) {
             case LLVMAMD64ArchPrctl.ARCH_SET_FS:
                 context.setThreadLocalStorage(addr);
                 break;
             case LLVMAMD64ArchPrctl.ARCH_GET_FS: {
                 Object tls = context.getThreadLocalStorage();
-                store.executeWithTarget(addr, tls);
+                store.executeWithTarget(frame, addr, tls);
                 break;
             }
             default:

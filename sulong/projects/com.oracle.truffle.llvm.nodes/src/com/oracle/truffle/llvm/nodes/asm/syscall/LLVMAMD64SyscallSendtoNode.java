@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -54,6 +54,6 @@ public abstract class LLVMAMD64SyscallSendtoNode extends LLVMSyscallOperationNod
 
     @Specialization
     protected long doOp(long socket, long message, long length, long flags, long destAddr, long destLen) {
-        return execute(socket, LLVMNativePointer.create(message), length, flags, LLVMNativePointer.create(destAddr), destLen);
+        return doOp(socket, LLVMNativePointer.create(message), length, flags, LLVMNativePointer.create(destAddr), destLen);
     }
 }

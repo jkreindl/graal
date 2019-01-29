@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -33,6 +33,7 @@ import static com.oracle.truffle.llvm.nodes.asm.syscall.LLVMAMD64Time.CLOCK_MONO
 import static com.oracle.truffle.llvm.nodes.asm.syscall.LLVMAMD64Time.CLOCK_REALTIME;
 
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.llvm.nodes.memory.store.LLVMI64StoreNode;
 import com.oracle.truffle.llvm.nodes.memory.store.LLVMI64StoreNodeGen;
 import com.oracle.truffle.llvm.runtime.memory.LLVMSyscallOperationNode;
@@ -53,16 +54,16 @@ public abstract class LLVMAMD64SyscallClockGetTimeNode extends LLVMSyscallOperat
     }
 
     @Specialization
-    protected long doI64(long clkId, LLVMPointer tp) {
-        return clockGetTime((int) clkId, tp);
+    protected long doI64(VirtualFrame frame, long clkId, LLVMPointer tp) {
+        return clockGetTime(frame, (int) clkId, tp);
     }
 
     @Specialization
-    protected long doI64(long clkId, long tp) {
-        return doI64(clkId, LLVMNativePointer.create(tp));
+    protected long doI64(VirtualFrame frame, long clkId, long tp) {
+        return doI64(frame, clkId, LLVMNativePointer.create(tp));
     }
 
-    private int clockGetTime(int clkId, LLVMPointer timespec) {
+    private int clockGetTime(VirtualFrame frame, int clkId, LLVMPointer timespec) {
         long s;
         long ns;
         switch (clkId) {
@@ -82,9 +83,9 @@ public abstract class LLVMAMD64SyscallClockGetTimeNode extends LLVMSyscallOperat
                 return -LLVMAMD64Error.EINVAL;
         }
         LLVMPointer ptr = timespec;
-        writeI64.executeWithTarget(ptr, s);
+        writeI64.executeWithTarget(frame, ptr, s);
         ptr = ptr.increment(8);
-        writeI64.executeWithTarget(ptr, ns);
+        writeI64.executeWithTarget(frame, ptr, ns);
         return 0;
     }
 }
