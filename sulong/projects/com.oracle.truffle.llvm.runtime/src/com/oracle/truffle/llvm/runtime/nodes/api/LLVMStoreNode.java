@@ -30,19 +30,28 @@
 package com.oracle.truffle.llvm.runtime.nodes.api;
 
 import com.oracle.truffle.api.dsl.NodeChild;
+import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.GenerateWrapper;
+import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 
 @NodeChild(value = "address", type = LLVMExpressionNode.class)
 @NodeChild(value = "value", type = LLVMExpressionNode.class)
+@GenerateWrapper
 public abstract class LLVMStoreNode extends LLVMStatementNode {
 
     public static final LLVMStoreNode[] NO_STORES = {};
 
-    public abstract void executeWithTarget(Object address, Object value);
+    public abstract void executeWithTarget(VirtualFrame frame, Object address, Object value);
 
     @Override
     public boolean hasTag(Class<? extends Tag> tag) {
         return tag == LLVMTags.Store.class || super.hasTag(tag);
+    }
+
+    @Override
+    public WrapperNode createWrapper(ProbeNode probe) {
+        return new LLVMStoreNodeWrapper(this, probe);
     }
 }

@@ -31,6 +31,7 @@ package com.oracle.truffle.llvm.nodes.memory.rmw;
 
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.llvm.nodes.memory.load.LLVMI16LoadNode;
 import com.oracle.truffle.llvm.nodes.memory.load.LLVMI16LoadNodeGen;
 import com.oracle.truffle.llvm.nodes.memory.store.LLVMI16StoreNode;
@@ -58,12 +59,12 @@ public abstract class LLVMI16RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected short doOp(LLVMManagedPointer address, short value,
+        protected short doOp(VirtualFrame frame, LLVMManagedPointer address, short value,
                         @Cached("createRead()") LLVMI16LoadNode read,
                         @Cached("createWrite()") LLVMI16StoreNode write) {
             synchronized (address.getObject()) {
                 short result = (short) read.executeWithTarget(address);
-                write.executeWithTarget(address, value);
+                write.executeWithTarget(frame, address, value);
                 return result;
             }
         }
@@ -78,12 +79,12 @@ public abstract class LLVMI16RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected short doOp(LLVMManagedPointer address, short value,
+        protected short doOp(VirtualFrame frame, LLVMManagedPointer address, short value,
                         @Cached("createRead()") LLVMI16LoadNode read,
                         @Cached("createWrite()") LLVMI16StoreNode write) {
             synchronized (address.getObject()) {
                 short result = (short) read.executeWithTarget(address);
-                write.executeWithTarget(address, ((short) (result + value)));
+                write.executeWithTarget(frame, address, ((short) (result + value)));
                 return result;
             }
         }
@@ -98,12 +99,12 @@ public abstract class LLVMI16RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected short doOp(LLVMManagedPointer address, short value,
+        protected short doOp(VirtualFrame frame, LLVMManagedPointer address, short value,
                         @Cached("createRead()") LLVMI16LoadNode read,
                         @Cached("createWrite()") LLVMI16StoreNode write) {
             synchronized (address.getObject()) {
                 short result = (short) read.executeWithTarget(address);
-                write.executeWithTarget(address, ((short) (result - value)));
+                write.executeWithTarget(frame, address, ((short) (result - value)));
                 return result;
             }
         }
@@ -118,12 +119,12 @@ public abstract class LLVMI16RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected short doOp(LLVMManagedPointer address, short value,
+        protected short doOp(VirtualFrame frame, LLVMManagedPointer address, short value,
                         @Cached("createRead()") LLVMI16LoadNode read,
                         @Cached("createWrite()") LLVMI16StoreNode write) {
             synchronized (address.getObject()) {
                 short result = (short) read.executeWithTarget(address);
-                write.executeWithTarget(address, ((short) (result & value)));
+                write.executeWithTarget(frame, address, ((short) (result & value)));
                 return result;
             }
         }
@@ -138,12 +139,12 @@ public abstract class LLVMI16RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected short doOp(LLVMManagedPointer address, short value,
+        protected short doOp(VirtualFrame frame, LLVMManagedPointer address, short value,
                         @Cached("createRead()") LLVMI16LoadNode read,
                         @Cached("createWrite()") LLVMI16StoreNode write) {
             synchronized (address.getObject()) {
                 short result = (short) read.executeWithTarget(address);
-                write.executeWithTarget(address, ((short) ~(result & value)));
+                write.executeWithTarget(frame, address, ((short) ~(result & value)));
                 return result;
             }
         }
@@ -158,12 +159,12 @@ public abstract class LLVMI16RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected short doOp(LLVMManagedPointer address, short value,
+        protected short doOp(VirtualFrame frame, LLVMManagedPointer address, short value,
                         @Cached("createRead()") LLVMI16LoadNode read,
                         @Cached("createWrite()") LLVMI16StoreNode write) {
             synchronized (address.getObject()) {
                 short result = (short) read.executeWithTarget(address);
-                write.executeWithTarget(address, ((short) (result | value)));
+                write.executeWithTarget(frame, address, ((short) (result | value)));
                 return result;
             }
         }
@@ -178,12 +179,12 @@ public abstract class LLVMI16RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected short doOp(LLVMManagedPointer address, short value,
+        protected short doOp(VirtualFrame frame, LLVMManagedPointer address, short value,
                         @Cached("createRead()") LLVMI16LoadNode read,
                         @Cached("createWrite()") LLVMI16StoreNode write) {
             synchronized (address.getObject()) {
                 short result = (short) read.executeWithTarget(address);
-                write.executeWithTarget(address, ((short) (result ^ value)));
+                write.executeWithTarget(frame, address, ((short) (result ^ value)));
                 return result;
             }
         }

@@ -170,7 +170,7 @@ public abstract class LLVMCompareExchangeNode extends LLVMExpressionNode {
                 byte currentValue = (byte) read.executeWithTarget(address);
                 boolean success = currentValue == comparisonValue;
                 if (success) {
-                    write.executeWithTarget(address, newValue);
+                    write.executeWithTarget(frame, address, newValue);
                 }
                 memory.putI8(allocation, currentValue);
                 memory.putI1(allocation.increment(secondValueOffset), success);
@@ -188,7 +188,7 @@ public abstract class LLVMCompareExchangeNode extends LLVMExpressionNode {
                 short currentValue = (short) read.executeWithTarget(address);
                 boolean success = currentValue == comparisonValue;
                 if (success) {
-                    write.executeWithTarget(address, newValue);
+                    write.executeWithTarget(frame, address, newValue);
                 }
                 memory.putI16(allocation, currentValue);
                 memory.putI1(allocation.increment(secondValueOffset), success);
@@ -206,7 +206,7 @@ public abstract class LLVMCompareExchangeNode extends LLVMExpressionNode {
                 int currentValue = (int) read.executeWithTarget(address);
                 boolean success = currentValue == comparisonValue;
                 if (success) {
-                    write.executeWithTarget(address, newValue);
+                    write.executeWithTarget(frame, address, newValue);
                 }
                 memory.putI32(allocation, currentValue);
                 memory.putI1(allocation.increment(secondValueOffset), success);
@@ -224,7 +224,7 @@ public abstract class LLVMCompareExchangeNode extends LLVMExpressionNode {
                 long currentValue = (long) read.executeWithTarget(address);
                 boolean success = currentValue == comparisonValue;
                 if (success) {
-                    write.executeWithTarget(address, newValue);
+                    write.executeWithTarget(frame, address, newValue);
                 }
                 memory.putI64(allocation, currentValue);
                 memory.putI1(allocation.increment(secondValueOffset), success);

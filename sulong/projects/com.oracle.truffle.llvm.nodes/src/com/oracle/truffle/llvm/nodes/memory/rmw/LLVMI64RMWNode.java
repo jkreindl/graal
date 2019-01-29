@@ -31,6 +31,7 @@ package com.oracle.truffle.llvm.nodes.memory.rmw;
 
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.llvm.nodes.memory.load.LLVMI64LoadNode;
 import com.oracle.truffle.llvm.nodes.memory.load.LLVMI64LoadNodeGen;
 import com.oracle.truffle.llvm.nodes.memory.store.LLVMI64StoreNode;
@@ -59,12 +60,12 @@ public abstract class LLVMI64RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected Object doOp(LLVMManagedPointer address, long value,
+        protected Object doOp(VirtualFrame frame, LLVMManagedPointer address, long value,
                         @Cached("createRead()") LLVMI64LoadNode read,
                         @Cached("createWrite()") LLVMI64StoreNode write) {
             synchronized (address.getObject()) {
                 Object result = read.executeWithTarget(address);
-                write.executeWithTarget(address, value);
+                write.executeWithTarget(frame, address, value);
                 return result;
             }
         }
@@ -79,13 +80,13 @@ public abstract class LLVMI64RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected long doOp(LLVMManagedPointer address, long value,
+        protected long doOp(VirtualFrame frame, LLVMManagedPointer address, long value,
                         @Cached("createToNativeWithTarget()") LLVMToNativeNode toNative,
                         @Cached("createRead()") LLVMI64LoadNode read,
                         @Cached("createWrite()") LLVMI64StoreNode write) {
             synchronized (address.getObject()) {
                 long result = toNative.executeWithTarget(read.executeWithTarget(address)).asNative();
-                write.executeWithTarget(address, result + value);
+                write.executeWithTarget(frame, address, result + value);
                 return result;
             }
         }
@@ -100,13 +101,13 @@ public abstract class LLVMI64RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected long doOp(LLVMManagedPointer address, long value,
+        protected long doOp(VirtualFrame frame, LLVMManagedPointer address, long value,
                         @Cached("createToNativeWithTarget()") LLVMToNativeNode toNative,
                         @Cached("createRead()") LLVMI64LoadNode read,
                         @Cached("createWrite()") LLVMI64StoreNode write) {
             synchronized (address.getObject()) {
                 long result = toNative.executeWithTarget(read.executeWithTarget(address)).asNative();
-                write.executeWithTarget(address, result - value);
+                write.executeWithTarget(frame, address, result - value);
                 return result;
             }
         }
@@ -121,13 +122,13 @@ public abstract class LLVMI64RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected long doOp(LLVMManagedPointer address, long value,
+        protected long doOp(VirtualFrame frame, LLVMManagedPointer address, long value,
                         @Cached("createToNativeWithTarget()") LLVMToNativeNode toNative,
                         @Cached("createRead()") LLVMI64LoadNode read,
                         @Cached("createWrite()") LLVMI64StoreNode write) {
             synchronized (address.getObject()) {
                 long result = toNative.executeWithTarget(read.executeWithTarget(address)).asNative();
-                write.executeWithTarget(address, result & value);
+                write.executeWithTarget(frame, address, result & value);
                 return result;
             }
         }
@@ -142,13 +143,13 @@ public abstract class LLVMI64RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected long doOp(LLVMManagedPointer address, long value,
+        protected long doOp(VirtualFrame frame, LLVMManagedPointer address, long value,
                         @Cached("createToNativeWithTarget()") LLVMToNativeNode toNative,
                         @Cached("createRead()") LLVMI64LoadNode read,
                         @Cached("createWrite()") LLVMI64StoreNode write) {
             synchronized (address.getObject()) {
                 long result = toNative.executeWithTarget(read.executeWithTarget(address)).asNative();
-                write.executeWithTarget(address, ~(result & value));
+                write.executeWithTarget(frame, address, ~(result & value));
                 return result;
             }
         }
@@ -163,13 +164,13 @@ public abstract class LLVMI64RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected long doOp(LLVMManagedPointer address, long value,
+        protected long doOp(VirtualFrame frame, LLVMManagedPointer address, long value,
                         @Cached("createToNativeWithTarget()") LLVMToNativeNode toNative,
                         @Cached("createRead()") LLVMI64LoadNode read,
                         @Cached("createWrite()") LLVMI64StoreNode write) {
             synchronized (address.getObject()) {
                 long result = toNative.executeWithTarget(read.executeWithTarget(address)).asNative();
-                write.executeWithTarget(address, result | value);
+                write.executeWithTarget(frame, address, result | value);
                 return result;
             }
         }
@@ -184,13 +185,13 @@ public abstract class LLVMI64RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected long doOp(LLVMManagedPointer address, long value,
+        protected long doOp(VirtualFrame frame, LLVMManagedPointer address, long value,
                         @Cached("createToNativeWithTarget()") LLVMToNativeNode toNative,
                         @Cached("createRead()") LLVMI64LoadNode read,
                         @Cached("createWrite()") LLVMI64StoreNode write) {
             synchronized (address.getObject()) {
                 long result = toNative.executeWithTarget(read.executeWithTarget(address)).asNative();
-                write.executeWithTarget(address, result ^ value);
+                write.executeWithTarget(frame, address, result ^ value);
                 return result;
             }
         }

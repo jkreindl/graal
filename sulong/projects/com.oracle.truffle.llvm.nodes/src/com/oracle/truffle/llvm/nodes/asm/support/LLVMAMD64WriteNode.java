@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -97,9 +97,9 @@ public abstract class LLVMAMD64WriteNode extends LLVMNode {
     }
 
     @Specialization(guards = "!isFrameSlot(addr)")
-    protected void doMemoryWrite(Object addr, Object value,
+    protected void doMemoryWrite(VirtualFrame frame, Object addr, Object value,
                     @Cached("createMemoryWriteNode()") LLVMAMD64MemWriteNode writeNode) {
-        writeNode.executeWithTarget(addr, value);
+        writeNode.executeWithTarget(frame, addr, value);
     }
 
     protected static boolean isFrameSlot(Object o) {
@@ -117,31 +117,31 @@ public abstract class LLVMAMD64WriteNode extends LLVMNode {
         @Child private LLVMStoreNode storeI32 = LLVMI32StoreNodeGen.create(null, null);
         @Child private LLVMStoreNode storeI64 = LLVMI64StoreNodeGen.create(null, null);
 
-        public abstract void executeWithTarget(Object addr, Object value);
+        public abstract void executeWithTarget(VirtualFrame frame, Object addr, Object value);
 
         @Specialization
-        protected void doI8(Object addr, byte value) {
-            storeI8.executeWithTarget(addr, value);
+        protected void doI8(VirtualFrame frame, Object addr, byte value) {
+            storeI8.executeWithTarget(frame, addr, value);
         }
 
         @Specialization
-        protected void doI16(Object addr, short value) {
-            storeI16.executeWithTarget(addr, value);
+        protected void doI16(VirtualFrame frame, Object addr, short value) {
+            storeI16.executeWithTarget(frame, addr, value);
         }
 
         @Specialization
-        protected void doI32(Object addr, int value) {
-            storeI32.executeWithTarget(addr, value);
+        protected void doI32(VirtualFrame frame, Object addr, int value) {
+            storeI32.executeWithTarget(frame, addr, value);
         }
 
         @Specialization
-        protected void doI64(Object addr, long value) {
-            storeI64.executeWithTarget(addr, value);
+        protected void doI64(VirtualFrame frame, Object addr, long value) {
+            storeI64.executeWithTarget(frame, addr, value);
         }
 
         @Fallback
-        protected void doObject(Object addr, Object value) {
-            storeAddress.executeWithTarget(addr, value);
+        protected void doObject(VirtualFrame frame, Object addr, Object value) {
+            storeAddress.executeWithTarget(frame, addr, value);
         }
     }
 }
