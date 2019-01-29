@@ -33,6 +33,7 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.CachedContext;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.llvm.nodes.intrinsics.llvm.LLVMIntrinsic;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.LLVMLanguage;
@@ -42,10 +43,10 @@ import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 public abstract class LLVMLoadLibrary extends LLVMIntrinsic {
 
     @Specialization
-    protected Object doIntrinsic(Object value,
+    protected Object doIntrinsic(VirtualFrame frame, Object value,
                     @CachedContext(LLVMLanguage.class) LLVMContext context,
                     @Cached("createReadString()") LLVMReadStringNode readId) {
-        String name = readId.executeWithTarget(value);
+        String name = readId.executeWithTarget(frame, value);
         context.addExternalLibrary(name, true);
         return null;
     }

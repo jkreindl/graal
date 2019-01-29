@@ -93,24 +93,24 @@ public abstract class LLVMX86_64BitVACopy extends LLVMBuiltin {
         regSaveAreaStore.executeWithTarget(frame, p, value);
     }
 
-    private int getGPOffset(Object address) {
+    private int getGPOffset(VirtualFrame frame, Object address) {
         Object p = pointerArithmeticStructInit.executeWithTarget(address, X86_64BitVarArgs.GP_OFFSET);
-        return (int) gpOffsetLoad.executeWithTarget(p);
+        return (int) gpOffsetLoad.executeWithTarget(frame, p);
     }
 
-    private int getFPOffset(Object address) {
+    private int getFPOffset(VirtualFrame frame, Object address) {
         Object p = pointerArithmeticStructInit.executeWithTarget(address, X86_64BitVarArgs.FP_OFFSET);
-        return (int) fpOffsetLoad.executeWithTarget(p);
+        return (int) fpOffsetLoad.executeWithTarget(frame, p);
     }
 
-    private Object getOverflowArgArea(Object address) {
+    private Object getOverflowArgArea(VirtualFrame frame, Object address) {
         Object p = pointerArithmeticStructInit.executeWithTarget(address, X86_64BitVarArgs.OVERFLOW_ARG_AREA);
-        return overflowArgAreaLoad.executeWithTarget(p);
+        return overflowArgAreaLoad.executeWithTarget(frame, p);
     }
 
-    private Object getRegSaveArea(Object address) {
+    private Object getRegSaveArea(VirtualFrame frame, Object address) {
         Object p = pointerArithmeticStructInit.executeWithTarget(address, X86_64BitVarArgs.REG_SAVE_AREA);
-        return regSaveAreaLoad.executeWithTarget(p);
+        return regSaveAreaLoad.executeWithTarget(frame, p);
     }
 
     public abstract int getNumberExplicitArguments();
@@ -122,10 +122,10 @@ public abstract class LLVMX86_64BitVACopy extends LLVMBuiltin {
          * COPY THIS: typedef struct { unsigned int gp_offset; unsigned int fp_offset; void
          * *overflow_arg_area; void *reg_save_area; } va_list[1];
          */
-        setGPOffset(frame, dest, getGPOffset(source));
-        setFPOffset(frame, dest, getFPOffset(source));
-        setOverflowArgArea(frame, dest, getOverflowArgArea(source));
-        setRegSaveArea(frame, dest, getRegSaveArea(source));
+        setGPOffset(frame, dest, getGPOffset(frame, source));
+        setFPOffset(frame, dest, getFPOffset(frame, source));
+        setOverflowArgArea(frame, dest, getOverflowArgArea(frame, source));
+        setRegSaveArea(frame, dest, getRegSaveArea(frame, source));
 
         return null;
     }

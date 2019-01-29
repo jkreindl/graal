@@ -34,6 +34,7 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.CachedContext;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.interop.UnknownIdentifierException;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
@@ -51,13 +52,13 @@ import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 public abstract class LLVMPolyglotImport extends LLVMIntrinsic {
 
     @Specialization
-    protected Object doImport(Object name,
+    protected Object doImport(VirtualFrame frame, Object name,
                     @Cached LLVMReadStringNode readString,
                     @CachedLibrary(limit = "3") InteropLibrary interop,
                     @Cached("createToLLVM()") ForeignToLLVM toLLVM,
                     @Cached BranchProfile notFound,
                     @CachedContext(LLVMLanguage.class) LLVMContext ctx) {
-        String symbolName = readString.executeWithTarget(name);
+        String symbolName = readString.executeWithTarget(frame, name);
 
         try {
             Object ret = interop.readMember(ctx.getEnv().getPolyglotBindings(), symbolName);

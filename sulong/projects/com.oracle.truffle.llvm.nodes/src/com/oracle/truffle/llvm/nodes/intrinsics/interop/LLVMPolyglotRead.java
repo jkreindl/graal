@@ -29,6 +29,7 @@
  */
 package com.oracle.truffle.llvm.nodes.intrinsics.interop;
 
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.llvm.runtime.interop.LLVMAsForeignNode;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Cached;
@@ -61,13 +62,13 @@ public abstract class LLVMPolyglotRead extends LLVMIntrinsic {
         }
 
         @Specialization
-        protected Object uncached(LLVMManagedPointer value, Object id,
+        protected Object uncached(VirtualFrame frame, LLVMManagedPointer value, Object id,
                         @Cached LLVMAsForeignNode asForeign,
                         @Cached("createReadString()") LLVMReadStringNode readStr,
                         @CachedLibrary(limit = "3") InteropLibrary foreignRead,
                         @Cached BranchProfile exception) {
             TruffleObject foreign = asForeign.execute(value);
-            String name = readStr.executeWithTarget(id);
+            String name = readStr.executeWithTarget(frame, id);
             try {
                 Object rawValue = foreignRead.readMember(foreign, name);
                 return toLLVM.executeWithTarget(rawValue);

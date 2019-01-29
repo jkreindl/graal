@@ -35,6 +35,7 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.interop.InvalidArrayIndexException;
 import com.oracle.truffle.api.interop.TruffleObject;
@@ -64,14 +65,14 @@ public final class LLVMPolyglotWrite {
         }
 
         @Specialization
-        protected void doIntrinsic(LLVMManagedPointer target, Object id, Object value,
+        protected void doIntrinsic(VirtualFrame frame, LLVMManagedPointer target, Object id, Object value,
                         @Cached LLVMAsForeignNode asForeign,
                         @CachedLibrary(limit = "3") InteropLibrary foreignWrite,
                         @Cached LLVMDataEscapeNode prepareValueForEscape,
                         @Cached("createReadString()") LLVMReadStringNode readStr,
                         @Cached BranchProfile exception) {
             TruffleObject foreign = asForeign.execute(target);
-            String name = readStr.executeWithTarget(id);
+            String name = readStr.executeWithTarget(frame, id);
             Object escapedValue = prepareValueForEscape.executeWithTarget(value);
             try {
                 foreignWrite.writeMember(foreign, name, escapedValue);

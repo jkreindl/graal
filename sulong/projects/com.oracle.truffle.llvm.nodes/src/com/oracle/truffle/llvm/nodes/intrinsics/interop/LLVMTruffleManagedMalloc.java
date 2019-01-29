@@ -39,6 +39,7 @@ import com.oracle.truffle.api.interop.InvalidArrayIndexException;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 import com.oracle.truffle.api.profiles.BranchProfile;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.llvm.nodes.intrinsics.llvm.LLVMIntrinsic;
 import com.oracle.truffle.llvm.runtime.interop.LLVMInternalTruffleObject;
 import com.oracle.truffle.llvm.runtime.interop.convert.ForeignToLLVM.ForeignToLLVMType;
@@ -127,7 +128,7 @@ public abstract class LLVMTruffleManagedMalloc extends LLVMIntrinsic {
         }
 
         @Override
-        public Object executeRead(Object obj, long offset, ForeignToLLVMType type) {
+        public Object executeRead(VirtualFrame frame, Object obj, long offset, ForeignToLLVMType type) {
             assert offset % LLVMExpressionNode.ADDRESS_SIZE_IN_BYTES == 0 : "invalid offset";
             long idx = offset / LLVMExpressionNode.ADDRESS_SIZE_IN_BYTES;
             return ((ManagedMallocObject) obj).get((int) idx);

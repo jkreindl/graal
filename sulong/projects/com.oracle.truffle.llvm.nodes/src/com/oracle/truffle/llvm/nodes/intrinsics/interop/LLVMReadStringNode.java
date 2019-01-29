@@ -30,6 +30,7 @@
 package com.oracle.truffle.llvm.nodes.intrinsics.interop;
 
 import com.oracle.truffle.api.CompilerAsserts;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
@@ -57,7 +58,7 @@ public abstract class LLVMReadStringNode extends LLVMNode {
 
     @Child PointerReadStringNode readOther;
 
-    public abstract String executeWithTarget(Object address);
+    public abstract String executeWithTarget(VirtualFrame frame, Object address);
 
     @Specialization
     String readString(String address) {
@@ -65,17 +66,17 @@ public abstract class LLVMReadStringNode extends LLVMNode {
     }
 
     @Specialization(guards = "isForeign(foreign)")
-    String readForeign(LLVMManagedPointer foreign,
+    String readForeign(VirtualFrame frame, LLVMManagedPointer foreign,
                     @Cached("create()") ForeignReadStringNode read) {
-        return read.execute(foreign);
+        return read.execute(frame, foreign);
     }
 
     @Fallback
-    String readOther(Object address) {
+    String readOther(VirtualFrame frame, Object address) {
         if (readOther == null) {
             readOther = insert(PointerReadStringNode.create());
         }
-        return readOther.execute(address);
+        return readOther.execute(frame, address);
     }
 
     protected static boolean isForeign(LLVMManagedPointer pointer) {
@@ -94,7 +95,7 @@ public abstract class LLVMReadStringNode extends LLVMNode {
         protected abstract String execute(LLVMManagedPointer foreign);
 
         @Specialization(limit = "3")
-        String doDefault(@SuppressWarnings("unused") LLVMManagedPointer object, TruffleObject foreign,
+        String doDefault(VirtualFrame frame, @SuppressWarnings("unused") LLVMManagedPointer object, TruffleObject foreign,
                         @CachedLibrary("foreign") InteropLibrary interop,
                         @Cached PointerReadStringNode read) {
             if (interop.isString(foreign)) {
@@ -103,7 +104,7 @@ public abstract class LLVMReadStringNode extends LLVMNode {
                 } catch (UnsupportedMessageException e) {
                 }
             }
-            return read.execute(object);
+            return read.execute(frame, object);
         }
 
         public static ForeignReadStringNode create() {
@@ -116,7 +117,7 @@ public abstract class LLVMReadStringNode extends LLVMNode {
         @Child private LLVMIncrementPointerNode inc = LLVMIncrementPointerNodeGen.create();
         @Child private LLVMLoadNode read = LLVMI8LoadNodeGen.create(null);
 
-        protected abstract String execute(Object address);
+        protected abstract String execute(VirtualFrame frame, Object address);
 
         boolean isReadOnlyMemory(LLVMPointer address) {
             CompilerAsserts.neverPartOfCompilation();
@@ -129,17 +130,17 @@ public abstract class LLVMReadStringNode extends LLVMNode {
         }
 
         @Specialization(guards = {"cachedAddress.equals(address)", "isReadOnlyMemory(cachedAddress)"})
-        String doCachedPointer(@SuppressWarnings("unused") LLVMPointer address,
+        String doCachedPointer(@SuppressWarnings("unused") VirtualFrame frame, @SuppressWarnings("unused") LLVMPointer address,
                         @Cached("address") @SuppressWarnings("unused") LLVMPointer cachedAddress,
-                        @Cached("doReadString(cachedAddress)") String result) {
+                        @Cached("doReadString(frame, cachedAddress)") String result) {
             return result;
         }
 
         @Specialization(replaces = "doCachedPointer")
-        String doReadString(Object address) {
+        String doReadString(VirtualFrame frame, Object address) {
             Object ptr = address;
             int length = 0;
-            while ((byte) read.executeWithTarget(ptr) != 0) {
+            while ((byte) read.executeWithTarget(frame, ptr) != 0) {
                 length++;
                 ptr = inc.executeWithTarget(ptr, Byte.BYTES);
             }
@@ -148,7 +149,7 @@ public abstract class LLVMReadStringNode extends LLVMNode {
 
             ptr = address;
             for (int i = 0; i < length; i++) {
-                string[i] = (char) Byte.toUnsignedInt((byte) read.executeWithTarget(ptr));
+                string[i] = (char) Byte.toUnsignedInt((byte) read.executeWithTarget(frame, ptr));
                 ptr = inc.executeWithTarget(ptr, Byte.BYTES);
             }
 

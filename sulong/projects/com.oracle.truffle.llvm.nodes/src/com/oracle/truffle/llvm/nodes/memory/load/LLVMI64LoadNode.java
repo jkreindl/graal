@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -32,6 +32,7 @@ package com.oracle.truffle.llvm.nodes.memory.load;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.profiles.LongValueProfile;
 import com.oracle.truffle.llvm.runtime.LLVMBoxedPrimitive;
 import com.oracle.truffle.llvm.runtime.LLVMVirtualAllocationAddress;
@@ -50,8 +51,8 @@ public abstract class LLVMI64LoadNode extends LLVMAbstractLoadNode {
     }
 
     @Specialization(guards = "isAutoDerefHandle(addr)")
-    protected Object doI64DerefHandle(LLVMNativePointer addr) {
-        return doI64Managed(getDerefHandleGetReceiverNode().execute(addr));
+    protected Object doI64DerefHandle(VirtualFrame frame, LLVMNativePointer addr) {
+        return doI64Managed(frame, getDerefHandleGetReceiverNode().execute(addr));
     }
 
     @Specialization
@@ -61,8 +62,8 @@ public abstract class LLVMI64LoadNode extends LLVMAbstractLoadNode {
     }
 
     @Specialization
-    protected Object doI64Managed(LLVMManagedPointer addr) {
-        return getForeignReadNode().executeRead(addr.getObject(), addr.getOffset(), ForeignToLLVMType.I64);
+    protected Object doI64Managed(VirtualFrame frame, LLVMManagedPointer addr) {
+        return getForeignReadNode().executeRead(frame, addr.getObject(), addr.getOffset(), ForeignToLLVMType.I64);
     }
 
     @Specialization

@@ -33,6 +33,7 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.dsl.CachedContext;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.interop.InteropException;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.library.CachedLibrary;
@@ -51,10 +52,10 @@ public abstract class LLVMPolyglotExport extends LLVMIntrinsic {
     @Child LLVMDataEscapeNode escape = LLVMDataEscapeNode.create();
 
     @Specialization
-    protected Object doExport(Object name, Object value,
+    protected Object doExport(VirtualFrame frame, Object name, Object value,
                     @CachedLibrary(limit = "3") InteropLibrary interop,
                     @CachedContext(LLVMLanguage.class) LLVMContext ctx) {
-        String symbolName = readString.executeWithTarget(name);
+        String symbolName = readString.executeWithTarget(frame, name);
         Object escaped = escape.executeWithTarget(value);
 
         try {
