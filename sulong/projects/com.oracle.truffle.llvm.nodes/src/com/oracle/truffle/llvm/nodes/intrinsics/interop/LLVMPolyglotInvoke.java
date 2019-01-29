@@ -115,7 +115,7 @@ public abstract class LLVMPolyglotInvoke extends LLVMIntrinsic {
                     @CachedContext(LLVMLanguage.class) ContextReference<LLVMContext> context,
                     @Cached("create()") LLVMGetStackNode getStack) {
         TruffleObject foreign = asForeign.execute(value);
-        return doInvoke(frame, foreign, readStr.executeWithTarget(id), context, getStack);
+        return doInvoke(frame, foreign, readStr.executeWithTarget(frame, id), context, getStack);
     }
 
     @Fallback

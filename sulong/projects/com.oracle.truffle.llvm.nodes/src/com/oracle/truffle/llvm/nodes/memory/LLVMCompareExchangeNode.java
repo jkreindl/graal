@@ -167,7 +167,7 @@ public abstract class LLVMCompareExchangeNode extends LLVMExpressionNode {
                         @Cached("getLLVMMemory()") LLVMMemory memory) {
             synchronized (address.getObject()) {
                 LLVMNativePointer allocation = allocateResult(frame, memory);
-                byte currentValue = (byte) read.executeWithTarget(address);
+                byte currentValue = (byte) read.executeWithTarget(frame, address);
                 boolean success = currentValue == comparisonValue;
                 if (success) {
                     write.executeWithTarget(frame, address, newValue);
@@ -185,7 +185,7 @@ public abstract class LLVMCompareExchangeNode extends LLVMExpressionNode {
                         @Cached("getLLVMMemory()") LLVMMemory memory) {
             synchronized (address.getObject()) {
                 LLVMNativePointer allocation = allocateResult(frame, memory);
-                short currentValue = (short) read.executeWithTarget(address);
+                short currentValue = (short) read.executeWithTarget(frame, address);
                 boolean success = currentValue == comparisonValue;
                 if (success) {
                     write.executeWithTarget(frame, address, newValue);
@@ -203,7 +203,7 @@ public abstract class LLVMCompareExchangeNode extends LLVMExpressionNode {
                         @Cached("getLLVMMemory()") LLVMMemory memory) {
             synchronized (address.getObject()) {
                 LLVMNativePointer allocation = allocateResult(frame, memory);
-                int currentValue = (int) read.executeWithTarget(address);
+                int currentValue = (int) read.executeWithTarget(frame, address);
                 boolean success = currentValue == comparisonValue;
                 if (success) {
                     write.executeWithTarget(frame, address, newValue);
@@ -221,7 +221,7 @@ public abstract class LLVMCompareExchangeNode extends LLVMExpressionNode {
                         @Cached("getLLVMMemory()") LLVMMemory memory) {
             synchronized (address.getObject()) {
                 LLVMNativePointer allocation = allocateResult(frame, memory);
-                long currentValue = (long) read.executeWithTarget(address);
+                long currentValue = (long) read.executeWithTarget(frame, address);
                 boolean success = currentValue == comparisonValue;
                 if (success) {
                     write.executeWithTarget(frame, address, newValue);

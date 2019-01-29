@@ -63,7 +63,7 @@ public abstract class LLVMI16RMWNode extends LLVMRMWNode {
                         @Cached("createRead()") LLVMI16LoadNode read,
                         @Cached("createWrite()") LLVMI16StoreNode write) {
             synchronized (address.getObject()) {
-                short result = (short) read.executeWithTarget(address);
+                short result = (short) read.executeWithTarget(frame, address);
                 write.executeWithTarget(frame, address, value);
                 return result;
             }
@@ -83,7 +83,7 @@ public abstract class LLVMI16RMWNode extends LLVMRMWNode {
                         @Cached("createRead()") LLVMI16LoadNode read,
                         @Cached("createWrite()") LLVMI16StoreNode write) {
             synchronized (address.getObject()) {
-                short result = (short) read.executeWithTarget(address);
+                short result = (short) read.executeWithTarget(frame, address);
                 write.executeWithTarget(frame, address, ((short) (result + value)));
                 return result;
             }
@@ -103,7 +103,7 @@ public abstract class LLVMI16RMWNode extends LLVMRMWNode {
                         @Cached("createRead()") LLVMI16LoadNode read,
                         @Cached("createWrite()") LLVMI16StoreNode write) {
             synchronized (address.getObject()) {
-                short result = (short) read.executeWithTarget(address);
+                short result = (short) read.executeWithTarget(frame, address);
                 write.executeWithTarget(frame, address, ((short) (result - value)));
                 return result;
             }
@@ -123,7 +123,7 @@ public abstract class LLVMI16RMWNode extends LLVMRMWNode {
                         @Cached("createRead()") LLVMI16LoadNode read,
                         @Cached("createWrite()") LLVMI16StoreNode write) {
             synchronized (address.getObject()) {
-                short result = (short) read.executeWithTarget(address);
+                short result = (short) read.executeWithTarget(frame, address);
                 write.executeWithTarget(frame, address, ((short) (result & value)));
                 return result;
             }
@@ -143,7 +143,7 @@ public abstract class LLVMI16RMWNode extends LLVMRMWNode {
                         @Cached("createRead()") LLVMI16LoadNode read,
                         @Cached("createWrite()") LLVMI16StoreNode write) {
             synchronized (address.getObject()) {
-                short result = (short) read.executeWithTarget(address);
+                short result = (short) read.executeWithTarget(frame, address);
                 write.executeWithTarget(frame, address, ((short) ~(result & value)));
                 return result;
             }
@@ -163,7 +163,7 @@ public abstract class LLVMI16RMWNode extends LLVMRMWNode {
                         @Cached("createRead()") LLVMI16LoadNode read,
                         @Cached("createWrite()") LLVMI16StoreNode write) {
             synchronized (address.getObject()) {
-                short result = (short) read.executeWithTarget(address);
+                short result = (short) read.executeWithTarget(frame, address);
                 write.executeWithTarget(frame, address, ((short) (result | value)));
                 return result;
             }
@@ -183,7 +183,7 @@ public abstract class LLVMI16RMWNode extends LLVMRMWNode {
                         @Cached("createRead()") LLVMI16LoadNode read,
                         @Cached("createWrite()") LLVMI16StoreNode write) {
             synchronized (address.getObject()) {
-                short result = (short) read.executeWithTarget(address);
+                short result = (short) read.executeWithTarget(frame, address);
                 write.executeWithTarget(frame, address, ((short) (result ^ value)));
                 return result;
             }

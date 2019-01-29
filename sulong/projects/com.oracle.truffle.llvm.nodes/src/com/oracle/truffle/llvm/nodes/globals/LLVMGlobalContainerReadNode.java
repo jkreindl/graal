@@ -31,6 +31,7 @@ package com.oracle.truffle.llvm.nodes.globals;
 
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.llvm.nodes.cast.LLVMToAddressNode;
 import com.oracle.truffle.llvm.nodes.cast.LLVMToI64Node.LLVMBitcastToI64Node;
 import com.oracle.truffle.llvm.runtime.CastOperator;
@@ -56,7 +57,7 @@ public final class LLVMGlobalContainerReadNode extends LLVMNode implements LLVMO
     }
 
     @Override
-    public Object executeRead(Object obj, long offset, ForeignToLLVMType type) {
+    public Object executeRead(VirtualFrame frame, Object obj, long offset, ForeignToLLVMType type) {
         LLVMGlobalContainer container = (LLVMGlobalContainer) obj;
         if (container.getAddress() == 0) {
             if (offset == 0 && (type == ForeignToLLVMType.POINTER || type == ForeignToLLVMType.I64)) {
@@ -65,7 +66,7 @@ public final class LLVMGlobalContainerReadNode extends LLVMNode implements LLVMO
                     return convertToI64(result);
                 } else {
                     assert type == ForeignToLLVMType.POINTER;
-                    return convertToPointer(result);
+                    return convertToPointer(frame, result);
                 }
             }
             transformToNative(container);
@@ -73,12 +74,12 @@ public final class LLVMGlobalContainerReadNode extends LLVMNode implements LLVMO
         return readFromNative(container, offset, type);
     }
 
-    public Object convertToPointer(Object result) {
+    public Object convertToPointer(VirtualFrame frame, Object result) {
         if (toPointer == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
             toPointer = (LLVMToAddressNode) insert(getNodeFactory().createBitcast(CastOperator.INTERNAL, null, PointerType.VOID, null));
         }
-        return toPointer.executeWithTarget(result);
+        return toPointer.executeWithTarget(frame, result);
     }
 
     public Object convertToI64(Object result) {

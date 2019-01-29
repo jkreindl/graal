@@ -34,6 +34,7 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.interop.InvalidArrayIndexException;
 import com.oracle.truffle.api.interop.TruffleObject;
@@ -54,7 +55,7 @@ public final class LLVMPolyglotRemove {
     public abstract static class LLVMPolyglotRemoveMember extends LLVMIntrinsic {
 
         @Specialization
-        protected boolean doRemove(LLVMManagedPointer value, Object id,
+        protected boolean doRemove(VirtualFrame frame, LLVMManagedPointer value, Object id,
                         @Cached LLVMAsForeignNode asForeign,
                         @Cached LLVMReadStringNode readStr,
                         @CachedLibrary(limit = "3") InteropLibrary interop,
@@ -62,7 +63,7 @@ public final class LLVMPolyglotRemove {
                         @Cached BranchProfile exception) {
             TruffleObject foreign = asForeign.execute(value);
             try {
-                interop.removeMember(foreign, readStr.executeWithTarget(id));
+                interop.removeMember(foreign, readStr.executeWithTarget(frame, id));
                 return true;
             } catch (UnknownIdentifierException ex) {
                 notFound.enter();

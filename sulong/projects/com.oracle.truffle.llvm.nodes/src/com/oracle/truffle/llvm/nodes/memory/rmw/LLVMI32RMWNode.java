@@ -63,7 +63,7 @@ public abstract class LLVMI32RMWNode extends LLVMRMWNode {
                         @Cached("createRead()") LLVMI32LoadNode read,
                         @Cached("createWrite()") LLVMI32StoreNode write) {
             synchronized (address.getObject()) {
-                int result = (int) read.executeWithTarget(address);
+                int result = (int) read.executeWithTarget(frame, address);
                 write.executeWithTarget(frame, address, value);
                 return result;
             }
@@ -83,7 +83,7 @@ public abstract class LLVMI32RMWNode extends LLVMRMWNode {
                         @Cached("createRead()") LLVMI32LoadNode read,
                         @Cached("createWrite()") LLVMI32StoreNode write) {
             synchronized (address.getObject()) {
-                int result = (int) read.executeWithTarget(address);
+                int result = (int) read.executeWithTarget(frame, address);
                 write.executeWithTarget(frame, address, result + value);
                 return result;
             }
@@ -103,7 +103,7 @@ public abstract class LLVMI32RMWNode extends LLVMRMWNode {
                         @Cached("createRead()") LLVMI32LoadNode read,
                         @Cached("createWrite()") LLVMI32StoreNode write) {
             synchronized (address.getObject()) {
-                int result = (int) read.executeWithTarget(address);
+                int result = (int) read.executeWithTarget(frame, address);
                 write.executeWithTarget(frame, address, result - value);
                 return result;
             }
@@ -123,7 +123,7 @@ public abstract class LLVMI32RMWNode extends LLVMRMWNode {
                         @Cached("createRead()") LLVMI32LoadNode read,
                         @Cached("createWrite()") LLVMI32StoreNode write) {
             synchronized (address.getObject()) {
-                int result = (int) read.executeWithTarget(address);
+                int result = (int) read.executeWithTarget(frame, address);
                 write.executeWithTarget(frame, address, result & value);
                 return result;
             }
@@ -143,7 +143,7 @@ public abstract class LLVMI32RMWNode extends LLVMRMWNode {
                         @Cached("createRead()") LLVMI32LoadNode read,
                         @Cached("createWrite()") LLVMI32StoreNode write) {
             synchronized (address.getObject()) {
-                int result = (int) read.executeWithTarget(address);
+                int result = (int) read.executeWithTarget(frame, address);
                 write.executeWithTarget(frame, address, ~(result & value));
                 return result;
             }
@@ -163,7 +163,7 @@ public abstract class LLVMI32RMWNode extends LLVMRMWNode {
                         @Cached("createRead()") LLVMI32LoadNode read,
                         @Cached("createWrite()") LLVMI32StoreNode write) {
             synchronized (address.getObject()) {
-                int result = (int) read.executeWithTarget(address);
+                int result = (int) read.executeWithTarget(frame, address);
                 write.executeWithTarget(frame, address, result | value);
                 return result;
             }
@@ -183,7 +183,7 @@ public abstract class LLVMI32RMWNode extends LLVMRMWNode {
                         @Cached("createRead()") LLVMI32LoadNode read,
                         @Cached("createWrite()") LLVMI32StoreNode write) {
             synchronized (address.getObject()) {
-                int result = (int) read.executeWithTarget(address);
+                int result = (int) read.executeWithTarget(frame, address);
                 write.executeWithTarget(frame, address, result ^ value);
                 return result;
             }

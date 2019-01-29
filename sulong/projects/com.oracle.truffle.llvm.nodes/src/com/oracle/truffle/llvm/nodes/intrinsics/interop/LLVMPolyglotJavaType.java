@@ -33,6 +33,7 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.CachedContext;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.llvm.nodes.intrinsics.llvm.LLVMIntrinsic;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.LLVMLanguage;
@@ -46,10 +47,10 @@ public abstract class LLVMPolyglotJavaType extends LLVMIntrinsic {
     @Child LLVMReadStringNode readString = LLVMReadStringNodeGen.create();
 
     @Specialization
-    protected Object doImport(Object name,
+    protected Object doImport(VirtualFrame frame, Object name,
                     @CachedContext(LLVMLanguage.class) LLVMContext ctx,
                     @Cached("createForeignToLLVM()") ForeignToLLVM toLLVM) {
-        String className = readString.executeWithTarget(name);
+        String className = readString.executeWithTarget(frame, name);
 
         Object ret = ctx.getEnv().lookupHostSymbol(className);
         return toLLVM.executeWithTarget(ret);

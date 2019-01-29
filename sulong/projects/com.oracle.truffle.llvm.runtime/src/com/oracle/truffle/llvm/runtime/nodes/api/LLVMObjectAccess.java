@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,6 +29,7 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes.api;
 
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.nodes.NodeInterface;
 import com.oracle.truffle.api.object.DynamicObject;
@@ -62,7 +63,7 @@ public interface LLVMObjectAccess {
          * @param offset the byte offset into the object
          * @return the read value
          */
-        Object executeRead(Object obj, long offset, ForeignToLLVMType type);
+        Object executeRead(VirtualFrame frame, Object obj, long offset, ForeignToLLVMType type);
     }
 
     interface LLVMObjectWriteNode extends LLVMObjectAccessNode {

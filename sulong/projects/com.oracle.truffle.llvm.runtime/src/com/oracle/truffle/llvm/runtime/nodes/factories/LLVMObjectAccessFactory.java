@@ -33,6 +33,7 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.interop.InteropException;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.interop.TruffleObject;
@@ -72,9 +73,9 @@ public abstract class LLVMObjectAccessFactory {
         }
 
         @Specialization(limit = "TYPE_LIMIT", guards = "impl.canAccess(obj)")
-        protected Object doRead(Object obj, long offset, ForeignToLLVMType type,
+        protected Object doRead(VirtualFrame frame, Object obj, long offset, ForeignToLLVMType type,
                         @Cached("createReadNode(obj)") LLVMObjectReadNode impl) {
-            return impl.executeRead(obj, offset, type);
+            return impl.executeRead(frame, obj, offset, type);
         }
 
         protected LLVMObjectReadNode createReadNode(Object obj) {
@@ -104,7 +105,7 @@ public abstract class LLVMObjectAccessFactory {
         }
 
         @Override
-        public Object executeRead(Object obj, long offset, ForeignToLLVMType type) {
+        public Object executeRead(VirtualFrame frame, Object obj, long offset, ForeignToLLVMType type) {
             try {
                 Object foreign = interop.readArrayElement(obj, offset / type.getSizeInBytes());
                 return toLLVM.executeWithType(foreign, null, type);

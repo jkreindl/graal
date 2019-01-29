@@ -29,6 +29,7 @@
  */
 package com.oracle.truffle.llvm.nodes.intrinsics.interop;
 
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.llvm.runtime.interop.LLVMAsForeignNode;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
@@ -47,12 +48,12 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
 public abstract class LLVMPolyglotHasMember extends LLVMIntrinsic {
 
     @Specialization
-    protected boolean doHasMember(LLVMManagedPointer object, Object name,
+    protected boolean doHasMember(VirtualFrame frame, LLVMManagedPointer object, Object name,
                     @Cached LLVMAsForeignNode asForeign,
                     @Cached LLVMReadStringNode readString,
                     @CachedLibrary(limit = "3") InteropLibrary interop) {
         TruffleObject foreign = asForeign.execute(object);
-        String id = readString.executeWithTarget(name);
+        String id = readString.executeWithTarget(frame, name);
         return interop.isMemberExisting(foreign, id);
     }
 

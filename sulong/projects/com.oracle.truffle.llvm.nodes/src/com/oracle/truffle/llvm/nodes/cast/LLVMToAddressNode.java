@@ -31,6 +31,7 @@ package com.oracle.truffle.llvm.nodes.cast;
 
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.llvm.runtime.CastOperator;
 import com.oracle.truffle.llvm.runtime.LLVMBoxedPrimitive;
 import com.oracle.truffle.llvm.runtime.LLVMVirtualAllocationAddress;
@@ -46,7 +47,7 @@ public abstract class LLVMToAddressNode extends LLVMCastNode {
         super(conversionKind);
     }
 
-    public abstract Object executeWithTarget(Object from);
+    public abstract Object executeWithTarget(VirtualFrame frame, Object from);
 
     @Specialization
     protected LLVMNativePointer doI1(boolean from) {
