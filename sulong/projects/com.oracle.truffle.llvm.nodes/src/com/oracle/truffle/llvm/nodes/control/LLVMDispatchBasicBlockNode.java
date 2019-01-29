@@ -103,7 +103,7 @@ public final class LLVMDispatchBasicBlockNode extends LLVMExpressionNode {
 
             // execute control flow node, write phis, null stack frame slots, and dispatch to
             // the correct successor block
-            LLVMControlFlowNode controlFlowNode = bb.termInstruction;
+            LLVMControlFlowNode controlFlowNode = bb.getTerminatingInstruction();
             if (controlFlowNode instanceof LLVMConditionalBranchNode) {
                 LLVMConditionalBranchNode conditionalBranchNode = (LLVMConditionalBranchNode) controlFlowNode;
                 boolean condition = conditionalBranchNode.executeCondition(frame);
