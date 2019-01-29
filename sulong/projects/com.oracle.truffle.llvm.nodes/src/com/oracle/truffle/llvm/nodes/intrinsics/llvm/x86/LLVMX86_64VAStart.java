@@ -106,31 +106,31 @@ public abstract class LLVMX86_64VAStart extends LLVMExpressionNode {
         this.memmove = memmove;
     }
 
-    private void setGPOffset(Object address, int value) {
+    private void setGPOffset(VirtualFrame frame, Object address, int value) {
         Object p = pointerArithmeticStructInit.executeWithTarget(address, X86_64BitVarArgs.GP_OFFSET);
-        gpOffsetStore.executeWithTarget(p, value);
+        gpOffsetStore.executeWithTarget(frame, p, value);
     }
 
-    private void setFPOffset(Object address, int value) {
+    private void setFPOffset(VirtualFrame frame, Object address, int value) {
         Object p = pointerArithmeticStructInit.executeWithTarget(address, X86_64BitVarArgs.FP_OFFSET);
-        fpOffsetStore.executeWithTarget(p, value);
+        fpOffsetStore.executeWithTarget(frame, p, value);
     }
 
-    private void setOverflowArgArea(Object address, Object value) {
+    private void setOverflowArgArea(VirtualFrame frame, Object address, Object value) {
         Object p = pointerArithmeticStructInit.executeWithTarget(address, X86_64BitVarArgs.OVERFLOW_ARG_AREA);
-        overflowArgAreaStore.executeWithTarget(p, value);
+        overflowArgAreaStore.executeWithTarget(frame, p, value);
     }
 
-    private void setRegSaveArea(Object address, Object value) {
+    private void setRegSaveArea(VirtualFrame frame, Object address, Object value) {
         Object p = pointerArithmeticStructInit.executeWithTarget(address, X86_64BitVarArgs.REG_SAVE_AREA);
-        regSaveAreaStore.executeWithTarget(p, value);
+        regSaveAreaStore.executeWithTarget(frame, p, value);
     }
 
-    private void initializeVaList(Object valist, int gpOffset, int fpOffset, Object overflowArgArea, Object regSaveArea) {
-        setGPOffset(valist, gpOffset);
-        setFPOffset(valist, fpOffset);
-        setOverflowArgArea(valist, overflowArgArea);
-        setRegSaveArea(valist, regSaveArea);
+    private void initializeVaList(VirtualFrame frame, Object valist, int gpOffset, int fpOffset, Object overflowArgArea, Object regSaveArea) {
+        setGPOffset(frame, valist, gpOffset);
+        setFPOffset(frame, valist, fpOffset);
+        setOverflowArgArea(frame, valist, overflowArgArea);
+        setRegSaveArea(frame, valist, regSaveArea);
     }
 
     private enum VarArgArea {
@@ -245,7 +245,7 @@ public abstract class LLVMX86_64VAStart extends LLVMExpressionNode {
         int gpOffset = calculateUsedGpArea(arguments);
         int fpOffset = X86_64BitVarArgs.GP_LIMIT + calculateUsedFpArea(arguments);
 
-        initializeVaList(targetAddress, gpOffset, fpOffset, overflowArgArea, regSaveArea);
+        initializeVaList(frame, targetAddress, gpOffset, fpOffset, overflowArgArea, regSaveArea);
 
         // reconstruct register_save_area and overflow_arg_area according to AMD64 ABI
         if (vaLength > 0) {
@@ -258,14 +258,16 @@ public abstract class LLVMX86_64VAStart extends LLVMExpressionNode {
                 final VarArgArea area = getVarArgArea(object);
 
                 if (area == VarArgArea.GP_AREA && gpOffset < X86_64BitVarArgs.GP_LIMIT) {
-                    storeArgument(regSaveArea, gpOffset, memmove, pointerArithmeticRegSaveArea, i64RegSaveAreaStore, i32RegSaveAreaStore, fp80bitRegSaveAreaStore, pointerRegSaveAreaStore, object);
+                    storeArgument(frame, regSaveArea, gpOffset, memmove, pointerArithmeticRegSaveArea, i64RegSaveAreaStore, i32RegSaveAreaStore, fp80bitRegSaveAreaStore, pointerRegSaveAreaStore,
+                                    object);
                     gpOffset += X86_64BitVarArgs.GP_STEP;
                 } else if (area == VarArgArea.FP_AREA && fpOffset < X86_64BitVarArgs.FP_LIMIT) {
-                    storeArgument(regSaveArea, fpOffset, memmove, pointerArithmeticRegSaveArea, i64RegSaveAreaStore, i32RegSaveAreaStore, fp80bitRegSaveAreaStore, pointerRegSaveAreaStore, object);
+                    storeArgument(frame, regSaveArea, fpOffset, memmove, pointerArithmeticRegSaveArea, i64RegSaveAreaStore, i32RegSaveAreaStore, fp80bitRegSaveAreaStore, pointerRegSaveAreaStore,
+                                    object);
                     fpOffset += X86_64BitVarArgs.FP_STEP;
                 } else {
                     assert overflowArgAreaSize >= overflowOffset;
-                    overflowOffset += storeArgument(overflowArgArea, overflowOffset, memmove, pointerArithmeticOverflowArea, i64OverflowArgAreaStore, i32OverflowArgAreaStore,
+                    overflowOffset += storeArgument(frame, overflowArgArea, overflowOffset, memmove, pointerArithmeticOverflowArea, i64OverflowArgAreaStore, i32OverflowArgAreaStore,
                                     fp80bitOverflowArgAreaStore, pointerOverflowArgAreaStore, object);
                 }
             }
@@ -279,10 +281,10 @@ public abstract class LLVMX86_64VAStart extends LLVMExpressionNode {
         return source;
     }
 
-    private static int storeArgument(Object ptr, long offset, LLVMMemMoveNode memmove, LLVMIncrementPointerNode pointerArithmetic, LLVMStoreNode storeI64Node,
+    private static int storeArgument(VirtualFrame frame, Object ptr, long offset, LLVMMemMoveNode memmove, LLVMIncrementPointerNode pointerArithmetic, LLVMStoreNode storeI64Node,
                     LLVMStoreNode storeI32Node, LLVMStoreNode storeFP80Node, LLVMStoreNode storePointerNode, Object object) {
         if (object instanceof Number) {
-            return doPrimitiveWrite(ptr, offset, pointerArithmetic, storeI64Node, object);
+            return doPrimitiveWrite(frame, ptr, offset, pointerArithmetic, storeI64Node, object);
         } else if (object instanceof LLVMVarArgCompoundValue) {
             LLVMVarArgCompoundValue obj = (LLVMVarArgCompoundValue) object;
             Object currentPtr = pointerArithmetic.executeWithTarget(ptr, offset);
@@ -290,17 +292,17 @@ public abstract class LLVMX86_64VAStart extends LLVMExpressionNode {
             return obj.getSize();
         } else if (LLVMPointer.isInstance(object)) {
             Object currentPtr = pointerArithmetic.executeWithTarget(ptr, offset);
-            storePointerNode.executeWithTarget(currentPtr, object);
+            storePointerNode.executeWithTarget(frame, currentPtr, object);
             return X86_64BitVarArgs.STACK_STEP;
         } else if (object instanceof LLVM80BitFloat) {
             Object currentPtr = pointerArithmetic.executeWithTarget(ptr, offset);
-            storeFP80Node.executeWithTarget(currentPtr, object);
+            storeFP80Node.executeWithTarget(frame, currentPtr, object);
             return 16;
         } else if (object instanceof LLVMFloatVector) {
             final LLVMFloatVector floatVec = (LLVMFloatVector) object;
             for (int i = 0; i < floatVec.getLength(); i++) {
                 Object currentPtr = pointerArithmetic.executeWithTarget(ptr, offset + i * Float.BYTES);
-                storeI32Node.executeWithTarget(currentPtr, Float.floatToIntBits(floatVec.getValue(i)));
+                storeI32Node.executeWithTarget(frame, currentPtr, Float.floatToIntBits(floatVec.getValue(i)));
             }
             return floatVec.getLength() * Float.BYTES;
         } else {
@@ -309,7 +311,7 @@ public abstract class LLVMX86_64VAStart extends LLVMExpressionNode {
         }
     }
 
-    private static int doPrimitiveWrite(Object ptr, long offset, LLVMIncrementPointerNode pointerArithmetic, LLVMStoreNode storeNode, Object arg) throws AssertionError {
+    private static int doPrimitiveWrite(VirtualFrame frame, Object ptr, long offset, LLVMIncrementPointerNode pointerArithmetic, LLVMStoreNode storeNode, Object arg) throws AssertionError {
         Object currentPtr = pointerArithmetic.executeWithTarget(ptr, offset);
         long value;
         if (arg instanceof Boolean) {
@@ -330,7 +332,7 @@ public abstract class LLVMX86_64VAStart extends LLVMExpressionNode {
             CompilerDirectives.transferToInterpreter();
             throw new AssertionError(arg);
         }
-        storeNode.executeWithTarget(currentPtr, value);
+        storeNode.executeWithTarget(frame, currentPtr, value);
         return X86_64BitVarArgs.STACK_STEP;
     }
 }

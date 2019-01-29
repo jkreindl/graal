@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -34,6 +34,7 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.NodeField;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.llvm.nodes.intrinsics.llvm.LLVMBuiltin;
 import com.oracle.truffle.llvm.nodes.intrinsics.llvm.LLVMIntrinsic;
@@ -417,30 +418,30 @@ public abstract class LLVMCMathsIntrinsics {
     public abstract static class LLVMModf extends LLVMIntrinsic {
 
         @Specialization
-        protected double doIntrinsic(double value, LLVMPointer integralAddr,
+        protected double doIntrinsic(VirtualFrame frame, double value, LLVMPointer integralAddr,
                         @Cached("createDoubleStore()") LLVMDoubleStoreNode store) {
             double fractional = value % 1;
             double integral = value - fractional;
-            store.executeWithTarget(integralAddr, integral);
+            store.executeWithTarget(frame, integralAddr, integral);
             return fractional;
         }
 
         @Specialization
-        protected float doIntrinsic(float value, LLVMPointer integralAddr,
+        protected float doIntrinsic(VirtualFrame frame, float value, LLVMPointer integralAddr,
                         @Cached("createFloatStore()") LLVMFloatStoreNode store) {
             float fractional = value % 1;
             float integral = value - fractional;
-            store.executeWithTarget(integralAddr, integral);
+            store.executeWithTarget(frame, integralAddr, integral);
             return fractional;
         }
 
         @Specialization
-        protected LLVM80BitFloat doIntrinsic(LLVM80BitFloat longDoubleValue, LLVMPointer integralAddr,
+        protected LLVM80BitFloat doIntrinsic(VirtualFrame frame, LLVM80BitFloat longDoubleValue, LLVMPointer integralAddr,
                         @Cached("create80BitFloatStore()") LLVM80BitFloatStoreNode store) {
             double value = longDoubleValue.getDoubleValue();
             double fractional = value % 1;
             double integral = value - fractional;
-            store.executeWithTarget(integralAddr, integral);
+            store.executeWithTarget(frame, integralAddr, integral);
             return LLVM80BitFloat.fromDouble(fractional);
         }
 

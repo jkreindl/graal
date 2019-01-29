@@ -82,8 +82,8 @@ public final class LLVMLandingpadNode extends LLVMExpressionNode {
                 throw exception;
             } else {
                 LLVMPointer landingPadValue = allocateLandingPadValue.executeLLVMPointer(frame);
-                writePointer.executeWithTarget(landingPadValue, unwindHeader);
-                writeI32.executeWithTarget(landingPadValue.increment(LLVMExpressionNode.ADDRESS_SIZE_IN_BYTES), clauseId);
+                writePointer.executeWithTarget(frame, landingPadValue, unwindHeader);
+                writeI32.executeWithTarget(frame, landingPadValue.increment(LLVMExpressionNode.ADDRESS_SIZE_IN_BYTES), clauseId);
                 return landingPadValue;
             }
         } catch (FrameSlotTypeException | UnexpectedResultException e) {

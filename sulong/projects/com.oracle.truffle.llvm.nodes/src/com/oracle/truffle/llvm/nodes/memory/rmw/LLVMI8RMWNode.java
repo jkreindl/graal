@@ -31,6 +31,7 @@ package com.oracle.truffle.llvm.nodes.memory.rmw;
 
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.llvm.nodes.memory.load.LLVMI8LoadNode;
 import com.oracle.truffle.llvm.nodes.memory.load.LLVMI8LoadNodeGen;
 import com.oracle.truffle.llvm.nodes.memory.store.LLVMI8StoreNode;
@@ -58,12 +59,12 @@ public abstract class LLVMI8RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected byte doOp(LLVMManagedPointer address, byte value,
+        protected byte doOp(VirtualFrame frame, LLVMManagedPointer address, byte value,
                         @Cached("createRead()") LLVMI8LoadNode read,
                         @Cached("createWrite()") LLVMI8StoreNode write) {
             synchronized (address.getObject()) {
                 byte result = (byte) read.executeWithTarget(address);
-                write.executeWithTarget(address, value);
+                write.executeWithTarget(frame, address, value);
                 return result;
             }
         }
@@ -78,12 +79,12 @@ public abstract class LLVMI8RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected byte doOp(LLVMManagedPointer address, byte value,
+        protected byte doOp(VirtualFrame frame, LLVMManagedPointer address, byte value,
                         @Cached("createRead()") LLVMI8LoadNode read,
                         @Cached("createWrite()") LLVMI8StoreNode write) {
             synchronized (address.getObject()) {
                 byte result = (byte) read.executeWithTarget(address);
-                write.executeWithTarget(address, ((byte) (result + value)));
+                write.executeWithTarget(frame, address, ((byte) (result + value)));
                 return result;
             }
         }
@@ -98,12 +99,12 @@ public abstract class LLVMI8RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected byte doOp(LLVMManagedPointer address, byte value,
+        protected byte doOp(VirtualFrame frame, LLVMManagedPointer address, byte value,
                         @Cached("createRead()") LLVMI8LoadNode read,
                         @Cached("createWrite()") LLVMI8StoreNode write) {
             synchronized (address.getObject()) {
                 byte result = (byte) read.executeWithTarget(address);
-                write.executeWithTarget(address, ((byte) (result - value)));
+                write.executeWithTarget(frame, address, ((byte) (result - value)));
                 return result;
             }
         }
@@ -118,12 +119,12 @@ public abstract class LLVMI8RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected byte doOp(LLVMManagedPointer address, byte value,
+        protected byte doOp(VirtualFrame frame, LLVMManagedPointer address, byte value,
                         @Cached("createRead()") LLVMI8LoadNode read,
                         @Cached("createWrite()") LLVMI8StoreNode write) {
             synchronized (address.getObject()) {
                 byte result = (byte) read.executeWithTarget(address);
-                write.executeWithTarget(address, ((byte) (result & value)));
+                write.executeWithTarget(frame, address, ((byte) (result & value)));
                 return result;
             }
         }
@@ -138,12 +139,12 @@ public abstract class LLVMI8RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected byte doOp(LLVMManagedPointer address, byte value,
+        protected byte doOp(VirtualFrame frame, LLVMManagedPointer address, byte value,
                         @Cached("createRead()") LLVMI8LoadNode read,
                         @Cached("createWrite()") LLVMI8StoreNode write) {
             synchronized (address.getObject()) {
                 byte result = (byte) read.executeWithTarget(address);
-                write.executeWithTarget(address, ((byte) ~(result & value)));
+                write.executeWithTarget(frame, address, ((byte) ~(result & value)));
                 return result;
             }
         }
@@ -158,12 +159,12 @@ public abstract class LLVMI8RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected byte doOp(LLVMManagedPointer address, byte value,
+        protected byte doOp(VirtualFrame frame, LLVMManagedPointer address, byte value,
                         @Cached("createRead()") LLVMI8LoadNode read,
                         @Cached("createWrite()") LLVMI8StoreNode write) {
             synchronized (address.getObject()) {
                 byte result = (byte) read.executeWithTarget(address);
-                write.executeWithTarget(address, ((byte) (result | value)));
+                write.executeWithTarget(frame, address, ((byte) (result | value)));
                 return result;
             }
         }
@@ -178,12 +179,12 @@ public abstract class LLVMI8RMWNode extends LLVMRMWNode {
         }
 
         @Specialization
-        protected byte doOp(LLVMManagedPointer address, byte value,
+        protected byte doOp(VirtualFrame frame, LLVMManagedPointer address, byte value,
                         @Cached("createRead()") LLVMI8LoadNode read,
                         @Cached("createWrite()") LLVMI8StoreNode write) {
             synchronized (address.getObject()) {
                 byte result = (byte) read.executeWithTarget(address);
-                write.executeWithTarget(address, ((byte) (result ^ value)));
+                write.executeWithTarget(frame, address, ((byte) (result ^ value)));
                 return result;
             }
         }

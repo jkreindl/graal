@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -62,13 +62,13 @@ public abstract class LLVMAMD64StosNode extends LLVMStatementNode {
 
         @Specialization
         protected void opI8(VirtualFrame frame, byte al, long rdi, boolean df) {
-            store.executeWithTarget(LLVMNativePointer.create(rdi), al);
+            store.executeWithTarget(frame, LLVMNativePointer.create(rdi), al);
             writeRDI.execute(frame, rdi + (df ? -1 : 1));
         }
 
         @Specialization
         protected void opI8(VirtualFrame frame, byte al, LLVMPointer rdi, boolean df) {
-            store.executeWithTarget(rdi, al);
+            store.executeWithTarget(frame, rdi, al);
             writeRDI.execute(frame, rdi.increment(df ? -1 : 1));
         }
     }
@@ -81,13 +81,13 @@ public abstract class LLVMAMD64StosNode extends LLVMStatementNode {
 
         @Specialization
         protected void opI8(VirtualFrame frame, short al, long rdi, boolean df) {
-            store.executeWithTarget(LLVMNativePointer.create(rdi), al);
+            store.executeWithTarget(frame, LLVMNativePointer.create(rdi), al);
             writeRDI.execute(frame, rdi + (df ? -2 : 2));
         }
 
         @Specialization
         protected void opI8(VirtualFrame frame, short al, LLVMPointer rdi, boolean df) {
-            store.executeWithTarget(rdi, al);
+            store.executeWithTarget(frame, rdi, al);
             writeRDI.execute(frame, rdi.increment(df ? -2 : 2));
         }
     }
@@ -100,13 +100,13 @@ public abstract class LLVMAMD64StosNode extends LLVMStatementNode {
 
         @Specialization
         protected void opI8(VirtualFrame frame, int al, long rdi, boolean df) {
-            store.executeWithTarget(LLVMNativePointer.create(rdi), al);
+            store.executeWithTarget(frame, LLVMNativePointer.create(rdi), al);
             writeRDI.execute(frame, rdi + (df ? -4 : 4));
         }
 
         @Specialization
         protected void opI8(VirtualFrame frame, int al, LLVMPointer rdi, boolean df) {
-            store.executeWithTarget(rdi, al);
+            store.executeWithTarget(frame, rdi, al);
             writeRDI.execute(frame, rdi.increment(df ? -4 : 4));
         }
     }
@@ -119,13 +119,13 @@ public abstract class LLVMAMD64StosNode extends LLVMStatementNode {
 
         @Specialization
         protected void opI8(VirtualFrame frame, long al, long rdi, boolean df) {
-            store.executeWithTarget(LLVMNativePointer.create(rdi), al);
+            store.executeWithTarget(frame, LLVMNativePointer.create(rdi), al);
             writeRDI.execute(frame, rdi + (df ? -8 : 8));
         }
 
         @Specialization
         protected void opI8(VirtualFrame frame, long al, LLVMPointer rdi, boolean df) {
-            store.executeWithTarget(rdi, al);
+            store.executeWithTarget(frame, rdi, al);
             writeRDI.execute(frame, rdi.increment(df ? -8 : 8));
         }
     }

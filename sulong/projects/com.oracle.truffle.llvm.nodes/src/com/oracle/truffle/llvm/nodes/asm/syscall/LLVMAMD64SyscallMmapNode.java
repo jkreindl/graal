@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -31,6 +31,7 @@ package com.oracle.truffle.llvm.nodes.asm.syscall;
 
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.profiles.ConditionProfile;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory;
 import com.oracle.truffle.llvm.runtime.memory.LLVMSyscallOperationNode;
@@ -57,7 +58,7 @@ public abstract class LLVMAMD64SyscallMmapNode extends LLVMSyscallOperationNode 
     }
 
     @Specialization
-    protected long doOp(long addr, long len, long prot, long flags, long fildes, long off) {
-        return execute(LLVMNativePointer.create(addr), len, prot, flags, fildes, off);
+    protected long doOp(VirtualFrame frame, long addr, long len, long prot, long flags, long fildes, long off) {
+        return execute(frame, LLVMNativePointer.create(addr), len, prot, flags, fildes, off);
     }
 }

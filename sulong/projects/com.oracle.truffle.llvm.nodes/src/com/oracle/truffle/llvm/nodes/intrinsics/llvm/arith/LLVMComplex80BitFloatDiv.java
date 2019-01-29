@@ -85,8 +85,8 @@ public abstract class LLVMComplex80BitFloatDiv extends LLVMExpressionNode {
             double zImag = (b * c - a * d) / denom;
 
             LLVMPointer allocatedMemory = alloc.executeLLVMPointer(frame);
-            store.executeWithTarget(allocatedMemory, LLVM80BitFloat.fromDouble(zReal));
-            store.executeWithTarget(allocatedMemory.increment(sizeInBytes), LLVM80BitFloat.fromDouble(zImag));
+            store.executeWithTarget(frame, allocatedMemory, LLVM80BitFloat.fromDouble(zReal));
+            store.executeWithTarget(frame, allocatedMemory.increment(sizeInBytes), LLVM80BitFloat.fromDouble(zImag));
 
             return allocatedMemory;
         } catch (UnexpectedResultException e) {

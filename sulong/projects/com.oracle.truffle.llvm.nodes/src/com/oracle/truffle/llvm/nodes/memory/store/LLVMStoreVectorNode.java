@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -33,6 +33,7 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.NodeField;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
@@ -198,12 +199,12 @@ public abstract class LLVMStoreVectorNode extends LLVMStoreNodeCommon {
 
     @Specialization(guards = "!isAutoDerefHandle(address)")
     @ExplodeLoop
-    protected void writeVector(LLVMNativePointer address, LLVMPointerVector value,
+    protected void writeVector(VirtualFrame frame, LLVMNativePointer address, LLVMPointerVector value,
                     @Cached("createPointerStore()") LLVMPointerStoreNode write) {
         assert value.getLength() == getVectorLength();
         long currentPtr = address.asNative();
         for (int i = 0; i < getVectorLength(); i++) {
-            write.executeWithTarget(currentPtr, value.getValue(i));
+            write.executeWithTarget(frame, currentPtr, value.getValue(i));
             currentPtr += ADDRESS_SIZE_IN_BYTES;
         }
     }

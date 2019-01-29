@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -73,8 +73,8 @@ public final class LLVMComplexDoubleMul extends LLVMExpressionNode {
             double zImag = ad + bc;
 
             LLVMPointer allocatedMemory = alloc.executeLLVMPointer(frame);
-            store.executeWithTarget(allocatedMemory, zReal);
-            store.executeWithTarget(allocatedMemory.increment(LLVMExpressionNode.DOUBLE_SIZE_IN_BYTES), zImag);
+            store.executeWithTarget(frame, allocatedMemory, zReal);
+            store.executeWithTarget(frame, allocatedMemory.increment(LLVMExpressionNode.DOUBLE_SIZE_IN_BYTES), zImag);
 
             return allocatedMemory;
         } catch (UnexpectedResultException e) {
