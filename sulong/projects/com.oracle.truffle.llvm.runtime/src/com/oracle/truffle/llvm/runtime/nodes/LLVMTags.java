@@ -133,6 +133,12 @@ public final class LLVMTags {
         }
     }
 
+    @Identifier(value = "SELECT")
+    public static final class Select extends Tag {
+        private Select() {
+        }
+    }
+
     @Identifier(value = "RET")
     public static final class Ret extends Tag {
         private Ret() {

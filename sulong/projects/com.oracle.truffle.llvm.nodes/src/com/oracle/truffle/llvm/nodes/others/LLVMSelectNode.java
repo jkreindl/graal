@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -31,16 +31,24 @@ package com.oracle.truffle.llvm.nodes.others;
 
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.profiles.ConditionProfile;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 
-@NodeChild(type = LLVMExpressionNode.class)
-@NodeChild(type = LLVMExpressionNode.class)
-@NodeChild(type = LLVMExpressionNode.class)
+@NodeChild(value = "condition", type = LLVMExpressionNode.class)
+@NodeChild(value = "trueBranch", type = LLVMExpressionNode.class)
+@NodeChild(value = "falseBranch", type = LLVMExpressionNode.class)
 public abstract class LLVMSelectNode extends LLVMExpressionNode {
+
     protected final ConditionProfile conditionProfile = ConditionProfile.createCountingProfile();
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return tag == LLVMTags.Select.class || super.hasTag(tag);
+    }
 
     public abstract static class LLVMI1SelectNode extends LLVMSelectNode {
 
