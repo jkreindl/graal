@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -43,5 +43,10 @@ public class LLVMFrameNuller extends LLVMStatementNode {
     @Override
     public void execute(VirtualFrame frame) {
         LLVMFrameNullerUtil.nullFrameSlot(frame, frameSlot, false);
+    }
+
+    @Override
+    public boolean isInstrumentable() {
+        return false;
     }
 }

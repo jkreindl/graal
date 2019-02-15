@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -56,5 +56,10 @@ public abstract class LLVMArgNode extends LLVMExpressionNode {
     @Specialization(guards = "!isPointer(frame)")
     protected Object doObject(VirtualFrame frame) {
         return frame.getArguments()[getIndex()];
+    }
+
+    @Override
+    public boolean isInstrumentable() {
+        return false;
     }
 }
