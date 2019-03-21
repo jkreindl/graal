@@ -75,7 +75,7 @@ public abstract class LLVMToVarINode extends LLVMCastNode {
 
         @Override
         protected LLVMToVarINode createRecursive() {
-            return LLVMSignedCastToIVarNodeGen.create(null, getBits());
+            return LLVMSignedCastToIVarNodeGen.create(getConversionKind(), null, getBits());
         }
 
         @Specialization
@@ -117,7 +117,7 @@ public abstract class LLVMToVarINode extends LLVMCastNode {
 
         @Override
         protected LLVMToVarINode createRecursive() {
-            return LLVMUnsignedCastToIVarNodeGen.create(null, getBits());
+            return LLVMUnsignedCastToIVarNodeGen.create(getConversionKind(), null, getBits());
         }
 
         @Specialization
@@ -154,7 +154,7 @@ public abstract class LLVMToVarINode extends LLVMCastNode {
 
         @Override
         protected LLVMToVarINode createRecursive() {
-            return LLVMBitcastToIVarNodeGen.create(null, getBits());
+            return LLVMBitcastToIVarNodeGen.create(getConversionKind(), null, getBits());
         }
 
         @Specialization

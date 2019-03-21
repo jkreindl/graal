@@ -56,7 +56,7 @@ public abstract class LLVMForeignWriteNode extends LLVMNode {
                     @Cached("createStoreNode(cachedKind)") LLVMStoreNode store,
                     @Cached("createForeignToLLVM(type)") ForeignToLLVM toLLVM) {
         Object llvmValue = toLLVM.executeWithForeignToLLVMType(value, type.getBaseType(), cachedKind.foreignToLLVMType);
-        store.executeWithTarget(ptr, llvmValue);
+        store.executeWithTarget(null, ptr, llvmValue);
     }
 
     @Specialization(replaces = "doValue")

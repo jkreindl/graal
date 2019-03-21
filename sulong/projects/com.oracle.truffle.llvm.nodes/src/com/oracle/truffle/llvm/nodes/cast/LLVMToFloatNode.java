@@ -87,10 +87,9 @@ public abstract class LLVMToFloatNode extends LLVMCastNode {
             super(conversionKind);
         }
 
-
         @Override
         protected LLVMToFloatNode createRecursive() {
-            return LLVMSignedCastToFloatNodeGen.create(null);
+            return LLVMSignedCastToFloatNodeGen.create(getConversionKind(), null);
         }
 
         @Specialization
@@ -144,7 +143,7 @@ public abstract class LLVMToFloatNode extends LLVMCastNode {
 
         @Override
         protected LLVMToFloatNode createRecursive() {
-            return LLVMUnsignedCastToFloatNodeGen.create(null);
+            return LLVMUnsignedCastToFloatNodeGen.create(getConversionKind(), null);
         }
 
         @Specialization
@@ -190,7 +189,7 @@ public abstract class LLVMToFloatNode extends LLVMCastNode {
 
         @Override
         protected LLVMToFloatNode createRecursive() {
-            return LLVMBitcastToFloatNodeGen.create(null);
+            return LLVMBitcastToFloatNodeGen.create(getConversionKind(), null);
         }
 
         @Specialization

@@ -42,7 +42,6 @@ import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.llvm.nodes.vars.LLVMReadNodeFactory.ForeignAttachInteropTypeNodeGen;
 import com.oracle.truffle.llvm.runtime.interop.LLVMTypedForeignObject;
 import com.oracle.truffle.llvm.runtime.interop.access.LLVMInteropType;
-import com.oracle.truffle.llvm.runtime.nodes.LLVMFrameReadObject;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjects;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
@@ -69,7 +68,7 @@ public abstract class LLVMReadNode extends LLVMExpressionNode {
 
     @Override
     public Object getNodeObject() {
-        return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_SLOT_ID, LLVMNodeObjects.KEY_GET_READ_VALUE}, new Object[]{String.valueOf(slot.getIdentifier()), new LLVMFrameReadObject(slot)});
+        return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_SLOT_ID}, new Object[]{String.valueOf(slot.getIdentifier())});
     }
 
     public abstract static class LLVMI1ReadNode extends LLVMReadNode {

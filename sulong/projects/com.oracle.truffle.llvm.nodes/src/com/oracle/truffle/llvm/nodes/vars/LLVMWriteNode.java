@@ -45,7 +45,6 @@ import com.oracle.truffle.llvm.nodes.func.LLVMFunctionStartNode;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
-import com.oracle.truffle.llvm.runtime.nodes.LLVMFrameReadObject;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjects;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
@@ -104,7 +103,7 @@ public abstract class LLVMWriteNode extends LLVMStatementNode {
 
     @Override
     public Object getNodeObject() {
-        return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_SLOT_ID, LLVMNodeObjects.KEY_GET_WRITTEN_VALUE}, new Object[]{String.valueOf(slot.getIdentifier()), new LLVMFrameReadObject(slot)});
+        return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_SLOT_ID}, new Object[]{String.valueOf(slot.getIdentifier())});
     }
 
     @Override
