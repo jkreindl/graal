@@ -75,7 +75,7 @@ public abstract class LLVMTo80BitFloatingNode extends LLVMCastNode {
 
         @Override
         protected LLVMTo80BitFloatingNode createRecursive() {
-            return LLVMSignedCastToLLVM80BitFloatNodeGen.create(null);
+            return LLVMSignedCastToLLVM80BitFloatNodeGen.create(getConversionKind(), null);
         }
 
         @Specialization
@@ -128,7 +128,7 @@ public abstract class LLVMTo80BitFloatingNode extends LLVMCastNode {
 
         @Override
         protected LLVMTo80BitFloatingNode createRecursive() {
-            return LLVMUnsignedCastToLLVM80BitFloatNodeGen.create(null);
+            return LLVMUnsignedCastToLLVM80BitFloatNodeGen.create(getConversionKind(), null);
         }
 
         @Specialization
@@ -176,7 +176,7 @@ public abstract class LLVMTo80BitFloatingNode extends LLVMCastNode {
 
         @Override
         protected LLVMTo80BitFloatingNode createRecursive() {
-            return LLVMBitcastToLLVM80BitFloatNodeGen.create(null);
+            return LLVMBitcastToLLVM80BitFloatNodeGen.create(getConversionKind(), null);
         }
 
         @Specialization

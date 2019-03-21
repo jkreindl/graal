@@ -29,15 +29,14 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes;
 
-import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.interop.ForeignAccess;
-import com.oracle.truffle.api.interop.MessageResolution;
-import com.oracle.truffle.api.interop.Resolve;
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.InvalidArrayIndexException;
 import com.oracle.truffle.api.interop.TruffleObject;
-import com.oracle.truffle.api.interop.UnknownIdentifierException;
-import com.oracle.truffle.api.nodes.Node;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
 
+@ExportLibrary(InteropLibrary.class)
 public class LLVMNodeObjectKeys implements TruffleObject {
 
     public static boolean isInstance(TruffleObject obj) {
@@ -50,84 +49,28 @@ public class LLVMNodeObjectKeys implements TruffleObject {
         this.properties = properties;
     }
 
-    @Override
-    public ForeignAccess getForeignAccess() {
-        return NodeObjectKeysMessageResolutionForeign.ACCESS;
+    @SuppressWarnings("static-method")
+    @ExportMessage
+    public boolean hasArrayElements() {
+        return true;
     }
 
-    @MessageResolution(receiverType = LLVMNodeObjectKeys.class)
-    abstract static class NodeObjectKeysMessageResolution {
+    @ExportMessage
+    public long getArraySize() {
+        return properties.length;
+    }
 
-        @Resolve(message = "HAS_KEYS")
-        abstract static class HasKeys extends Node {
-            public boolean access(@SuppressWarnings("unused") LLVMNodeObjectKeys receiver) {
-                return false;
-            }
-        }
+    @ExportMessage
+    public boolean isArrayElementReadable(long index) {
+        return index >= 0 && index < properties.length;
+    }
 
-        @Resolve(message = "HAS_SIZE")
-        abstract static class HasSize extends Node {
-            public boolean access(@SuppressWarnings("unused") LLVMNodeObjectKeys receiver) {
-                return true;
-            }
-        }
-
-        @Resolve(message = "GET_SIZE")
-        abstract static class GetSize extends Node {
-            public int access(LLVMNodeObjectKeys receiver) {
-                return receiver.properties.length;
-            }
-        }
-
-        @Resolve(message = "READ")
-        abstract static class ReadNode extends Node {
-            public String access(LLVMNodeObjectKeys receiver, int index) {
-                if (index < 0 || index >= receiver.properties.length) {
-                    CompilerDirectives.transferToInterpreter();
-                    throw UnknownIdentifierException.raise(String.valueOf(index));
-                }
-
-                return receiver.properties[index];
-            }
-
-            public String access(LLVMNodeObjectKeys receiver, long index) {
-                return access(receiver, (int) index);
-            }
-        }
-
-        @Resolve(message = "IS_NULL")
-        public abstract static class IsNull extends Node {
-            public boolean access(@SuppressWarnings("unused") LLVMNodeObjectKeys receiver) {
-                return false;
-            }
-        }
-
-        @Resolve(message = "IS_POINTER")
-        public abstract static class IsPointer extends Node {
-            public boolean access(@SuppressWarnings("unused") LLVMNodeObjectKeys receiver) {
-                return false;
-            }
-        }
-
-        @Resolve(message = "IS_EXECUTABLE")
-        public abstract static class IsExecutable extends Node {
-            public boolean access(@SuppressWarnings("unused") LLVMNodeObjectKeys receiver) {
-                return false;
-            }
-        }
-
-        @Resolve(message = "IS_INSTANTIABLE")
-        public abstract static class IsInstantiable extends Node {
-            public boolean access(@SuppressWarnings("unused") LLVMNodeObjectKeys receiver) {
-                return false;
-            }
-        }
-
-        @Resolve(message = "IS_BOXED")
-        public abstract static class IsBoxed extends Node {
-            public boolean access(@SuppressWarnings("unused") LLVMNodeObjectKeys receiver) {
-                return false;
-            }
+    @ExportMessage
+    public String readArrayElement(long index) throws InvalidArrayIndexException {
+        if (index >= 0 && index < properties.length) {
+            return properties[(int) index];
+        } else {
+            throw InvalidArrayIndexException.create(index);
         }
     }
 }

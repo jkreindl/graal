@@ -91,7 +91,7 @@ public abstract class LLVMToDoubleNode extends LLVMCastNode {
 
         @Override
         protected LLVMToDoubleNode createRecursive() {
-            return LLVMSignedCastToDoubleNodeGen.create(null);
+            return LLVMSignedCastToDoubleNodeGen.create(getConversionKind(), null);
         }
 
         @Specialization
@@ -145,7 +145,7 @@ public abstract class LLVMToDoubleNode extends LLVMCastNode {
 
         @Override
         protected LLVMToDoubleNode createRecursive() {
-            return LLVMUnsignedCastToDoubleNodeGen.create(null);
+            return LLVMUnsignedCastToDoubleNodeGen.create(getConversionKind(), null);
         }
 
         @Specialization
@@ -191,7 +191,7 @@ public abstract class LLVMToDoubleNode extends LLVMCastNode {
 
         @Override
         protected LLVMToDoubleNode createRecursive() {
-            return LLVMBitcastToDoubleNodeGen.create(null);
+            return LLVMBitcastToDoubleNodeGen.create(getConversionKind(), null);
         }
 
         @Specialization
