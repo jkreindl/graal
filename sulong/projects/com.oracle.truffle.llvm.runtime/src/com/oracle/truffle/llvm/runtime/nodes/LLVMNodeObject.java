@@ -29,17 +29,18 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes;
 
-import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
-import com.oracle.truffle.api.interop.ForeignAccess;
-import com.oracle.truffle.api.interop.MessageResolution;
-import com.oracle.truffle.api.interop.Resolve;
+import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.interop.UnknownIdentifierException;
-import com.oracle.truffle.api.nodes.Node;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
+import com.oracle.truffle.api.profiles.BranchProfile;
 import org.graalvm.collections.EconomicMap;
 
+@ExportLibrary(InteropLibrary.class)
 public final class LLVMNodeObject implements TruffleObject {
 
     public static boolean isInstance(TruffleObject obj) {
@@ -61,104 +62,37 @@ public final class LLVMNodeObject implements TruffleObject {
         }
     }
 
-    @Override
-    public ForeignAccess getForeignAccess() {
-        return LLVMNodeObjectMessageResolutionForeign.ACCESS;
+    @SuppressWarnings("static-method")
+    @ExportMessage
+    boolean hasMembers() {
+        return true;
     }
 
-    @MessageResolution(receiverType = LLVMNodeObject.class)
-    abstract static class LLVMNodeObjectMessageResolution {
+    @ExportMessage
+    Object getMembers(@SuppressWarnings("unused") boolean includeInternal) {
+        return new LLVMNodeObjectKeys(keys);
+    }
 
-        @TruffleBoundary
-        private static boolean isInvalidKey(LLVMNodeObject receiver, String key) {
-            return key == null || !receiver.entries.containsKey(key);
+    @TruffleBoundary
+    private Object getValue(String key) {
+        return entries.get(key);
+    }
+
+    @ExportMessage
+    Object readMember(String key,
+                    @Cached BranchProfile exception) throws UnknownIdentifierException {
+        final Object element = getValue(key);
+        if (element != null) {
+            return element;
+        } else {
+            exception.enter();
+            throw UnknownIdentifierException.create(key);
         }
+    }
 
-        @Resolve(message = "HAS_KEYS")
-        abstract static class HasKeys extends Node {
-            public boolean access(@SuppressWarnings("unused") LLVMNodeObject receiver) {
-                return true;
-            }
-        }
-
-        @Resolve(message = "KEYS")
-        abstract static class Keys extends Node {
-            public TruffleObject access(LLVMNodeObject receiver) {
-                return new LLVMNodeObjectKeys(receiver.keys);
-            }
-        }
-
-        @Resolve(message = "KEY_INFO")
-        abstract static class KeyInfo extends Node {
-
-            public int access(LLVMNodeObject receiver, String key) {
-                if (isInvalidKey(receiver, key)) {
-                    CompilerDirectives.transferToInterpreter();
-                    throw UnknownIdentifierException.raise(key);
-                }
-
-                return com.oracle.truffle.api.interop.KeyInfo.READABLE;
-            }
-        }
-
-        @Resolve(message = "READ")
-        abstract static class Read extends Node {
-
-            @TruffleBoundary
-            private static Object readKey(LLVMNodeObject receiver, String key) {
-                return receiver.entries.get(key);
-            }
-
-            public Object access(LLVMNodeObject receiver, String key) {
-                if (isInvalidKey(receiver, key)) {
-                    CompilerDirectives.transferToInterpreter();
-                    throw UnknownIdentifierException.raise(key);
-                }
-
-                return readKey(receiver, key);
-            }
-        }
-
-        @Resolve(message = "IS_NULL")
-        public abstract static class IsNull extends Node {
-            public boolean access(@SuppressWarnings("unused") LLVMNodeObject receiver) {
-                return false;
-            }
-        }
-
-        @Resolve(message = "IS_POINTER")
-        public abstract static class IsPointer extends Node {
-            public boolean access(@SuppressWarnings("unused") LLVMNodeObject receiver) {
-                return false;
-            }
-        }
-
-        @Resolve(message = "HAS_SIZE")
-        public abstract static class HasSize extends Node {
-            public boolean access(@SuppressWarnings("unused") LLVMNodeObject receiver) {
-                return false;
-            }
-        }
-
-        @Resolve(message = "IS_EXECUTABLE")
-        public abstract static class IsExecutable extends Node {
-            public boolean access(@SuppressWarnings("unused") LLVMNodeObject receiver) {
-                return false;
-            }
-        }
-
-        @Resolve(message = "IS_INSTANTIABLE")
-        public abstract static class IsInstantiable extends Node {
-            public boolean access(@SuppressWarnings("unused") LLVMNodeObject receiver) {
-                return false;
-            }
-        }
-
-        @Resolve(message = "IS_BOXED")
-        public abstract static class IsBoxed extends Node {
-            public boolean access(@SuppressWarnings("unused") LLVMNodeObject receiver) {
-                return false;
-            }
-        }
+    @ExportMessage
+    boolean isMemberReadable(String key) {
+        final Object element = getValue(key);
+        return element != null;
     }
 }

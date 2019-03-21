@@ -151,7 +151,7 @@ public abstract class LLVMBasicBlockNode extends LLVMStatementNode {
         @Children private final LLVMStatementNode[] statements;
         @Child public LLVMControlFlowNode termInstruction;
 
-        public InitializedBlock(LLVMStatementNode[] statements, LLVMControlFlowNode termInstruction, int blockId, String blockName) {
+        InitializedBlock(LLVMStatementNode[] statements, LLVMControlFlowNode termInstruction, int blockId, String blockName) {
             super(blockId, blockName);
             this.successorExecutionCount = termInstruction.needsBranchProfiling() ? new long[termInstruction.getSuccessorCount()] : null;
             this.statements = statements;

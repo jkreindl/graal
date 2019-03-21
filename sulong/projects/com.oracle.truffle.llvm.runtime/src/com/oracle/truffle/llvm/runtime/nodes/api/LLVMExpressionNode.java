@@ -62,7 +62,7 @@ public abstract class LLVMExpressionNode extends LLVMNode implements Instrumenta
     }
 
     @GenerateWrapper.OutgoingConverter
-    Object convertOutgoing(@SuppressWarnings("unused") Object object) {
+    public Object convertOutgoing(@SuppressWarnings("unused") Object object) {
         return null;
     }
 
