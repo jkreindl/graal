@@ -32,6 +32,7 @@ package com.oracle.truffle.llvm.nodes.memory.store;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.NodeField;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemMoveNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMToNativeNode;
@@ -62,23 +63,23 @@ public abstract class LLVMStructStoreNode extends LLVMStoreNodeCommon {
     }
 
     @Specialization(guards = {"getStructSize() > 0", "!isAutoDerefHandle(address)", "!isAutoDerefHandle(value)"})
-    protected void doOp(LLVMNativePointer address, LLVMNativePointer value) {
-        memMove.executeWithTarget(address, value, getStructSize());
+    protected void doOp(VirtualFrame frame, LLVMNativePointer address, LLVMNativePointer value) {
+        memMove.executeWithTarget(frame, address, value, getStructSize());
     }
 
     @Specialization(guards = {"getStructSize() > 0", "isAutoDerefHandle(addr)", "isAutoDerefHandle(value)"})
-    protected void doOpDerefHandle(LLVMNativePointer addr, LLVMNativePointer value) {
-        doManaged(getDerefHandleGetReceiverNode().execute(addr), getDerefHandleGetReceiverNode().execute(value));
+    protected void doOpDerefHandle(VirtualFrame frame, LLVMNativePointer addr, LLVMNativePointer value) {
+        doManaged(frame, getDerefHandleGetReceiverNode().execute(addr), getDerefHandleGetReceiverNode().execute(value));
     }
 
     @Specialization(guards = "getStructSize() > 0")
-    protected void doManaged(LLVMManagedPointer address, LLVMManagedPointer value) {
-        memMove.executeWithTarget(address, value, getStructSize());
+    protected void doManaged(VirtualFrame frame, LLVMManagedPointer address, LLVMManagedPointer value) {
+        memMove.executeWithTarget(frame, address, value, getStructSize());
     }
 
     @Specialization(guards = {"getStructSize() > 0", "!isAutoDerefHandle(address)"}, replaces = "doOp")
-    protected void doConvert(LLVMNativePointer address, LLVMPointer value,
+    protected void doConvert(VirtualFrame frame, LLVMNativePointer address, LLVMPointer value,
                     @Cached("createToNativeWithTarget()") LLVMToNativeNode toNative) {
-        memMove.executeWithTarget(address, toNative.executeWithTarget(value), getStructSize());
+        memMove.executeWithTarget(frame, address, toNative.executeWithTarget(value), getStructSize());
     }
 }

@@ -43,6 +43,7 @@ import com.oracle.truffle.llvm.runtime.LLVMLanguage;
 import com.oracle.truffle.llvm.runtime.interop.access.LLVMInteropType;
 import com.oracle.truffle.llvm.runtime.interop.access.LLVMInteropType.ValueKind;
 import com.oracle.truffle.llvm.runtime.interop.convert.ForeignToLLVM;
+import com.oracle.truffle.llvm.runtime.library.LLVMLibraryUtils;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
@@ -77,7 +78,7 @@ public abstract class LLVMForeignWriteNode extends LLVMNode {
     }
 
     protected DirectCallNode createCachedStore() {
-        return LLVMForeignUtils.createDirectCall(new ForeignLLVMStore());
+        return LLVMLibraryUtils.createDirectCall(new ForeignLLVMStore());
     }
 
     static class ForeignLLVMStore extends RootNode {
@@ -86,9 +87,9 @@ public abstract class LLVMForeignWriteNode extends LLVMNode {
 
         ForeignLLVMStore() {
             super(LLVMLanguage.getLanguage());
-            final LLVMExpressionNode ptr = new LLVMForeignUtils.ArgReadNode(0);
-            final LLVMExpressionNode type = new LLVMForeignUtils.ArgReadNode(1);
-            final LLVMExpressionNode value = new LLVMForeignUtils.ArgReadNode(2);
+            final LLVMExpressionNode ptr = new LLVMLibraryUtils.LLVMArgReadNode(0);
+            final LLVMExpressionNode type = new LLVMLibraryUtils.LLVMArgReadNode(1);
+            final LLVMExpressionNode value = new LLVMLibraryUtils.LLVMArgReadNode(2);
             this.store = LLVMForeignWriteNodeGen.ForeignStoreNodeGen.create(ptr, type, value);
         }
 

@@ -288,7 +288,7 @@ public abstract class LLVMX86_64VAStart extends LLVMExpressionNode {
         } else if (object instanceof LLVMVarArgCompoundValue) {
             LLVMVarArgCompoundValue obj = (LLVMVarArgCompoundValue) object;
             Object currentPtr = pointerArithmetic.executeWithTarget(ptr, offset);
-            memmove.executeWithTarget(currentPtr, obj.getAddr(), obj.getSize());
+            memmove.executeWithTarget(frame, currentPtr, obj.getAddr(), obj.getSize());
             return obj.getSize();
         } else if (LLVMPointer.isInstance(object)) {
             Object currentPtr = pointerArithmetic.executeWithTarget(ptr, offset);

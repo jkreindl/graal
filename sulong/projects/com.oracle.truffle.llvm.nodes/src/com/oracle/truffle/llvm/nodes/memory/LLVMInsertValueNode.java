@@ -58,7 +58,7 @@ public abstract class LLVMInsertValueNode extends LLVMExpressionNode {
 
     @Specialization
     protected LLVMPointer doLLVMPointer(VirtualFrame frame, LLVMPointer sourceAggr, LLVMPointer targetAggr, Object element) {
-        memMove.executeWithTarget(targetAggr, sourceAggr, sourceAggregateSize);
+        memMove.executeWithTarget(frame, targetAggr, sourceAggr, sourceAggregateSize);
         store.executeWithTarget(frame, targetAggr.increment(offset), element);
         return targetAggr;
     }
