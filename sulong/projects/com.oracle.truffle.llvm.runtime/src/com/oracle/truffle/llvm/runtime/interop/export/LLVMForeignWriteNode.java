@@ -33,13 +33,19 @@ import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.GenerateUncached;
+import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
+import com.oracle.truffle.api.nodes.DirectCallNode;
+import com.oracle.truffle.api.nodes.RootNode;
 import com.oracle.truffle.llvm.runtime.LLVMLanguage;
 import com.oracle.truffle.llvm.runtime.interop.access.LLVMInteropType;
 import com.oracle.truffle.llvm.runtime.interop.access.LLVMInteropType.ValueKind;
 import com.oracle.truffle.llvm.runtime.interop.convert.ForeignToLLVM;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStoreNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 
@@ -52,18 +58,16 @@ public abstract class LLVMForeignWriteNode extends LLVMNode {
 
     @Specialization(guards = "type.getKind() == cachedKind", limit = "VALUE_KIND_COUNT")
     static void doValue(LLVMPointer ptr, LLVMInteropType.Value type, Object value,
-                    @Cached("type.getKind()") @SuppressWarnings("unused") LLVMInteropType.ValueKind cachedKind,
-                    @Cached("createStoreNode(cachedKind)") LLVMStoreNode store,
-                    @Cached("createForeignToLLVM(type)") ForeignToLLVM toLLVM) {
-        Object llvmValue = toLLVM.executeWithForeignToLLVMType(value, type.getBaseType(), cachedKind.foreignToLLVMType);
-        store.executeWithTarget(null, ptr, llvmValue);
+                    @Cached(value = "type.getKind()", allowUncached = true) @SuppressWarnings("unused") LLVMInteropType.ValueKind cachedKind,
+                    @Cached(value = "createCachedStore()") DirectCallNode store) {
+        store.call(ptr, type, value);
     }
 
     @Specialization(replaces = "doValue")
     @TruffleBoundary
     void doValueUncached(LLVMPointer ptr, LLVMInteropType.Value type, Object value) {
         LLVMInteropType.ValueKind kind = type.getKind();
-        doValue(ptr, type, value, kind, createStoreNode(kind), ForeignToLLVM.getUncached());
+        doValue(ptr, type, value, kind, createCachedStore());
     }
 
     @Specialization
@@ -72,12 +76,67 @@ public abstract class LLVMForeignWriteNode extends LLVMNode {
         throw UnsupportedMessageException.create();
     }
 
-    LLVMStoreNode createStoreNode(LLVMInteropType.ValueKind kind) {
-        CompilerAsserts.neverPartOfCompilation();
-        return LLVMLanguage.getLanguage().getNodeFactory().createStoreNode(kind);
+    protected DirectCallNode createCachedStore() {
+        return LLVMForeignUtils.createDirectCall(new ForeignLLVMStore());
     }
 
-    protected ForeignToLLVM createForeignToLLVM(LLVMInteropType.Value type) {
-        return getNodeFactory().createForeignToLLVM(type);
+    static class ForeignLLVMStore extends RootNode {
+
+        @Child LLVMStatementNode store;
+
+        ForeignLLVMStore() {
+            super(LLVMLanguage.getLanguage());
+            final LLVMExpressionNode ptr = new LLVMForeignUtils.ArgReadNode(0);
+            final LLVMExpressionNode type = new LLVMForeignUtils.ArgReadNode(1);
+            final LLVMExpressionNode value = new LLVMForeignUtils.ArgReadNode(2);
+            this.store = LLVMForeignWriteNodeGen.ForeignStoreNodeGen.create(ptr, type, value);
+        }
+
+        @Override
+        protected boolean isInstrumentable() {
+            return false;
+        }
+
+        @Override
+        public Object execute(VirtualFrame frame) {
+            store.execute(frame);
+            return null;
+        }
+    }
+
+    @NodeChild(value = "ptr", type = LLVMExpressionNode.class)
+    @NodeChild(value = "type", type = LLVMExpressionNode.class)
+    @NodeChild(value = "value", type = LLVMExpressionNode.class)
+    static abstract class ForeignStoreNode extends LLVMStatementNode {
+
+        static final int VALUE_KIND_COUNT = ValueKind.values().length;
+
+        protected ForeignToLLVM createForeignToLLVM(LLVMInteropType.Value type) {
+            return getNodeFactory().createForeignToLLVM(type);
+        }
+
+        @Specialization(guards = "type.getKind() == cachedKind", limit = "VALUE_KIND_COUNT")
+        protected void doStore(VirtualFrame frame,
+                        LLVMPointer ptr,
+                        @SuppressWarnings("unused") LLVMInteropType.Value type,
+                        Object value,
+                        @Cached(value = "type.getKind()", allowUncached = true) @SuppressWarnings("unused") LLVMInteropType.ValueKind cachedKind,
+                        @Cached("createForeignToLLVM(type)") ForeignToLLVM toLLVM,
+                        @Cached(value = "createStoreNode(cachedKind)") LLVMStoreNode store) {
+            Object llvmValue = toLLVM.executeWithForeignToLLVMType(value, type.getBaseType(), cachedKind.foreignToLLVMType);
+            store.executeWithTarget(frame, ptr, llvmValue);
+        }
+
+        @Specialization(replaces = "doValue")
+        @TruffleBoundary
+        void doValueUncached(LLVMPointer ptr, LLVMInteropType.Value type, Object value) {
+            LLVMInteropType.ValueKind kind = type.getKind();
+            doValue(ptr, type, value, kind, createStoreNode(kind), ForeignToLLVM.getUncached());
+        }
+
+        protected LLVMStoreNode createStoreNode(LLVMInteropType.ValueKind kind) {
+            CompilerAsserts.neverPartOfCompilation();
+            return LLVMLanguage.getLanguage().getNodeFactory().createStoreNode(kind);
+        }
     }
 }
