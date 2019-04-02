@@ -34,12 +34,18 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.TruffleLanguage;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.GenerateUncached;
+import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.DirectCallNode;
+import com.oracle.truffle.api.nodes.RootNode;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.LLVMLanguage;
 import com.oracle.truffle.llvm.runtime.interop.LLVMDataEscapeNode;
 import com.oracle.truffle.llvm.runtime.interop.LLVMDataEscapeNodeGen;
 import com.oracle.truffle.llvm.runtime.interop.access.LLVMInteropType;
+import com.oracle.truffle.llvm.runtime.interop.convert.ForeignToLLVM;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMLoadNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
@@ -59,23 +65,79 @@ public abstract class LLVMForeignReadNode extends LLVMNode {
 
     @Specialization(guards = "type.getKind() == cachedKind", limit = "VALUE_KIND_COUNT")
     static Object doValue(LLVMPointer ptr, LLVMInteropType.Value type,
-                    @Cached("type.getKind()") @SuppressWarnings(value = "unused") LLVMInteropType.ValueKind cachedKind,
-                    @Cached("createLoadNode(cachedKind)") LLVMLoadNode load,
-                    @Cached LLVMDataEscapeNode dataEscape) {
-        Object ret = load.executeWithTarget(ptr);
-        return dataEscape.executeWithType(ret, type.getBaseType());
+                    @Cached(value = "type.getKind()", allowUncached = true) @SuppressWarnings(value = "unused") LLVMInteropType.ValueKind cachedKind,
+                    @Cached(value = "createCachedRead()", allowUncached = true) DirectCallNode load) {
+        return load.call(ptr, type);
     }
 
     @Specialization(replaces = "doValue")
     @TruffleBoundary
     Object doValueUncached(LLVMPointer ptr, LLVMInteropType.Value type) {
         LLVMInteropType.ValueKind kind = type.getKind();
-        return doValue(ptr, type, kind, createLoadNode(kind), LLVMDataEscapeNodeGen.getUncached());
+        return doValue(ptr, type, kind, createCachedRead());
     }
 
     LLVMLoadNode createLoadNode(LLVMInteropType.ValueKind kind) {
         CompilerAsserts.neverPartOfCompilation();
         TruffleLanguage.ContextReference<LLVMContext> ctxRef = lookupContextReference(LLVMLanguage.class);
         return ctxRef.get().getNodeFactory().createLoadNode(kind);
+    }
+
+    protected DirectCallNode createCachedRead() {
+        return LLVMForeignUtils.createDirectCall(new ForeignLLVMLoad());
+    }
+
+    static class ForeignLLVMLoad extends RootNode {
+
+        @Child LLVMExpressionNode load;
+
+        ForeignLLVMLoad() {
+            super(LLVMLanguage.getLanguage());
+            final LLVMExpressionNode ptr = new LLVMForeignUtils.ArgReadNode(0);
+            final LLVMExpressionNode type = new LLVMForeignUtils.ArgReadNode(1);
+            this.load = LLVMForeignReadNodeGen.ForeignLoadNodeGen.create(ptr, type);
+        }
+
+        @Override
+        protected boolean isInstrumentable() {
+            return false;
+        }
+
+        @Override
+        public Object execute(VirtualFrame frame) {
+            return load.executeGeneric(frame);
+        }
+    }
+
+    @NodeChild(value = "ptr", type = LLVMExpressionNode.class)
+    @NodeChild(value = "type", type = LLVMExpressionNode.class)
+    static abstract class ForeignLoadNode extends LLVMExpressionNode {
+
+        static final int VALUE_KIND_COUNT = LLVMInteropType.ValueKind.values().length;
+
+        protected ForeignToLLVM createForeignToLLVM(LLVMInteropType.Value type) {
+            return getNodeFactory().createForeignToLLVM(type);
+        }
+
+        @Specialization(guards = "type.getKind() == cachedKind", limit = "VALUE_KIND_COUNT")
+        static Object doValue(VirtualFrame frame, LLVMPointer ptr, LLVMInteropType.Value type,
+                              @Cached(value = "type.getKind()", allowUncached = true) @SuppressWarnings(value = "unused") LLVMInteropType.ValueKind cachedKind,
+                              @Cached(value = "createLoadNode(cachedKind)", allowUncached = true) LLVMLoadNode load, @Cached LLVMDataEscapeNode dataEscape) {
+            Object ret = load.executeWithTarget(frame, ptr);
+            return dataEscape.executeWithType(ret, type.getBaseType());
+        }
+
+        @Specialization(replaces = "doValue")
+        @TruffleBoundary
+        Object doValueUncached(LLVMPointer ptr, LLVMInteropType.Value type) {
+            LLVMInteropType.ValueKind kind = type.getKind();
+            return doValue(ptr, type, kind, createLoadNode(kind), LLVMDataEscapeNodeGen.getUncached());
+        }
+
+        LLVMLoadNode createLoadNode(LLVMInteropType.ValueKind kind) {
+            CompilerAsserts.neverPartOfCompilation();
+            TruffleLanguage.ContextReference<LLVMContext> ctxRef = lookupContextReference(LLVMLanguage.class);
+            return ctxRef.get().getNodeFactory().createLoadNode(kind);
+        }
     }
 }
