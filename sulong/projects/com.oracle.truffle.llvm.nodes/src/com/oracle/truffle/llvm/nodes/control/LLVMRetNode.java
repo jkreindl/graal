@@ -304,7 +304,7 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode implements Instrum
 
         private Object returnStruct(VirtualFrame frame, Object retResult) {
             Object retStructAddress = argIdx1.executeGeneric(frame);
-            memMove.executeWithTarget(retStructAddress, retResult, getStructSize());
+            memMove.executeWithTarget(frame, retStructAddress, retResult, getStructSize());
             return retStructAddress;
         }
     }

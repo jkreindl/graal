@@ -27,7 +27,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.runtime.interop.export;
+package com.oracle.truffle.llvm.runtime.library;
 
 import com.oracle.truffle.api.CallTarget;
 import com.oracle.truffle.api.Truffle;
@@ -36,16 +36,16 @@ import com.oracle.truffle.api.nodes.DirectCallNode;
 import com.oracle.truffle.api.nodes.RootNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 
-final class LLVMForeignUtils {
+public final class LLVMLibraryUtils {
 
-    private LLVMForeignUtils() {
+    private LLVMLibraryUtils() {
     }
 
-    static class ArgReadNode extends LLVMExpressionNode {
+    public static class LLVMArgReadNode extends LLVMExpressionNode {
 
         private final int argIndex;
 
-        ArgReadNode(int argIndex) {
+        public LLVMArgReadNode(int argIndex) {
             this.argIndex = argIndex;
         }
 
@@ -55,7 +55,7 @@ final class LLVMForeignUtils {
         }
     }
 
-    static DirectCallNode createDirectCall(RootNode rootNode) {
+    public static DirectCallNode createDirectCall(RootNode rootNode) {
         final CallTarget target = Truffle.getRuntime().createCallTarget(rootNode);
         final DirectCallNode callNode = DirectCallNode.create(target);
         callNode.forceInlining();

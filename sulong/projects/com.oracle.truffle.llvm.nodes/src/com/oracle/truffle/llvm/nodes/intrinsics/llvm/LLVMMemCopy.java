@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -32,6 +32,7 @@ package com.oracle.truffle.llvm.nodes.intrinsics.llvm;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.llvm.runtime.LLVMVirtualAllocationAddress;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemMoveNode;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory;
@@ -72,8 +73,8 @@ public abstract class LLVMMemCopy extends LLVMBuiltin {
     }
 
     @Specialization
-    protected Object doVoid(LLVMPointer target, LLVMPointer source, int length, boolean isVolatile) {
-        return doVoid(target, source, (long) length, isVolatile);
+    protected Object doVoid(VirtualFrame frame, LLVMPointer target, LLVMPointer source, int length, boolean isVolatile) {
+        return doVoid(frame, target, source, (long) length, isVolatile);
     }
 
     @SuppressWarnings("unused")
@@ -102,8 +103,8 @@ public abstract class LLVMMemCopy extends LLVMBuiltin {
 
     @SuppressWarnings("unused")
     @Specialization
-    protected Object doVoid(LLVMPointer target, LLVMPointer source, long length, boolean isVolatile) {
-        memMove.executeWithTarget(target, source, length);
+    protected Object doVoid(VirtualFrame frame, LLVMPointer target, LLVMPointer source, long length, boolean isVolatile) {
+        memMove.executeWithTarget(frame, target, source, length);
         return null;
     }
 

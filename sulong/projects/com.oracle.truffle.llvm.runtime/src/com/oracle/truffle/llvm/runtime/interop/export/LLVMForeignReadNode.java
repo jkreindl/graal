@@ -45,6 +45,7 @@ import com.oracle.truffle.llvm.runtime.interop.LLVMDataEscapeNode;
 import com.oracle.truffle.llvm.runtime.interop.LLVMDataEscapeNodeGen;
 import com.oracle.truffle.llvm.runtime.interop.access.LLVMInteropType;
 import com.oracle.truffle.llvm.runtime.interop.convert.ForeignToLLVM;
+import com.oracle.truffle.llvm.runtime.library.LLVMLibraryUtils;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMLoadNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
@@ -84,7 +85,7 @@ public abstract class LLVMForeignReadNode extends LLVMNode {
     }
 
     protected DirectCallNode createCachedRead() {
-        return LLVMForeignUtils.createDirectCall(new ForeignLLVMLoad());
+        return LLVMLibraryUtils.createDirectCall(new ForeignLLVMLoad());
     }
 
     static class ForeignLLVMLoad extends RootNode {
@@ -93,8 +94,8 @@ public abstract class LLVMForeignReadNode extends LLVMNode {
 
         ForeignLLVMLoad() {
             super(LLVMLanguage.getLanguage());
-            final LLVMExpressionNode ptr = new LLVMForeignUtils.ArgReadNode(0);
-            final LLVMExpressionNode type = new LLVMForeignUtils.ArgReadNode(1);
+            final LLVMExpressionNode ptr = new LLVMLibraryUtils.LLVMArgReadNode(0);
+            final LLVMExpressionNode type = new LLVMLibraryUtils.LLVMArgReadNode(1);
             this.load = LLVMForeignReadNodeGen.ForeignLoadNodeGen.create(ptr, type);
         }
 
