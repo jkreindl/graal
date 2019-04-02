@@ -95,7 +95,7 @@ public abstract class LLVMReadStringNode extends LLVMNode {
         protected abstract String execute(VirtualFrame frame, LLVMManagedPointer foreign);
 
         @Specialization(limit = "3")
-        String doDefault(@SuppressWarnings("unused") LLVMManagedPointer object, TruffleObject foreign,
+        String doDefault(VirtualFrame frame, @SuppressWarnings("unused") LLVMManagedPointer object, TruffleObject foreign,
                         @CachedLibrary("foreign") InteropLibrary interop,
                         @Cached PointerReadStringNode read) {
             if (interop.isString(foreign)) {
@@ -104,7 +104,7 @@ public abstract class LLVMReadStringNode extends LLVMNode {
                 } catch (UnsupportedMessageException e) {
                 }
             }
-            return read.execute(null, object);
+            return read.execute(frame, object);
         }
 
         public static ForeignReadStringNode create() {
