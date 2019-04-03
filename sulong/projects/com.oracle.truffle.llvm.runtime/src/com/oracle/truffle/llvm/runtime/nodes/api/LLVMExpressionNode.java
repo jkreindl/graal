@@ -61,11 +61,6 @@ public abstract class LLVMExpressionNode extends LLVMNode implements Instrumenta
         return new LLVMExpressionNodeWrapper(this, probe);
     }
 
-    @GenerateWrapper.OutgoingConverter
-    public Object convertOutgoing(@SuppressWarnings("unused") Object object) {
-        return null;
-    }
-
     @Override
     public boolean isInstrumentable() {
         return getSourceSection() != null;
