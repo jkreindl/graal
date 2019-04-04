@@ -36,6 +36,8 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.CachedContext;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.instrumentation.GenerateWrapper;
+import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.llvm.nodes.memory.load.LLVMDerefHandleGetReceiverNode;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
@@ -47,6 +49,7 @@ import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 
+@GenerateWrapper
 @NodeChild(value = "function", type = LLVMExpressionNode.class)
 public abstract class LLVMLookupDispatchTargetNode extends LLVMExpressionNode {
 
@@ -133,5 +136,10 @@ public abstract class LLVMLookupDispatchTargetNode extends LLVMExpressionNode {
             derefHandleGetReceiverNode = insert(LLVMDerefHandleGetReceiverNode.create());
         }
         return derefHandleGetReceiverNode;
+    }
+
+    @Override
+    public WrapperNode createWrapper(ProbeNode probeNode) {
+        return new LLVMLookupDispatchTargetNodeWrapper(this, probeNode);
     }
 }
