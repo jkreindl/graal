@@ -317,7 +317,7 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode implements Instrum
 
         @Specialization
         protected Object doOp() {
-            return null;
+            return 0;
         }
     }
 }
