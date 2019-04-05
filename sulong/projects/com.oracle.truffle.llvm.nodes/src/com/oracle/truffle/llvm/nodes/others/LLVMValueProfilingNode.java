@@ -220,4 +220,9 @@ public abstract class LLVMValueProfilingNode extends LLVMExpressionNode {
             return profile.profile(value);
         }
     }
+
+    @Override
+    public boolean isInstrumentable() {
+        return false;
+    }
 }
