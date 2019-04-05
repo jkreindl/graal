@@ -32,8 +32,6 @@ package com.oracle.truffle.llvm.runtime.nodes;
 public final class LLVMNodeObjects {
 
     public static final String KEY_SLOT_ID = "SLOT_ID";
-    public static final String KEY_GET_READ_VALUE = "READ_VALUE";
-    public static final String KEY_GET_WRITTEN_VALUE = "GET_WRITTEN_VALUE";
     public static final String KEY_COMPARISON_KIND = "COMPARISON_KIND";
     public static final String KEY_CONVERSION_KIND = "CONVERSION_KIND";
     public static final String KEY_BLOCK_ID = "BLOCK_ID";
