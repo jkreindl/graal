@@ -109,7 +109,7 @@ public abstract class LLVMForeignReadNode extends LLVMNode {
 
     @NodeChild(value = "ptr", type = LLVMExpressionNode.class)
     @NodeChild(value = "type", type = LLVMExpressionNode.class)
-    static abstract class ForeignLoadNode extends LLVMExpressionNode {
+    abstract static class ForeignLoadNode extends LLVMExpressionNode {
 
         static final int VALUE_KIND_COUNT = LLVMInteropType.ValueKind.values().length;
 
