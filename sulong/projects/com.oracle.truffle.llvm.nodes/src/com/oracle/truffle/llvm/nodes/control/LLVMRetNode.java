@@ -73,11 +73,6 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode implements Instrum
         return new LLVMRetNodeWrapper(this, this, probe);
     }
 
-    @GenerateWrapper.OutgoingConverter
-    Object convertOutgoing(@SuppressWarnings("unused") Object object) {
-        return null;
-    }
-
     @Override
     public boolean isInstrumentable() {
         return getSourceLocation() != null;
