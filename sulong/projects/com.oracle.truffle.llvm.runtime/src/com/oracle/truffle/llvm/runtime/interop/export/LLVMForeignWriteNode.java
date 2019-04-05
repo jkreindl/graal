@@ -110,7 +110,7 @@ public abstract class LLVMForeignWriteNode extends LLVMNode {
     @NodeChild(value = "ptr", type = LLVMExpressionNode.class)
     @NodeChild(value = "type", type = LLVMExpressionNode.class)
     @NodeChild(value = "value", type = LLVMExpressionNode.class)
-    static abstract class ForeignStoreNode extends LLVMStatementNode {
+    abstract static class ForeignStoreNode extends LLVMStatementNode {
 
         static final int VALUE_KIND_COUNT = ValueKind.values().length;
 
