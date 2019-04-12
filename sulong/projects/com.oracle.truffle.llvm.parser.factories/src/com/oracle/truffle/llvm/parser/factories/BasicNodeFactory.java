@@ -2506,7 +2506,7 @@ public class BasicNodeFactory implements NodeFactory {
                     throw new AssertionError(type);
             }
         } else if (type instanceof VariableBitWidthType) {
-            return LLVMIVarBitStoreNodeGen.create(source, pointerNode, valueNode);
+            return LLVMIVarBitStoreNodeGen.create(context.getByteSize(type), source, pointerNode, valueNode);
         } else if (type instanceof StructureType || type instanceof ArrayType) {
             return LLVMStructStoreNodeGen.create(source, createMemMove(), pointerNode, valueNode, size);
         } else if (type instanceof PointerType || type instanceof FunctionType) {

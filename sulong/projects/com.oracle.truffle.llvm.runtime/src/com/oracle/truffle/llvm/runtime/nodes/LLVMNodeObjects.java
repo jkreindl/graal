@@ -36,6 +36,11 @@ public final class LLVMNodeObjects {
     public static final String KEY_CONVERSION_KIND = "CONVERSION_KIND";
     public static final String KEY_BLOCK_ID = "BLOCK_ID";
 
+    public static final String KEY_CALL_USER_ARGUMENTS_OFFSET = "USER_ARGUMENTS_OFFSET";
+
+    public static final String KEY_STORE_SIZE = "STORE_BYTES";
+    public static final String KEY_LOAD_SIZE = "LOAD_BYTES";
+
     private LLVMNodeObjects() {
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -68,5 +68,10 @@ public abstract class LLVM80BitFloatStoreNode extends LLVMStoreNodeCommon {
             getForeignWriteNode().executeWrite(currentPtr.getObject(), currentPtr.getOffset(), bytes[i], ForeignToLLVMType.I8);
             currentPtr = currentPtr.increment(I8_SIZE_IN_BYTES);
         }
+    }
+
+    @Override
+    public long getStoreSize() {
+        return LLVM80BitFloat.BYTE_WIDTH;
     }
 }

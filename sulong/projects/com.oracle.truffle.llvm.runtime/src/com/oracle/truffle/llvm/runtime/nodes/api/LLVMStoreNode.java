@@ -34,6 +34,8 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
 import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjects;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 
 @NodeChild(value = "address", type = LLVMExpressionNode.class)
@@ -45,9 +47,16 @@ public abstract class LLVMStoreNode extends LLVMStatementNode {
 
     public abstract void executeWithTarget(VirtualFrame frame, Object address, Object value);
 
+    public abstract long getStoreSize();
+
     @Override
     public boolean hasTag(Class<? extends Tag> tag) {
         return tag == LLVMTags.Store.class || super.hasTag(tag);
+    }
+
+    @Override
+    public Object getNodeObject() {
+        return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_STORE_SIZE}, new Object[]{getStoreSize()});
     }
 
     @Override

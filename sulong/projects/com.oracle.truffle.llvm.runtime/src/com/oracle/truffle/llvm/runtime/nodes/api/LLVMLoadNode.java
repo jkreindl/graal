@@ -32,6 +32,8 @@ package com.oracle.truffle.llvm.runtime.nodes.api;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjects;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 
 @NodeChild(value = "address", type = LLVMExpressionNode.class)
@@ -39,8 +41,15 @@ public abstract class LLVMLoadNode extends LLVMExpressionNode {
 
     public abstract Object executeWithTarget(VirtualFrame frame, Object address);
 
+    public abstract long getLoadSize();
+
     @Override
     public boolean hasTag(Class<? extends Tag> tag) {
         return tag == LLVMTags.Load.class || super.hasTag(tag);
+    }
+
+    @Override
+    public Object getNodeObject() {
+        return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_LOAD_SIZE}, new Object[]{getLoadSize()});
     }
 }
