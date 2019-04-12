@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -38,12 +38,11 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 
 public abstract class LLVMIVarBitStoreNode extends LLVMStoreNodeCommon {
 
-    public LLVMIVarBitStoreNode() {
-        this(null);
-    }
+    private final long storeByteWidth;
 
-    public LLVMIVarBitStoreNode(LLVMSourceLocation sourceLocation) {
+    public LLVMIVarBitStoreNode(long storeByteWidth, LLVMSourceLocation sourceLocation) {
         super(sourceLocation);
+        this.storeByteWidth = storeByteWidth;
     }
 
     @Specialization(guards = "!isAutoDerefHandle(addr)")
@@ -64,5 +63,10 @@ public abstract class LLVMIVarBitStoreNode extends LLVMStoreNodeCommon {
             getForeignWriteNode().executeWrite(currentPtr.getObject(), currentPtr.getOffset(), bytes[i], ForeignToLLVMType.I8);
             currentPtr = currentPtr.increment(I8_SIZE_IN_BYTES);
         }
+    }
+
+    @Override
+    public long getStoreSize() {
+        return storeByteWidth;
     }
 }

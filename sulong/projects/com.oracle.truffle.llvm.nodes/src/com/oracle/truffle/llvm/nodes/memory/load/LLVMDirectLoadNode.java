@@ -41,6 +41,7 @@ import com.oracle.truffle.llvm.runtime.LLVMVirtualAllocationAddress;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
 import com.oracle.truffle.llvm.runtime.interop.convert.ForeignToLLVM.ForeignToLLVMType;
 import com.oracle.truffle.llvm.runtime.memory.UnsafeArrayAccess;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
@@ -77,6 +78,11 @@ public abstract class LLVMDirectLoadNode {
             assert getBitWidth() % Byte.SIZE == 0;
             return getBitWidth() / Byte.SIZE;
         }
+
+        @Override
+        public long getLoadSize() {
+            return getByteSize();
+        }
     }
 
     public abstract static class LLVM80BitFloatDirectLoadNode extends LLVMAbstractLoadNode {
@@ -101,6 +107,11 @@ public abstract class LLVMDirectLoadNode {
                 currentPtr = currentPtr.increment(I8_SIZE_IN_BYTES);
             }
             return LLVM80BitFloat.fromBytes(result);
+        }
+
+        @Override
+        public long getLoadSize() {
+            return LLVM80BitFloat.BYTE_WIDTH;
         }
     }
 
@@ -136,6 +147,11 @@ public abstract class LLVMDirectLoadNode {
         protected Object doIndirectedForeign(VirtualFrame frame, LLVMManagedPointer addr) {
             return getForeignReadNode().executeRead(frame, addr.getObject(), addr.getOffset(), ForeignToLLVMType.POINTER);
         }
+
+        @Override
+        public long getLoadSize() {
+            return LLVMExpressionNode.ADDRESS_SIZE_IN_BYTES;
+        }
     }
 
     public abstract static class LLVMStructDirectLoadNode extends LLVMAbstractLoadNode {
@@ -143,6 +159,11 @@ public abstract class LLVMDirectLoadNode {
         @Specialization
         protected LLVMPointer doPointer(LLVMPointer addr) {
             return addr; // we do not actually load the struct into a virtual register
+        }
+
+        @Override
+        public long getLoadSize() {
+            return LLVMExpressionNode.ADDRESS_SIZE_IN_BYTES;
         }
     }
 }

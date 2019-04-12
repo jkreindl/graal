@@ -313,4 +313,10 @@ public abstract class LLVMStoreVectorNode extends LLVMStoreNodeCommon {
     protected static LLVMPointerStoreNode createPointerStore() {
         return LLVMPointerStoreNodeGen.create(null, null);
     }
+
+    @Override
+    public long getStoreSize() {
+        CompilerDirectives.transferToInterpreter();
+        throw new UnsupportedOperationException("Cannot determine size of arbitrary vector");
+    }
 }
