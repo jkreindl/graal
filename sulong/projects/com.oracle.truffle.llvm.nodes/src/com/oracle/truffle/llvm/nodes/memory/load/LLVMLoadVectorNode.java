@@ -31,6 +31,7 @@ package com.oracle.truffle.llvm.nodes.memory.load;
 
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.NodeField;
 import com.oracle.truffle.api.dsl.Specialization;
@@ -407,5 +408,12 @@ public abstract class LLVMLoadVectorNode extends LLVMAbstractLoadNode {
             }
             return LLVMDoubleVector.create(vector);
         }
+    }
+
+    @Override
+    @TruffleBoundary
+    public long getLoadSize() {
+        CompilerDirectives.transferToInterpreter();
+        throw new UnsupportedOperationException("Getting byte-size of loaded vector is not yet implemented");
     }
 }

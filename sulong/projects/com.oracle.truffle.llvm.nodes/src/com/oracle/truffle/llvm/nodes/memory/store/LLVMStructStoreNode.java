@@ -82,4 +82,9 @@ public abstract class LLVMStructStoreNode extends LLVMStoreNodeCommon {
                     @Cached("createToNativeWithTarget()") LLVMToNativeNode toNative) {
         memMove.executeWithTarget(frame, address, toNative.executeWithTarget(value), getStructSize());
     }
+
+    @Override
+    public long getStoreSize() {
+        return getStructSize();
+    }
 }
