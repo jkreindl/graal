@@ -35,6 +35,8 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.llvm.nodes.intrinsics.interop.LLVMReadStringNode;
 import com.oracle.truffle.llvm.nodes.intrinsics.interop.LLVMReadStringNodeGen;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjects;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 
@@ -59,6 +61,11 @@ public abstract class LLVMIntrinsic extends LLVMExpressionNode {
     @Override
     public boolean hasTag(Class<? extends Tag> tag) {
         return (tag == LLVMTags.Intrinsic.class && intrinsicName != null) || super.hasTag(tag);
+    }
+
+    @Override
+    public Object getNodeObject() {
+        return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_INTRINSIC_NAME}, new Object[]{intrinsicName});
     }
 
     public static class LLVMIntrinsicWrapper extends LLVMIntrinsic {

@@ -41,6 +41,8 @@ public final class LLVMNodeObjects {
     public static final String KEY_STORE_SIZE = "STORE_BYTES";
     public static final String KEY_LOAD_SIZE = "LOAD_BYTES";
 
+    public static final String KEY_INTRINSIC_NAME = "INTRINSIC_NAME";
+
     private LLVMNodeObjects() {
     }
 
