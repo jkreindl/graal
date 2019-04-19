@@ -80,4 +80,10 @@ public class LLVMInlineAssemblyRootNode extends RootNode {
         block.execute(frame);
         return result == null ? 0 : result.executeGeneric(frame);
     }
+
+    @Override
+    protected boolean isInstrumentable() {
+        // we do not support debugging inline assembly yet
+        return false;
+    }
 }
