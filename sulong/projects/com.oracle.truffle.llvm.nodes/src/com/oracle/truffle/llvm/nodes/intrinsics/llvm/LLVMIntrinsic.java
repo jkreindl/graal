@@ -29,13 +29,49 @@
  */
 package com.oracle.truffle.llvm.nodes.intrinsics.llvm;
 
+import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.llvm.nodes.intrinsics.interop.LLVMReadStringNode;
 import com.oracle.truffle.llvm.nodes.intrinsics.interop.LLVMReadStringNodeGen;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 
 public abstract class LLVMIntrinsic extends LLVMExpressionNode {
 
+    @CompilationFinal private String intrinsicName = null;
+
+    public void setIntrinsicName(String name) {
+        CompilerDirectives.transferToInterpreterAndInvalidate();
+        intrinsicName = name;
+    }
+
     public LLVMReadStringNode createReadString() {
         return LLVMReadStringNodeGen.create();
+    }
+
+    @Override
+    public boolean isInstrumentable() {
+        return intrinsicName != null;
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return (tag == LLVMTags.Intrinsic.class && intrinsicName != null) || super.hasTag(tag);
+    }
+
+    public static class LLVMIntrinsicWrapper extends LLVMIntrinsic {
+
+        @Child private LLVMExpressionNode body;
+
+        public LLVMIntrinsicWrapper(LLVMExpressionNode body) {
+            this.body = body;
+        }
+
+        @Override
+        public Object executeGeneric(VirtualFrame frame) {
+            return body.executeGeneric(frame);
+        }
     }
 }
