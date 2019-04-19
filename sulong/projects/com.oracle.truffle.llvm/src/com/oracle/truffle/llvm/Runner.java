@@ -833,10 +833,10 @@ final class Runner {
 
         private final RootCallTarget destructor;
 
-        @Child StaticInitsNode globalVarInit;
+        @Child LLVMStatementNode globalVarInit;
         @Child LLVMMemoryOpNode protectRoData;
 
-        @Child StaticInitsNode constructor;
+        @Child LLVMStatementNode constructor;
 
         InitializeModuleNode(Runner runner, FrameDescriptor rootFrame, LLVMParserResult parserResult) {
             this.destructor = runner.createDestructor(parserResult);
