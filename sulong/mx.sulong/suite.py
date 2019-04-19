@@ -164,6 +164,21 @@ suite = {
       "jacoco" : "include",
     },
 
+    "com.oracle.truffle.llvm.taint" : {
+      "subDir" : "projects",
+      "sourceDirs" : ["src"],
+      "dependencies" : [
+        "truffle:TRUFFLE_API",
+        "com.oracle.truffle.llvm.runtime"
+      ],
+      "checkstyle" : "com.oracle.truffle.llvm.runtime",
+      "annotationProcessors" : ["truffle:TRUFFLE_DSL_PROCESSOR"],
+      "javaCompliance" : "1.8",
+      "workingSets" : "Truffle, LLVM",
+      "license" : "BSD-new",
+      "jacoco" : "include",
+    },
+
     "com.oracle.truffle.llvm.nodes" : {
       "subDir" : "projects",
       "sourceDirs" : ["src"],
@@ -674,6 +689,18 @@ suite = {
       "javaProperties" : {
         "llvm.home": "<path:SULONG_LIBS>",
       },
+      "license" : "BSD-new",
+    },
+
+    "SULONG_TAINT" : {
+      "subDir" : "projects",
+      "dependencies" : [
+        "com.oracle.truffle.llvm.taint"
+      ],
+      "distDependencies" : [
+        "SULONG",
+        "truffle:TRUFFLE_API"
+      ],
       "license" : "BSD-new",
     },
 
