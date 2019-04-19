@@ -130,11 +130,10 @@ public abstract class LLVMForeignWriteNode extends LLVMNode {
             store.executeWithTarget(frame, ptr, llvmValue);
         }
 
-        @Specialization(replaces = "doValue")
-        @TruffleBoundary
-        void doValueUncached(LLVMPointer ptr, LLVMInteropType.Value type, Object value) {
+        @Specialization(replaces = "doStore")
+        void doStoreUncached(VirtualFrame frame, LLVMPointer ptr, LLVMInteropType.Value type, Object value) {
             LLVMInteropType.ValueKind kind = type.getKind();
-            doValue(ptr, type, value, kind, createStoreNode(kind), ForeignToLLVM.getUncached());
+            doStore(frame, ptr, type, value, kind, ForeignToLLVM.getUncached(), createStoreNode(kind));
         }
 
         protected LLVMStoreNode createStoreNode(LLVMInteropType.ValueKind kind) {

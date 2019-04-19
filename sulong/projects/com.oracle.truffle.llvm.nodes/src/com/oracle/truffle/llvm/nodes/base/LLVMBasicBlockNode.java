@@ -41,7 +41,6 @@ import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeUtil;
 import com.oracle.truffle.api.profiles.BranchProfile;
 import com.oracle.truffle.llvm.nodes.func.LLVMFunctionStartNode;
-import com.oracle.truffle.llvm.nodes.others.LLVMUnreachableNode;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjects;
@@ -63,11 +62,10 @@ public abstract class LLVMBasicBlockNode extends LLVMStatementNode {
     public static final int RETURN_FROM_FUNCTION = -1;
 
     public static LLVMBasicBlockNode createBasicBlockNode(LLVMContext context, LLVMStatementNode[] statements, LLVMControlFlowNode termInstruction, int blockId, String blockName) {
-        final LLVMBasicBlockNode block = new LLVMBasicBlockNode(statements, termInstruction, blockId, blockName);
         if (context.getEnv().getOptions().get(SulongEngineOption.LAZY_PARSING)) {
-            return new LazyBlock(block);
+            return new LazyBlock(statements, termInstruction, blockId, blockName);
         } else {
-            return block;
+            return new InitializedBlock(statements, termInstruction, blockId, blockName);
         }
     }
 
