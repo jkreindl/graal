@@ -108,6 +108,7 @@ public final class LLVMCallNode extends LLVMExpressionNode {
                 if (descriptor.isIntrinsicFunction()) {
                     try {
                         intrinsicDispatch = insert(new IntrinsicDispatch(descriptor, argumentNodes));
+                        notifyInserted(intrinsicDispatch);
                     } catch (LLVMPolyglotException e) {
                         // re-throw with this node to generate correct stack trace
                         throw new LLVMPolyglotException(this, e.getMessage(), e);
