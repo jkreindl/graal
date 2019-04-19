@@ -32,8 +32,12 @@ package com.oracle.truffle.llvm.nodes.func;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.dsl.Fallback;
+import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.GenerateWrapper;
+import com.oracle.truffle.api.instrumentation.InstrumentableNode;
+import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.api.instrumentation.StandardTags;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
@@ -42,6 +46,8 @@ import com.oracle.truffle.llvm.nodes.func.LLVMCallNodeFactory.ArgumentNodeGen;
 import com.oracle.truffle.llvm.runtime.LLVMFunctionDescriptor;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.except.LLVMPolyglotException;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjects;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
@@ -117,8 +123,13 @@ public final class LLVMCallNode extends LLVMExpressionNode {
             CompilerDirectives.transferToInterpreterAndInvalidate();
             intrinsicDispatch = null;
             // re-insert nodes (parent was changed to IntrinsicDispatch node)
+            if (prepareArgumentNodes == null) {
+                prepareArgumentNodes = new ArgumentNode[argumentNodes.length];
+            }
             for (int i = 0; i < argumentNodes.length; i++) {
                 argumentNodes[i] = insert(argumentNodes[i]);
+                prepareArgumentNodes[i] = insert(ArgumentNodeGen.create(argumentNodes[i]));
+                notifyInserted(prepareArgumentNodes[i]);
             }
         }
         Object[] argValues = new Object[argumentNodes.length];
@@ -129,16 +140,19 @@ public final class LLVMCallNode extends LLVMExpressionNode {
         for (int i = 0; i < argumentNodes.length; i++) {
             if (prepareArgumentNodes[i] == null) {
                 CompilerDirectives.transferToInterpreterAndInvalidate();
-                prepareArgumentNodes[i] = insert(ArgumentNodeGen.create());
+                prepareArgumentNodes[i] = insert(ArgumentNodeGen.create(argumentNodes[i]));
+                notifyInserted(prepareArgumentNodes[i]);
             }
-            argValues[i] = prepareArgumentNodes[i].executeWithTarget(argumentNodes[i].executeGeneric(frame));
+            argValues[i] = prepareArgumentNodes[i].executeGeneric(frame);
         }
         return dispatchNode.executeDispatch(function, argValues);
     }
 
-    protected abstract static class ArgumentNode extends LLVMNode {
+    @GenerateWrapper
+    @NodeChild(value = "source", type = LLVMExpressionNode.class)
+    protected abstract static class ArgumentNode extends LLVMNode implements InstrumentableNode {
 
-        protected abstract Object executeWithTarget(Object value);
+        public abstract Object executeGeneric(VirtualFrame frame);
 
         @Specialization
         protected LLVMPointer doPointer(LLVMPointer address) {
@@ -148,6 +162,21 @@ public final class LLVMCallNode extends LLVMExpressionNode {
         @Fallback
         protected Object doOther(Object value) {
             return value;
+        }
+
+        @Override
+        public boolean isInstrumentable() {
+            return true;
+        }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            return tag == LLVMTags.PrepareCallArg.class || super.hasTag(tag);
+        }
+
+        @Override
+        public WrapperNode createWrapper(ProbeNode probeNode) {
+            return new ArgumentNodeWrapper(this, probeNode);
         }
     }
 
@@ -166,5 +195,10 @@ public final class LLVMCallNode extends LLVMExpressionNode {
             return false;
         }
         return tag == StandardTags.StatementTag.class || tag == StandardTags.CallTag.class || super.hasTag(tag);
+    }
+
+    @Override
+    public Object getNodeObject() {
+        return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_CALL_USER_ARGUMENTS_OFFSET}, new Object[]{USER_ARGUMENT_OFFSET});
     }
 }

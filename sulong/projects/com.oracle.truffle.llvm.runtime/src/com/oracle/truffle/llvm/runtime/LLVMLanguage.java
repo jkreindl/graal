@@ -66,7 +66,7 @@ import org.graalvm.options.OptionDescriptors;
                 LLVMTags.Switch.class, LLVMTags.IndirectBr.class, LLVMTags.Resume.class, LLVMTags.Unreachable.class, LLVMTags.ICMP.class, LLVMTags.FCMP.class, LLVMTags.Cast.class,
                 LLVMTags.Alloca.class, LLVMTags.Load.class, LLVMTags.Store.class, LLVMTags.Fence.class, LLVMTags.CmpXchg.class, LLVMTags.AtomicRMW.class, LLVMTags.GetElementPtr.class,
                 LLVMTags.ExtractElement.class, LLVMTags.InsertElement.class, LLVMTags.ShuffleVector.class, LLVMTags.ExtractValue.class, LLVMTags.InsertValue.class, LLVMTags.Block.class,
-                LLVMTags.Select.class, LLVMTags.Internal.class})
+                LLVMTags.Select.class, LLVMTags.Internal.class, LLVMTags.PrepareCallArg.class, LLVMTags.ReadCallArg.class})
 public class LLVMLanguage extends TruffleLanguage<LLVMContext> {
 
     public static final Assumption SINGLE_CONTEXT_ASSUMPTION = Truffle.getRuntime().createAssumption("Single Context");

@@ -276,4 +276,16 @@ public final class LLVMTags {
         public Internal() {
         }
     }
+
+    @Identifier(value = "PREPARE_CALL_ARG")
+    public static final class PrepareCallArg extends Tag {
+        public PrepareCallArg() {
+        }
+    }
+
+    @Identifier(value = "READ_CALL_ARG")
+    public static final class ReadCallArg extends Tag {
+        public ReadCallArg() {
+        }
+    }
 }
