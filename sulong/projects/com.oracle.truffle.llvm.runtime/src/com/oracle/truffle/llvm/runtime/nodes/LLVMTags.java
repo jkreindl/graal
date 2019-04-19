@@ -270,4 +270,10 @@ public final class LLVMTags {
         public Block() {
         }
     }
+
+    @Identifier(value = "INTERNAL")
+    public static final class Internal extends Tag {
+        public Internal() {
+        }
+    }
 }
