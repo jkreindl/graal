@@ -32,6 +32,8 @@ package com.oracle.truffle.llvm.nodes.func;
 import com.oracle.truffle.api.dsl.NodeField;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 
@@ -59,7 +61,7 @@ public abstract class LLVMArgNode extends LLVMExpressionNode {
     }
 
     @Override
-    public boolean isInstrumentable() {
-        return false;
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return tag == LLVMTags.ReadCallArg.class || super.hasTag(tag);
     }
 }
