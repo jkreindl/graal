@@ -68,7 +68,7 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
                 LLVMTags.Switch.class, LLVMTags.IndirectBr.class, LLVMTags.Resume.class, LLVMTags.Unreachable.class, LLVMTags.ICMP.class, LLVMTags.FCMP.class, LLVMTags.Cast.class,
                 LLVMTags.Alloca.class, LLVMTags.Load.class, LLVMTags.Store.class, LLVMTags.Fence.class, LLVMTags.CmpXchg.class, LLVMTags.AtomicRMW.class, LLVMTags.GetElementPtr.class,
                 LLVMTags.ExtractElement.class, LLVMTags.InsertElement.class, LLVMTags.ShuffleVector.class, LLVMTags.ExtractValue.class, LLVMTags.InsertValue.class, LLVMTags.Block.class,
-                LLVMTags.Select.class, LLVMTags.Taint.Add.class, LLVMTags.Taint.Remove.class, LLVMTags.Taint.Assert.class, LLVMTags.Taint.AssertFalse.class, LLVMTags.Taint.Check.class})
+                LLVMTags.Select.class, LLVMTags.Internal.class})
 public class LLVMLanguage extends TruffleLanguage<LLVMContext> {
 
     static final String LLVM_BITCODE_MIME_TYPE = "application/x-llvm-ir-bitcode";
