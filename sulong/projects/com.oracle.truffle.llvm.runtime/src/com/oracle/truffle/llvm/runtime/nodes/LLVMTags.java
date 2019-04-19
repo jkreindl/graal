@@ -288,4 +288,10 @@ public final class LLVMTags {
         public ReadCallArg() {
         }
     }
+
+    @Identifier(value = "INTRINSIC")
+    public static final class Intrinsic extends Tag {
+        private Intrinsic() {
+        }
+    }
 }

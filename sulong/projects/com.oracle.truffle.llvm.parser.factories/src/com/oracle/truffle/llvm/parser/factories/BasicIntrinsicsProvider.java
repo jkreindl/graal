@@ -121,6 +121,7 @@ import com.oracle.truffle.llvm.nodes.intrinsics.interop.typed.LLVMArrayTypeIDNod
 import com.oracle.truffle.llvm.nodes.intrinsics.interop.typed.LLVMPolyglotAsTyped;
 import com.oracle.truffle.llvm.nodes.intrinsics.interop.typed.LLVMPolyglotFromTyped;
 import com.oracle.truffle.llvm.nodes.intrinsics.interop.typed.LLVMTypeIDNode;
+import com.oracle.truffle.llvm.nodes.intrinsics.llvm.LLVMIntrinsic;
 import com.oracle.truffle.llvm.nodes.intrinsics.llvm.LLVMIntrinsicRootNodeFactory.LLVMIntrinsicExpressionNodeGen;
 import com.oracle.truffle.llvm.nodes.intrinsics.llvm.LLVMMemoryIntrinsicFactory.LLVMCallocNodeGen;
 import com.oracle.truffle.llvm.nodes.intrinsics.llvm.LLVMMemoryIntrinsicFactory.LLVMFreeNodeGen;
@@ -175,7 +176,7 @@ public class BasicIntrinsicsProvider implements LLVMIntrinsicProvider, ContextEx
         if (factory == null) {
             return null;
         }
-        return wrap(name, factory.generate(new AbstractList<LLVMExpressionNode>() {
+        return wrap(name, factory.generate(name, new AbstractList<LLVMExpressionNode>() {
             @Override
             public LLVMExpressionNode get(int index) {
                 return LLVMArgNodeGen.create(index);
@@ -195,7 +196,7 @@ public class BasicIntrinsicsProvider implements LLVMIntrinsicProvider, ContextEx
         if (factory == null) {
             return null;
         }
-        return factory.generate(new AbstractList<LLVMExpressionNode>() {
+        return factory.generate(name, new AbstractList<LLVMExpressionNode>() {
             @Override
             public LLVMExpressionNode get(int index) {
                 return arguments[index];
@@ -242,8 +243,21 @@ public class BasicIntrinsicsProvider implements LLVMIntrinsicProvider, ContextEx
         public abstract LLVMExpressionNode get(int index);
     }
 
+    @FunctionalInterface
     public interface LLVMIntrinsicFactory {
-        LLVMExpressionNode generate(List<LLVMExpressionNode> args, LLVMLanguage language);
+        default LLVMIntrinsic generate(String intrinsicName, List<LLVMExpressionNode> args, LLVMLanguage language) {
+            LLVMExpressionNode node = createNode(args, language);
+            final LLVMIntrinsic intrinsic;
+            if (node instanceof LLVMIntrinsic) {
+                intrinsic = (LLVMIntrinsic) node;
+            } else {
+                intrinsic = new LLVMIntrinsic.LLVMIntrinsicWrapper(node);
+            }
+            intrinsic.setIntrinsicName(intrinsicName);
+            return intrinsic;
+        }
+
+        LLVMExpressionNode createNode(List<LLVMExpressionNode> args, LLVMLanguage language);
     }
 
     protected static final Demangler DEMANGLER = new Demangler();
