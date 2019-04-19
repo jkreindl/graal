@@ -78,12 +78,6 @@ public abstract class LLVMForeignReadNode extends LLVMNode {
         return doValue(ptr, type, kind, createCachedRead());
     }
 
-    LLVMLoadNode createLoadNode(LLVMInteropType.ValueKind kind) {
-        CompilerAsserts.neverPartOfCompilation();
-        TruffleLanguage.ContextReference<LLVMContext> ctxRef = lookupContextReference(LLVMLanguage.class);
-        return ctxRef.get().getNodeFactory().createLoadNode(kind);
-    }
-
     protected DirectCallNode createCachedRead() {
         return LLVMLibraryUtils.createDirectCall(new ForeignLLVMLoad());
     }
@@ -122,17 +116,16 @@ public abstract class LLVMForeignReadNode extends LLVMNode {
 
         @Specialization(guards = "type.getKind() == cachedKind", limit = "VALUE_KIND_COUNT")
         static Object doValue(VirtualFrame frame, LLVMPointer ptr, LLVMInteropType.Value type,
-                              @Cached(value = "type.getKind()", allowUncached = true) @SuppressWarnings(value = "unused") LLVMInteropType.ValueKind cachedKind,
-                              @Cached(value = "createLoadNode(cachedKind)", allowUncached = true) LLVMLoadNode load, @Cached LLVMDataEscapeNode dataEscape) {
+                        @Cached(value = "type.getKind()", allowUncached = true) @SuppressWarnings(value = "unused") LLVMInteropType.ValueKind cachedKind,
+                        @Cached(value = "createLoadNode(cachedKind)", allowUncached = true) LLVMLoadNode load, @Cached LLVMDataEscapeNode dataEscape) {
             Object ret = load.executeWithTarget(frame, ptr);
             return dataEscape.executeWithType(ret, type.getBaseType());
         }
 
         @Specialization(replaces = "doValue")
-        @TruffleBoundary
-        Object doValueUncached(LLVMPointer ptr, LLVMInteropType.Value type) {
+        Object doValueUncached(VirtualFrame frame, LLVMPointer ptr, LLVMInteropType.Value type) {
             LLVMInteropType.ValueKind kind = type.getKind();
-            return doValue(ptr, type, kind, createLoadNode(kind), LLVMDataEscapeNodeGen.getUncached());
+            return doValue(frame, ptr, type, kind, createLoadNode(kind), LLVMDataEscapeNodeGen.getUncached());
         }
 
         LLVMLoadNode createLoadNode(LLVMInteropType.ValueKind kind) {
