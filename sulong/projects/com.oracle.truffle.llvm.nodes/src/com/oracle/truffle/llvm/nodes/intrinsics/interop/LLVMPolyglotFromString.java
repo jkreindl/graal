@@ -41,6 +41,7 @@ import com.oracle.truffle.llvm.nodes.intrinsics.interop.LLVMPolyglotFromStringNo
 import com.oracle.truffle.llvm.nodes.intrinsics.interop.LLVMPolyglotFromStringNodeGen.ReadZeroTerminatedBytesNodeGen;
 import com.oracle.truffle.llvm.nodes.intrinsics.interop.LLVMReadCharsetNode.LLVMCharset;
 import com.oracle.truffle.llvm.nodes.intrinsics.llvm.LLVMIntrinsic;
+import com.oracle.truffle.llvm.nodes.literals.LLVMSimpleLiteralNode;
 import com.oracle.truffle.llvm.nodes.memory.LLVMGetElementPtrNode.LLVMIncrementPointerNode;
 import com.oracle.truffle.llvm.nodes.memory.LLVMGetElementPtrNodeGen.LLVMIncrementPointerNodeGen;
 import com.oracle.truffle.llvm.nodes.memory.load.LLVMI16LoadNodeGen;
@@ -54,35 +55,33 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 @NodeChild(value = "ptr", type = LLVMExpressionNode.class)
+@NodeChild(value = "len", type = LLVMExpressionNode.class)
 @NodeChild(value = "charset", type = LLVMReadCharsetNode.class)
-@NodeChild(value = "rawString", type = ReadBytesNode.class, executeWith = {"charset", "ptr"})
+@NodeChild(value = "rawString", type = ReadBytesNode.class, executeWith = {"charset", "ptr", "len"})
 public abstract class LLVMPolyglotFromString extends LLVMIntrinsic {
 
     public static LLVMPolyglotFromString create(LLVMExpressionNode string, LLVMExpressionNode charset) {
         LLVMReadCharsetNode charsetNode = LLVMReadCharsetNodeGen.create(charset);
         ReadBytesNode rawString = ReadZeroTerminatedBytesNodeGen.create();
-        return LLVMPolyglotFromStringNodeGen.create(string, charsetNode, rawString);
+        return LLVMPolyglotFromStringNodeGen.create(string, new LLVMSimpleLiteralNode.LLVMI64LiteralNode(0L), charsetNode, rawString);
     }
 
     public static LLVMPolyglotFromString createN(LLVMExpressionNode string, LLVMExpressionNode n, LLVMExpressionNode charset) {
         LLVMReadCharsetNode charsetNode = LLVMReadCharsetNodeGen.create(charset);
-        ReadBytesNode rawString = ReadBytesWithLengthNodeGen.create(null, null, n);
-        return LLVMPolyglotFromStringNodeGen.create(string, charsetNode, rawString);
+        ReadBytesNode rawString = ReadBytesWithLengthNodeGen.create();
+        return LLVMPolyglotFromStringNodeGen.create(string, n, charsetNode, rawString);
     }
 
     @Specialization
-    String doFromString(@SuppressWarnings("unused") Object ptr, LLVMCharset charset, ByteBuffer rawString) {
+    String doFromString(@SuppressWarnings("unused") Object ptr, @SuppressWarnings("unused") Object len, LLVMCharset charset, ByteBuffer rawString) {
         return charset.decode(rawString);
     }
 
     abstract static class ReadBytesNode extends LLVMNode {
 
-        protected abstract ByteBuffer execute(VirtualFrame frame, LLVMCharset charset, Object ptr);
+        protected abstract ByteBuffer execute(VirtualFrame frame, LLVMCharset charset, Object ptr, Object len);
     }
 
-    @NodeChild(type = LLVMReadCharsetNode.class)
-    @NodeChild(value = "string", type = LLVMExpressionNode.class)
-    @NodeChild(value = "len", type = LLVMExpressionNode.class)
     abstract static class ReadBytesWithLengthNode extends ReadBytesNode {
 
         @Child private LLVMLoadNode load = LLVMI8LoadNodeGen.create(null);
