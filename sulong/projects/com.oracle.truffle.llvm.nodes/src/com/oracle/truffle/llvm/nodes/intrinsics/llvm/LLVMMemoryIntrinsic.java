@@ -39,7 +39,7 @@ import com.oracle.truffle.llvm.runtime.memory.LLVMMemoryOpNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 
-public abstract class LLVMMemoryIntrinsic extends LLVMExpressionNode {
+public abstract class LLVMMemoryIntrinsic extends LLVMIntrinsic {
 
     @NodeChild(type = LLVMExpressionNode.class)
     public abstract static class LLVMMalloc extends LLVMMemoryIntrinsic {
