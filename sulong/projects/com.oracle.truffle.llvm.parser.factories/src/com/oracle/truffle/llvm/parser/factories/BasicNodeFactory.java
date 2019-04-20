@@ -128,6 +128,7 @@ import com.oracle.truffle.llvm.nodes.intrinsics.c.LLVMCMathsIntrinsicsFactory.LL
 import com.oracle.truffle.llvm.nodes.intrinsics.interop.LLVMTruffleGetArgCountNodeGen;
 import com.oracle.truffle.llvm.nodes.intrinsics.interop.LLVMTruffleGetArgNodeGen;
 import com.oracle.truffle.llvm.nodes.intrinsics.llvm.LLVMAssumeNodeGen;
+import com.oracle.truffle.llvm.nodes.intrinsics.llvm.LLVMBuiltin;
 import com.oracle.truffle.llvm.nodes.intrinsics.llvm.LLVMByteSwapFactory.LLVMByteSwapI16NodeGen;
 import com.oracle.truffle.llvm.nodes.intrinsics.llvm.LLVMByteSwapFactory.LLVMByteSwapI16VectorNodeGen;
 import com.oracle.truffle.llvm.nodes.intrinsics.llvm.LLVMByteSwapFactory.LLVMByteSwapI32NodeGen;
@@ -1826,7 +1827,7 @@ public class BasicNodeFactory implements NodeFactory {
         }
     }
 
-    private LLVMExpressionNode createMemcpyIntrinsic(LLVMExpressionNode[] args, LLVMSourceLocation sourceSection) {
+    private LLVMBuiltin createMemcpyIntrinsic(LLVMExpressionNode[] args, LLVMSourceLocation sourceSection) {
         if (args.length == 6) {
             return LLVMMemCopyNodeGen.create(createMemMove(), args[1], args[2], args[3], args[5], sourceSection);
         } else if (args.length == 5) {
@@ -1837,7 +1838,7 @@ public class BasicNodeFactory implements NodeFactory {
         }
     }
 
-    private LLVMExpressionNode createMemmoveIntrinsic(LLVMExpressionNode[] args, LLVMSourceLocation sourceSection) {
+    private LLVMBuiltin createMemmoveIntrinsic(LLVMExpressionNode[] args, LLVMSourceLocation sourceSection) {
         if (args.length == 6) {
             return LLVMMemMoveI64NodeGen.create(createMemMove(), args[1], args[2], args[3], args[5], sourceSection);
         } else if (args.length == 5) {
@@ -1883,8 +1884,11 @@ public class BasicNodeFactory implements NodeFactory {
             case "@llvm.ctlz.i64":
                 return CountLeadingZeroesI64NodeGen.create(args[1], args[2], sourceSection);
             case "@llvm.memcpy.p0i8.p0i8.i64":
-            case "@llvm.memcpy.p0i8.p0i8.i32":
-                return createMemcpyIntrinsic(args, sourceSection);
+            case "@llvm.memcpy.p0i8.p0i8.i32": {
+                final LLVMBuiltin memcpy = createMemcpyIntrinsic(args, sourceSection);
+                memcpy.setIntrinsicName(intrinsicName);
+                return memcpy;
+            }
             case "@llvm.ctpop.i32":
                 return CountSetBitsI32NodeGen.create(args[1], sourceSection);
             case "@llvm.ctpop.i64":
@@ -1917,8 +1921,11 @@ public class BasicNodeFactory implements NodeFactory {
                 return LLVMByteSwapI64VectorNodeGen.create(2, args[1], sourceSection);
             case "@llvm.bswap.v4i64":
                 return LLVMByteSwapI64VectorNodeGen.create(4, args[1], sourceSection);
-            case "@llvm.memmove.p0i8.p0i8.i64":
-                return createMemmoveIntrinsic(args, sourceSection);
+            case "@llvm.memmove.p0i8.p0i8.i64": {
+                final LLVMBuiltin memmove = createMemmoveIntrinsic(args, sourceSection);
+                memmove.setIntrinsicName(intrinsicName);
+                return memmove;
+            }
             case "@llvm.pow.f32":
                 return LLVMPowNodeGen.create(args[1], args[2], sourceSection);
             case "@llvm.pow.f64":

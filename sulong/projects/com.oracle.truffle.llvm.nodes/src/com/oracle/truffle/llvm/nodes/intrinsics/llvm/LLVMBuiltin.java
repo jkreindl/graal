@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -38,11 +38,10 @@ import com.oracle.truffle.llvm.nodes.memory.store.LLVMI32StoreNodeGen;
 import com.oracle.truffle.llvm.nodes.memory.store.LLVMI64StoreNodeGen;
 import com.oracle.truffle.llvm.nodes.memory.store.LLVMI8StoreNodeGen;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
-import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStoreNode;
 
 @NodeField(name = "sourceLocation", type = LLVMSourceLocation.class)
-public abstract class LLVMBuiltin extends LLVMExpressionNode {
+public abstract class LLVMBuiltin extends LLVMIntrinsic {
 
     protected static LLVMStoreNode createStoreI1() {
         return LLVMI1StoreNodeGen.create(null, null);
