@@ -39,6 +39,7 @@ import java.util.regex.Pattern;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameSlot;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.nodes.RootNode;
 import com.oracle.truffle.api.source.Source;
@@ -122,6 +123,9 @@ import com.oracle.truffle.llvm.nodes.func.LLVMResumeNode;
 import com.oracle.truffle.llvm.nodes.func.LLVMTypeIdForExceptionNode;
 import com.oracle.truffle.llvm.nodes.globals.LLVMGlobalContainerReadNode;
 import com.oracle.truffle.llvm.nodes.globals.LLVMGlobalContainerWriteNode;
+import com.oracle.truffle.llvm.nodes.instrumentation.InstrumentableControlFlow;
+import com.oracle.truffle.llvm.nodes.instrumentation.InstrumentableExpression;
+import com.oracle.truffle.llvm.nodes.instrumentation.InstrumentableStatement;
 import com.oracle.truffle.llvm.nodes.intrinsics.c.LLVMCMathsIntrinsicsFactory;
 import com.oracle.truffle.llvm.nodes.intrinsics.c.LLVMCMathsIntrinsicsFactory.LLVMFAbsNodeGen;
 import com.oracle.truffle.llvm.nodes.intrinsics.c.LLVMCMathsIntrinsicsFactory.LLVMFAbsVectorNodeGen;
@@ -1761,7 +1765,11 @@ public class BasicNodeFactory implements NodeFactory {
     }
 
     private static LLVMLandingpadNode.LandingpadEntryNode getLandingpadFilterEntry(LLVMExpressionNode exp) {
-        LLVMArrayLiteralNode array = (LLVMArrayLiteralNode) exp;
+        LLVMExpressionNode arrayNode = exp;
+        if (exp instanceof InstrumentableExpression) {
+            arrayNode = ((InstrumentableExpression) exp).getExpression();
+        }
+        LLVMArrayLiteralNode array = (LLVMArrayLiteralNode) arrayNode;
         LLVMExpressionNode[] types = array == null ? LLVMExpressionNode.NO_EXPRESSIONS : array.getValues();
         return new LLVMLandingpadNode.LandingpadFilterEntryNode(types);
     }
@@ -2591,5 +2599,20 @@ public class BasicNodeFactory implements NodeFactory {
 
     private static AssertionError unsupportedCast(PrimitiveKind kind) {
         throw new LLVMParserException("Cannot cast to " + kind);
+    }
+
+    @Override
+    public LLVMExpressionNode createInstrumentableExpression(LLVMExpressionNode expr, Class<? extends Tag>[] tags) {
+        return new InstrumentableExpression(expr, tags);
+    }
+
+    @Override
+    public LLVMStatementNode createInstrumentableStatement(LLVMStatementNode stmt, Class<? extends Tag>[] tags, Object nodeObject) {
+        return new InstrumentableStatement(stmt, tags, nodeObject);
+    }
+
+    @Override
+    public void instrumentControlFlow(LLVMControlFlowNode cfNode, Class<? extends Tag>[] tags, Object nodeObject) {
+        InstrumentableControlFlow.instrument(cfNode, tags, nodeObject);
     }
 }
