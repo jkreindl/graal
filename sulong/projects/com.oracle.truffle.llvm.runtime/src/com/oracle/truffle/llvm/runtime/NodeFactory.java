@@ -33,6 +33,7 @@ import java.util.List;
 
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameSlot;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.nodes.RootNode;
 import com.oracle.truffle.api.source.Source;
@@ -251,4 +252,8 @@ public interface NodeFactory extends InteropNodeFactory {
     LLVMObjectReadNode createGlobalContainerReadNode();
 
     LLVMObjectWriteNode createGlobalContainerWriteNode();
+
+    LLVMExpressionNode createInstrumentableExpression(LLVMExpressionNode expr, Class<? extends Tag>[] tags);
+
+    LLVMStatementNode createInstrumentableStatement(LLVMStatementNode stmt, Class<? extends Tag>[] tags);
 }
