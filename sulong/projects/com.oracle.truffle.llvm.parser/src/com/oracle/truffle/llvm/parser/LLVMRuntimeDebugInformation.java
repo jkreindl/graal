@@ -89,7 +89,7 @@ final class LLVMRuntimeDebugInformation {
         this.staticValueAccessVisitor = new StaticValueAccessVisitor();
     }
 
-    private final class StaticValueAccessVisitor extends ValueInstructionVisitor {
+    private final class StaticValueAccessVisitor implements ValueInstructionVisitor {
 
         private SourceVariable variable = null;
         private LLVMSourceSymbol symbol = null;
@@ -166,7 +166,7 @@ final class LLVMRuntimeDebugInformation {
             if (global.isReadOnly()) {
                 visitSimpleConstant(global);
             } else {
-                super.visit(global);
+                ValueInstructionVisitor.super.visit(global);
             }
         }
 

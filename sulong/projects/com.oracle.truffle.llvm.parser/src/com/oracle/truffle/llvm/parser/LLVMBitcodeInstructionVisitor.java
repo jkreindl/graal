@@ -93,6 +93,7 @@ import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.except.LLVMUserException;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack.UniquesRegion;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
@@ -122,6 +123,8 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
     private final LLVMRuntimeDebugInformation dbgInfoHandler;
     private final UniquesRegion uniquesRegion;
 
+    private final boolean instrumentIR;
+
     private final List<LLVMStatementNode> blockInstructions;
     private int instructionIndex;
     private LLVMControlFlowNode controlFlowNode;
@@ -144,6 +147,8 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         this.uniquesRegion = uniquesRegion;
 
         this.blockInstructions = new ArrayList<>();
+
+        this.instrumentIR = context.getEnv().getOptions().get(SulongEngineOption.INSTRUMENT_IR);
     }
 
     public LLVMStatementNode[] getInstructions() {
@@ -177,7 +182,7 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         }
 
         final SymbolImpl count = allocate.getCount();
-        final LLVMExpressionNode result;
+        LLVMExpressionNode result;
         if (count instanceof NullConstant) {
             result = nodeFactory.createAlloca(type, alignment);
         } else if (count instanceof IntegerConstant) {
@@ -199,6 +204,11 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         if (context.getEnv().getOptions().get(SulongEngineOption.LL_DEBUG)) {
             location = getSourceLocation(allocate);
         }
+
+        if (instrumentIR) {
+            result = nodeFactory.createInstrumentableExpression(result, LLVMTags.Alloca.SINGLE_EXPRESSION_TAG);
+        }
+
         createFrameWrite(result, allocate, location);
     }
 
@@ -840,7 +850,12 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
     }
 
     private void createFrameWrite(LLVMExpressionNode result, ValueInstruction source, LLVMSourceLocation sourceLocation) {
-        final LLVMStatementNode node = nodeFactory.createFrameWrite(source.getType(), result, getSlot(source.getName()), sourceLocation);
+        LLVMStatementNode node = nodeFactory.createFrameWrite(source.getType(), result, getSlot(source.getName()), sourceLocation);
+
+        if (instrumentIR) {
+            node = nodeFactory.createInstrumentableStatement(node, LLVMTags.SSAWrite.SINGLE_EXPRESSION_TAG);
+        }
+
         addInstruction(node);
     }
 

@@ -73,7 +73,7 @@ public final class StackManager {
         return frame;
     }
 
-    private static final class StackAllocationFunctionVisitor extends ValueInstructionVisitor implements FunctionVisitor {
+    private static final class StackAllocationFunctionVisitor implements ValueInstructionVisitor, FunctionVisitor {
 
         private final FrameDescriptor frame;
 
