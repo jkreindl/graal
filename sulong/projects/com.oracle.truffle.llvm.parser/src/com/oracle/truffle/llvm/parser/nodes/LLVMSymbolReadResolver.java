@@ -60,6 +60,10 @@ public abstract class LLVMSymbolReadResolver {
         this.nodeFactory = context.getNodeFactory();
     }
 
+    public static LLVMSymbolReadResolver createUninstrumenting(LLVMParserRuntime runtime, FrameDescriptor frame, GetStackSpaceFactory getStackSpaceFactory) {
+        return new ReadResolverImpl(runtime, frame, getStackSpaceFactory);
+    }
+
     public static LLVMSymbolReadResolver create(LLVMParserRuntime runtime, FrameDescriptor frame, GetStackSpaceFactory getStackSpaceFactory) {
         LLVMSymbolReadResolver impl = new ReadResolverImpl(runtime, frame, getStackSpaceFactory);
 
