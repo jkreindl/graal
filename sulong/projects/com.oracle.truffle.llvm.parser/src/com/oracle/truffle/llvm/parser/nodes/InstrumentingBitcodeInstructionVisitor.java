@@ -299,7 +299,6 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
 
     @Override
     void setControlFlowNode(LLVMControlFlowNode controlFlowNode) {
-        // TODO (jkreindl) handle this
         super.setControlFlowNode(controlFlowNode);
         tags = null;
     }

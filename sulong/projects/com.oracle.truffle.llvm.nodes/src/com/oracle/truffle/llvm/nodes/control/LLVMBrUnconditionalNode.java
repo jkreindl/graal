@@ -31,7 +31,6 @@ package com.oracle.truffle.llvm.nodes.control;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
-import com.oracle.truffle.api.instrumentation.InstrumentableNode;
 import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
@@ -40,7 +39,7 @@ import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 
 @GenerateWrapper
-public abstract class LLVMBrUnconditionalNode extends LLVMControlFlowNode implements InstrumentableNode {
+public abstract class LLVMBrUnconditionalNode extends LLVMControlFlowNode {
 
     public static LLVMBrUnconditionalNode create(int successor, LLVMStatementNode phi, LLVMSourceLocation sourceSection) {
         return new LLVMBrUnconditionalNodeImpl(successor, phi, sourceSection);
@@ -57,11 +56,6 @@ public abstract class LLVMBrUnconditionalNode extends LLVMControlFlowNode implem
     @Override
     public WrapperNode createWrapper(ProbeNode probe) {
         return new LLVMBrUnconditionalNodeWrapper(this, this, probe);
-    }
-
-    @Override
-    public boolean isInstrumentable() {
-        return getSourceLocation() != null;
     }
 
     public abstract int getSuccessor();

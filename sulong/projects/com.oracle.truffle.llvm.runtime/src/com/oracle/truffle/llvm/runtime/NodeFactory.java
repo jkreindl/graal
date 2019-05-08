@@ -256,4 +256,6 @@ public interface NodeFactory extends InteropNodeFactory {
     LLVMExpressionNode createInstrumentableExpression(LLVMExpressionNode expr, Class<? extends Tag>[] tags);
 
     LLVMStatementNode createInstrumentableStatement(LLVMStatementNode stmt, Class<? extends Tag>[] tags);
+
+    void instrumentControlFlow(LLVMControlFlowNode cfNode, Class<? extends Tag>[] tags);
 }

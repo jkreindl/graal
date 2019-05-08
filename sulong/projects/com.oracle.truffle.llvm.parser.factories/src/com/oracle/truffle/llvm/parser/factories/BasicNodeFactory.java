@@ -122,6 +122,7 @@ import com.oracle.truffle.llvm.nodes.func.LLVMResumeNode;
 import com.oracle.truffle.llvm.nodes.func.LLVMTypeIdForExceptionNode;
 import com.oracle.truffle.llvm.nodes.globals.LLVMGlobalContainerReadNode;
 import com.oracle.truffle.llvm.nodes.globals.LLVMGlobalContainerWriteNode;
+import com.oracle.truffle.llvm.nodes.instrumentation.InstrumentableControlFlow;
 import com.oracle.truffle.llvm.nodes.instrumentation.InstrumentableExpression;
 import com.oracle.truffle.llvm.nodes.instrumentation.InstrumentableStatement;
 import com.oracle.truffle.llvm.nodes.intrinsics.c.LLVMCMathsIntrinsicsFactory;
@@ -2614,5 +2615,10 @@ public class BasicNodeFactory implements NodeFactory {
     @Override
     public LLVMStatementNode createInstrumentableStatement(LLVMStatementNode stmt, Class<? extends Tag>[] tags) {
         return new InstrumentableStatement(stmt, tags);
+    }
+
+    @Override
+    public void instrumentControlFlow(LLVMControlFlowNode cfNode, Class<? extends Tag>[] tags) {
+        InstrumentableControlFlow.instrument(cfNode, tags);
     }
 }
