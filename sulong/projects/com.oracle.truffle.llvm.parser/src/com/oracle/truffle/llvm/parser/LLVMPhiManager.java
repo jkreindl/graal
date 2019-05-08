@@ -84,7 +84,7 @@ public final class LLVMPhiManager implements ModelVisitor {
         }
     }
 
-    static final class Phi {
+    public static final class Phi {
 
         private final InstructionBlock block;
 

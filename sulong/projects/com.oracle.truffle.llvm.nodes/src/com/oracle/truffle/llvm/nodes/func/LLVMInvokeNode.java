@@ -34,7 +34,6 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
-import com.oracle.truffle.api.instrumentation.InstrumentableNode;
 import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.api.instrumentation.StandardTags;
 import com.oracle.truffle.api.instrumentation.Tag;
@@ -53,7 +52,7 @@ import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.runtime.types.VoidType;
 
 @GenerateWrapper
-public abstract class LLVMInvokeNode extends LLVMControlFlowNode implements InstrumentableNode {
+public abstract class LLVMInvokeNode extends LLVMControlFlowNode {
 
     private static class LLVMInvokeNodeImpl extends LLVMInvokeNode {
 
@@ -187,11 +186,6 @@ public abstract class LLVMInvokeNode extends LLVMControlFlowNode implements Inst
     @Override
     public WrapperNode createWrapper(ProbeNode probe) {
         return new LLVMInvokeNodeWrapper(this, this, probe);
-    }
-
-    @Override
-    public boolean isInstrumentable() {
-        return getSourceLocation() != null;
     }
 
     public abstract int getNormalSuccessor();

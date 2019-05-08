@@ -51,6 +51,8 @@ import com.oracle.truffle.llvm.parser.model.blocks.InstructionBlock;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDefinition;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionParameter;
 import com.oracle.truffle.llvm.parser.model.functions.LazyFunctionParser;
+import com.oracle.truffle.llvm.parser.nodes.LLVMBitcodeInstructionVisitor;
+import com.oracle.truffle.llvm.parser.nodes.LLVMRuntimeDebugInformation;
 import com.oracle.truffle.llvm.parser.nodes.LLVMSymbolReadResolver;
 import com.oracle.truffle.llvm.runtime.GetStackSpaceFactory;
 import com.oracle.truffle.llvm.runtime.LLVMFunctionDescriptor.LazyToTruffleConverter;

@@ -29,12 +29,17 @@
  */
 package com.oracle.truffle.llvm.nodes.others;
 
+import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.GenerateWrapper;
+import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ControlFlowException;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 
+@GenerateWrapper
 public class LLVMUnreachableNode extends LLVMControlFlowNode {
 
     public static class LLVMUnreachableException extends ControlFlowException {
@@ -55,8 +60,14 @@ public class LLVMUnreachableNode extends LLVMControlFlowNode {
         return null;
     }
 
-    public void execute() {
+    public void execute(@SuppressWarnings("unused") VirtualFrame frame) {
+        CompilerDirectives.transferToInterpreter();
         throw new LLVMUnreachableException();
+    }
+
+    @Override
+    public WrapperNode createWrapper(ProbeNode probe) {
+        return new LLVMUnreachableNodeWrapper(this, probe);
     }
 
     @Override

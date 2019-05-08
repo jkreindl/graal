@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,7 +27,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser;
+package com.oracle.truffle.llvm.parser.nodes;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +35,8 @@ import java.util.Objects;
 
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameSlot;
-import com.oracle.truffle.llvm.parser.LLVMPhiManager.Phi;
+import com.oracle.truffle.llvm.parser.LLVMLivenessAnalysis;
+import com.oracle.truffle.llvm.parser.LLVMPhiManager;
 import com.oracle.truffle.llvm.parser.metadata.MDExpression;
 import com.oracle.truffle.llvm.parser.metadata.debuginfo.SourceVariable;
 import com.oracle.truffle.llvm.parser.model.SymbolImpl;
@@ -82,17 +83,12 @@ import com.oracle.truffle.llvm.parser.model.symbols.instructions.UnreachableInst
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.ValueInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.VoidCallInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.VoidInvokeInstruction;
-import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
-import com.oracle.truffle.llvm.parser.nodes.LLVMSymbolReadResolver;
 import com.oracle.truffle.llvm.parser.util.LLVMBitcodeTypeHelper;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
-import com.oracle.truffle.llvm.runtime.LLVMContext.ExternalLibrary;
-import com.oracle.truffle.llvm.runtime.NodeFactory;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.except.LLVMUserException;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack;
-import com.oracle.truffle.llvm.runtime.memory.LLVMStack.UniquesRegion;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
@@ -107,21 +103,18 @@ import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
 import com.oracle.truffle.llvm.runtime.types.StructureType;
 import com.oracle.truffle.llvm.runtime.types.Type;
 
-final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
-
-    static final FrameSlot[] NO_SLOTS = new FrameSlot[0];
+class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
 
     private final FrameDescriptor frame;
-    private final List<Phi> blockPhis;
-    private final NodeFactory nodeFactory;
+    private final List<LLVMPhiManager.Phi> blockPhis;
     private final int argCount;
     private final LLVMSymbolReadResolver symbols;
     private final LLVMContext context;
-    private final ExternalLibrary library;
+    private final LLVMContext.ExternalLibrary library;
     private final ArrayList<LLVMLivenessAnalysis.NullerInformation> nullerInfos;
     private final List<FrameSlot> notNullable;
     private final LLVMRuntimeDebugInformation dbgInfoHandler;
-    private final UniquesRegion uniquesRegion;
+    private final LLVMStack.UniquesRegion uniquesRegion;
 
     private final boolean instrumentIR;
 
@@ -131,11 +124,11 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
 
     private LLVMSourceLocation lastLocation;
 
-    LLVMBitcodeInstructionVisitor(FrameDescriptor frame, UniquesRegion uniquesRegion, List<Phi> blockPhis, int argCount, LLVMSymbolReadResolver symbols, LLVMContext context,
-                    ExternalLibrary library, ArrayList<LLVMLivenessAnalysis.NullerInformation> nullerInfos, List<FrameSlot> notNullable, LLVMRuntimeDebugInformation dbgInfoHandler) {
+    BitcodeInstructionVisitorImpl(FrameDescriptor frame, LLVMStack.UniquesRegion uniquesRegion, List<LLVMPhiManager.Phi> blockPhis, int argCount, LLVMSymbolReadResolver symbols, LLVMContext context,
+                    LLVMContext.ExternalLibrary library, ArrayList<LLVMLivenessAnalysis.NullerInformation> nullerInfos, List<FrameSlot> notNullable, LLVMRuntimeDebugInformation dbgInfoHandler) {
+        super(context.getNodeFactory());
         this.frame = frame;
         this.blockPhis = blockPhis;
-        this.nodeFactory = context.getLanguage().getNodeFactory();
         this.argCount = argCount;
         this.symbols = symbols;
         this.context = context;
@@ -151,15 +144,18 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         this.instrumentIR = context.getEnv().getOptions().get(SulongEngineOption.INSTRUMENT_IR);
     }
 
+    @Override
     public LLVMStatementNode[] getInstructions() {
         return blockInstructions.toArray(LLVMStatementNode.NO_STATEMENTS);
     }
 
-    LLVMControlFlowNode getControlFlowNode() {
+    @Override
+    public LLVMControlFlowNode getControlFlowNode() {
         return controlFlowNode;
     }
 
-    void setInstructionIndex(int instructionIndex) {
+    @Override
+    public void setInstructionIndex(int instructionIndex) {
         this.instructionIndex = instructionIndex;
     }
 
@@ -403,7 +399,7 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         List<LLVMSourceLocation> normalSources = new ArrayList<>();
         List<LLVMSourceLocation> unwindSources = new ArrayList<>();
         if (blockPhis != null) {
-            for (Phi phi : blockPhis) {
+            for (LLVMPhiManager.Phi phi : blockPhis) {
                 FrameSlot slot = getSlot(phi.getPhiValue().getName());
                 LLVMExpressionNode value = symbols.resolve(phi.getValue());
                 if (call.normalSuccessor() == phi.getBlock()) {
@@ -472,7 +468,7 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         List<LLVMSourceLocation> normalSources = new ArrayList<>();
         List<LLVMSourceLocation> unwindSources = new ArrayList<>();
         if (blockPhis != null) {
-            for (Phi phi : blockPhis) {
+            for (LLVMPhiManager.Phi phi : blockPhis) {
                 FrameSlot slot = getSlot(phi.getPhiValue().getName());
                 LLVMExpressionNode value = symbols.resolve(phi.getValue());
                 if (call.normalSuccessor() == phi.getBlock()) {
@@ -776,13 +772,13 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
 
     private LLVMStatementNode[] getPhiWriteNodes(TerminatingInstruction terminatingInstruction) {
         if (blockPhis != null) {
-            ArrayList<Phi>[] phisPerSuccessor = LLVMPhiManager.getPhisForSuccessors(terminatingInstruction, blockPhis);
+            ArrayList<LLVMPhiManager.Phi>[] phisPerSuccessor = LLVMPhiManager.getPhisForSuccessors(terminatingInstruction, blockPhis);
             return convertToPhiWriteNodes(phisPerSuccessor);
         }
         return new LLVMStatementNode[terminatingInstruction.getSuccessorCount()];
     }
 
-    private LLVMStatementNode[] convertToPhiWriteNodes(ArrayList<Phi>[] phisPerSuccessor) {
+    private LLVMStatementNode[] convertToPhiWriteNodes(ArrayList<LLVMPhiManager.Phi>[] phisPerSuccessor) {
         if (phisPerSuccessor.length == 0) {
             return LLVMStatementNode.NO_STATEMENTS;
         }
@@ -795,7 +791,7 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
             Type[] types = new Type[successorCount];
             LLVMSourceLocation[] sources = new LLVMSourceLocation[successorCount];
             for (int j = 0; j < successorCount; j++) {
-                Phi phi = phisPerSuccessor[i].get(j);
+                LLVMPhiManager.Phi phi = phisPerSuccessor[i].get(j);
                 to[j] = getSlot(phi.getPhiValue().getName());
                 from[j] = symbols.resolve(phi.getValue());
                 types[j] = phi.getValue().getType();
@@ -849,13 +845,8 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         createFrameWrite(result, source, getSourceLocation(source));
     }
 
-    private void createFrameWrite(LLVMExpressionNode result, ValueInstruction source, LLVMSourceLocation sourceLocation) {
-        LLVMStatementNode node = nodeFactory.createFrameWrite(source.getType(), result, getSlot(source.getName()), sourceLocation);
-
-        if (instrumentIR) {
-            node = nodeFactory.createInstrumentableStatement(node, LLVMTags.SSAWrite.SINGLE_EXPRESSION_TAG);
-        }
-
+    void createFrameWrite(LLVMExpressionNode result, ValueInstruction source, LLVMSourceLocation sourceLocation) {
+        final LLVMStatementNode node = nodeFactory.createFrameWrite(source.getType(), result, getSlot(source.getName()), sourceLocation);
         addInstruction(node);
     }
 
@@ -881,12 +872,13 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         return getSlot(LLVMStack.FRAME_ID);
     }
 
-    private void addInstruction(LLVMStatementNode node) {
+    void addInstruction(LLVMStatementNode node) {
         blockInstructions.add(node);
         handleNullerInfo();
     }
 
-    void addInstructionUnchecked(LLVMStatementNode instruction) {
+    @Override
+    public void addInstructionUnchecked(LLVMStatementNode instruction) {
         blockInstructions.add(instruction);
     }
 
@@ -909,7 +901,7 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         }
     }
 
-    private void setControlFlowNode(LLVMControlFlowNode controlFlowNode) {
+    void setControlFlowNode(LLVMControlFlowNode controlFlowNode) {
         assert this.controlFlowNode == null;
         this.controlFlowNode = controlFlowNode;
     }

@@ -97,7 +97,7 @@ public abstract class LLVMSymbolReadResolver {
         }
     }
 
-    public LLVMExpressionNode resolveElementPointer(SymbolImpl base, List<SymbolImpl> indices) {
+    LLVMExpressionNode resolveElementPointer(SymbolImpl base, List<SymbolImpl> indices) {
         LLVMExpressionNode currentAddress = resolve(base);
         Type currentType = base.getType();
 
