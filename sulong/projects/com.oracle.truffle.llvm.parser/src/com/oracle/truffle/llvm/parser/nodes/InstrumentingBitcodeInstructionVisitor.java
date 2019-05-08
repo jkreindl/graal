@@ -96,7 +96,49 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
 
     @Override
     public void visit(BinaryOperationInstruction operation) {
-        // TODO (jkreindl)
+        switch (operation.getOperator()) {
+            case FP_ADD:
+            case INT_ADD:
+                tags = LLVMTags.Add.SINGLE_EXPRESSION_TAG;
+                break;
+            case FP_SUBTRACT:
+            case INT_SUBTRACT:
+                tags = LLVMTags.Sub.SINGLE_EXPRESSION_TAG;
+                break;
+            case FP_MULTIPLY:
+            case INT_MULTIPLY:
+                tags = LLVMTags.Mul.SINGLE_EXPRESSION_TAG;
+                break;
+            case FP_DIVIDE:
+            case INT_UNSIGNED_DIVIDE:
+            case INT_SIGNED_DIVIDE:
+                tags = LLVMTags.Div.SINGLE_EXPRESSION_TAG;
+                break;
+            case FP_REMAINDER:
+            case INT_UNSIGNED_REMAINDER:
+            case INT_SIGNED_REMAINDER:
+                tags = LLVMTags.Rem.SINGLE_EXPRESSION_TAG;
+                break;
+            case INT_SHIFT_LEFT:
+                tags = LLVMTags.ShiftLeft.SINGLE_EXPRESSION_TAG;
+                break;
+            case INT_LOGICAL_SHIFT_RIGHT:
+            case INT_ARITHMETIC_SHIFT_RIGHT:
+                tags = LLVMTags.ShiftRight.SINGLE_EXPRESSION_TAG;
+                break;
+            case INT_AND:
+                tags = LLVMTags.And.SINGLE_EXPRESSION_TAG;
+                break;
+            case INT_OR:
+                tags = LLVMTags.Or.SINGLE_EXPRESSION_TAG;
+                break;
+            case INT_XOR:
+                tags = LLVMTags.XOr.SINGLE_EXPRESSION_TAG;
+                break;
+            default:
+                tags = null;
+                break;
+        }
         super.visit(operation);
     }
 
