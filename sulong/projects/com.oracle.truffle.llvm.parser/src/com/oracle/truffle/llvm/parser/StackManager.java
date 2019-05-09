@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -73,7 +73,7 @@ public final class StackManager {
         return frame;
     }
 
-    private static final class StackAllocationFunctionVisitor extends ValueInstructionVisitor implements FunctionVisitor {
+    private static final class StackAllocationFunctionVisitor implements ValueInstructionVisitor, FunctionVisitor {
 
         private final FrameDescriptor frame;
 

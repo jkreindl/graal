@@ -124,6 +124,7 @@ import com.oracle.truffle.llvm.nodes.globals.LLVMGlobalContainerReadNode;
 import com.oracle.truffle.llvm.nodes.globals.LLVMGlobalContainerWriteNode;
 import com.oracle.truffle.llvm.nodes.instrumentation.InstrumentableControlFlow;
 import com.oracle.truffle.llvm.nodes.instrumentation.InstrumentableExpression;
+import com.oracle.truffle.llvm.nodes.instrumentation.InstrumentablePointerIncrementNodeGen;
 import com.oracle.truffle.llvm.nodes.instrumentation.InstrumentableStatement;
 import com.oracle.truffle.llvm.nodes.intrinsics.c.LLVMCMathsIntrinsicsFactory;
 import com.oracle.truffle.llvm.nodes.intrinsics.c.LLVMCMathsIntrinsicsFactory.LLVMFAbsNodeGen;
@@ -484,12 +485,12 @@ public class BasicNodeFactory implements NodeFactory {
                 case DOUBLE:
                     return LLVMDoubleInsertElementNodeGen.create(vector, element, index, vectorLength);
                 default:
-                    throw new AssertionError("vector type " + vectorType + "  not supported!");
+                    throw new AssertionError("vector type " + vectorType + "  is not supported for insertelement");
             }
         } else if (vectorType.getElementType() instanceof PointerType || vectorType.getElementType() instanceof FunctionType) {
             return LLVMI64InsertElementNodeGen.create(vector, element, index, vectorLength);
         }
-        throw new AssertionError(vectorType);
+        throw new AssertionError("vector type " + vectorType + "  is not supported for insertelement");
     }
 
     @Override
@@ -512,12 +513,12 @@ public class BasicNodeFactory implements NodeFactory {
                 case DOUBLE:
                     return LLVMDoubleExtractElementNodeGen.create(vector, index);
                 default:
-                    throw new AssertionError(resultType1 + " not supported!");
+                    throw new AssertionError(resultType1 + " is not supported for extractelement");
             }
         } else if (resultType instanceof PointerType || resultType instanceof FunctionType) {
             return LLVMI64ExtractElementNodeGen.create(vector, index);
         } else {
-            throw new AssertionError(resultType + " not supported!");
+            throw new AssertionError(resultType + " is not supported for extractelement");
         }
     }
 
@@ -543,12 +544,12 @@ public class BasicNodeFactory implements NodeFactory {
                 case DOUBLE:
                     return LLVMShuffleDoubleVectorNodeGen.create(vector1, vector2, mask, resultLength);
                 default:
-                    throw new AssertionError(resultType);
+                    throw new AssertionError(resultType + " is not supported for shufflevector");
             }
         } else if (resultType.getElementType() instanceof PointerType || resultType.getElementType() instanceof FunctionType) {
             return LLVMShuffleI64VectorNodeGen.create(vector1, vector2, mask, resultLength);
         }
-        throw new AssertionError(resultType);
+        throw new AssertionError(resultType + " is not supported for shufflevector");
     }
 
     @Override
@@ -1012,7 +1013,7 @@ public class BasicNodeFactory implements NodeFactory {
     private static LLVMAbstractCompareNode createPrimitiveComparison(CompareOperator operator, LLVMExpressionNode lhs, LLVMExpressionNode rhs) {
         switch (operator) {
             case FP_FALSE:
-                return LLVMFalseCmpNodeGen.create(null, null);
+                return LLVMFalseCmpNodeGen.create(lhs, rhs);
             case FP_ORDERED_EQUAL:
                 return LLVMOrderedEqNodeGen.create(lhs, rhs);
             case FP_ORDERED_GREATER_THAN:
@@ -1042,7 +1043,7 @@ public class BasicNodeFactory implements NodeFactory {
             case FP_UNORDERED_NOT_EQUAL:
                 return LLVMUnorderedNeNodeGen.create(lhs, rhs);
             case FP_TRUE:
-                return LLVMTrueCmpNodeGen.create(null, null);
+                return LLVMTrueCmpNodeGen.create(lhs, rhs);
             case INT_EQUAL:
                 return LLVMEqNodeGen.create(lhs, rhs);
             case INT_NOT_EQUAL:
@@ -1358,7 +1359,7 @@ public class BasicNodeFactory implements NodeFactory {
         } else if (type instanceof PointerType || type instanceof StructureType || type instanceof ArrayType) {
             return LLVMPointerDirectLoadNodeGen.create(targetAddress);
         } else {
-            throw new AssertionError(type);
+            throw new AssertionError(type + " is not supported for extractvalue");
         }
     }
 
@@ -1618,14 +1619,14 @@ public class BasicNodeFactory implements NodeFactory {
                     store = LLVM80BitFloatStoreNodeGen.create(null, null);
                     break;
                 default:
-                    throw new AssertionError(llvmType);
+                    throw new AssertionError(llvmType + " is not supported for insertvalue");
             }
         } else if (llvmType instanceof VectorType) {
             store = LLVMStoreVectorNodeGen.create(null, null, null, ((VectorType) llvmType).getNumberOfElements());
         } else if (llvmType instanceof PointerType) {
             store = LLVMPointerStoreNodeGen.create(null, null);
         } else {
-            throw new AssertionError(llvmType);
+            throw new AssertionError(llvmType + " is not supported for insertvalue");
         }
         return LLVMInsertValueNodeGen.create(store, createMemMove(), size, offset, sourceAggregate, resultAggregate, valueToInsert);
     }
@@ -2607,8 +2608,8 @@ public class BasicNodeFactory implements NodeFactory {
     }
 
     @Override
-    public LLVMExpressionNode createInstrumentableExpression(LLVMExpressionNode expr, Class<? extends Tag>[] tags) {
-        return new InstrumentableExpression(expr, tags);
+    public LLVMExpressionNode createInstrumentableExpression(LLVMExpressionNode expr, Class<? extends Tag>[] tags, Object nodeObject) {
+        return new InstrumentableExpression(expr, tags, nodeObject);
     }
 
     @Override
@@ -2619,5 +2620,10 @@ public class BasicNodeFactory implements NodeFactory {
     @Override
     public void instrumentControlFlow(LLVMControlFlowNode cfNode, Class<? extends Tag>[] tags, Object nodeObject) {
         InstrumentableControlFlow.instrument(cfNode, tags, nodeObject);
+    }
+
+    @Override
+    public LLVMExpressionNode createInstrumentableConstantPointerIncrement(LLVMExpressionNode baseAddress, LLVMExpressionNode index, long indexedPointerOffset) {
+        return InstrumentablePointerIncrementNodeGen.create(indexedPointerOffset, baseAddress, index);
     }
 }

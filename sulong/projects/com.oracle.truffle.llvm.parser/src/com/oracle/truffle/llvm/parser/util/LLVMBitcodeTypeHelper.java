@@ -31,6 +31,7 @@ package com.oracle.truffle.llvm.parser.util;
 
 import com.oracle.truffle.llvm.parser.model.enums.BinaryOperator;
 import com.oracle.truffle.llvm.parser.model.enums.CastOperator;
+import com.oracle.truffle.llvm.runtime.ArithmeticFlag;
 import com.oracle.truffle.llvm.runtime.ArithmeticOperation;
 import com.oracle.truffle.llvm.runtime.NodeFactory;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
@@ -41,6 +42,60 @@ public final class LLVMBitcodeTypeHelper {
 
     public static LLVMExpressionNode createArithmeticInstruction(NodeFactory nodeFactory, LLVMExpressionNode lhs, LLVMExpressionNode rhs, BinaryOperator operator, Type type) {
         return nodeFactory.createArithmeticOp(getArithmeticOperation(operator), type, lhs, rhs);
+    }
+
+    public static boolean testArithmeticFlag(ArithmeticFlag flag, int opFlags, BinaryOperator op) {
+        assert op != null;
+
+        switch (op) {
+            case INT_ADD:
+            case INT_SUBTRACT:
+            case INT_MULTIPLY:
+            case INT_SHIFT_LEFT: {
+                switch (flag) {
+                    case INT_NO_UNSIGNED_WRAP:
+                    case INT_NO_SIGNED_WRAP:
+                        return flag.test(opFlags);
+                }
+                break;
+            }
+
+            case FP_ADD:
+            case FP_SUBTRACT:
+            case FP_MULTIPLY:
+            case FP_DIVIDE:
+            case FP_REMAINDER: {
+                switch (flag) {
+                    case FP_FAST:
+                    case FP_NO_NANS:
+                    case FP_NO_INFINITIES:
+                    case FP_NO_SIGNED_ZEROES:
+                    case FP_ALLOW_RECIPROCAL:
+                        return flag.test(opFlags);
+                }
+
+                break;
+            }
+
+            case INT_UNSIGNED_DIVIDE:
+            case INT_SIGNED_DIVIDE:
+            case INT_LOGICAL_SHIFT_RIGHT:
+            case INT_ARITHMETIC_SHIFT_RIGHT: {
+                if (flag == ArithmeticFlag.INT_EXACT) {
+                    return flag.test(opFlags);
+                }
+                break;
+            }
+
+            case INT_UNSIGNED_REMAINDER:
+            case INT_SIGNED_REMAINDER:
+            case INT_AND:
+            case INT_OR:
+            case INT_XOR:
+                break;
+        }
+
+        return false;
     }
 
     private static ArithmeticOperation getArithmeticOperation(BinaryOperator operator) {
