@@ -61,7 +61,7 @@ import com.oracle.truffle.llvm.runtime.types.symbols.LLVMIdentifier;
 
 final class LLInstructionMapper {
 
-    private static final class Mapper extends ValueInstructionVisitor implements FunctionVisitor {
+    private static final class Mapper implements ValueInstructionVisitor, FunctionVisitor {
 
         private final Source llSource;
         private final LLVMSourceLocation parentLocation;

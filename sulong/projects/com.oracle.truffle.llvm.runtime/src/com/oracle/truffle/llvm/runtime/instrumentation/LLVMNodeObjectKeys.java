@@ -30,11 +30,14 @@
 package com.oracle.truffle.llvm.runtime.instrumentation;
 
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.interop.InvalidArrayIndexException;
 import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
+
+import java.util.Arrays;
 
 @ExportLibrary(InteropLibrary.class)
 public class LLVMNodeObjectKeys implements TruffleObject {
@@ -76,5 +79,11 @@ public class LLVMNodeObjectKeys implements TruffleObject {
         } else {
             throw InvalidArrayIndexException.create(index);
         }
+    }
+
+    @Override
+    @TruffleBoundary
+    public String toString() {
+        return Arrays.toString(getProperties());
     }
 }
