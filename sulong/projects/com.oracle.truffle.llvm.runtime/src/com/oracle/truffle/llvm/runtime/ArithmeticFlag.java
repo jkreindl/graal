@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,43 +27,46 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.runtime.nodes.api;
+package com.oracle.truffle.llvm.runtime;
 
-import com.oracle.truffle.api.frame.VirtualFrame;
-import com.oracle.truffle.api.instrumentation.GenerateWrapper;
-import com.oracle.truffle.api.instrumentation.InstrumentableNode;
-import com.oracle.truffle.api.instrumentation.ProbeNode;
-import com.oracle.truffle.llvm.runtime.LLVMLanguage;
-import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
+public enum ArithmeticFlag {
 
-/**
- * An statement node is a node that returns no result.
- */
-@GenerateWrapper
-public abstract class LLVMStatementNode extends LLVMNode implements InstrumentableNode {
+    // flags for integer arithmetic and logical shifts
+    INT_NO_UNSIGNED_WRAP("nuw", 1),
+    INT_NO_SIGNED_WRAP("nsw", 2),
 
-    @Override
-    public WrapperNode createWrapper(ProbeNode probe) {
-        return new LLVMStatementNodeWrapper(this, probe);
+    // flags for floating point arithmetic
+    FP_NO_NANS("nnan", 2),
+    FP_NO_INFINITIES("ninf", 4),
+    FP_NO_SIGNED_ZEROES("nsz", 8),
+    FP_ALLOW_RECIPROCAL("arcp", 16),
+    FP_FAST("fast", 31),
+
+    // additional flag for integer div
+    INT_EXACT("exact", 1);
+
+    public static final int NO_FLAGS = 0;
+    public static final ArithmeticFlag[] ALL_VALUES = values();
+
+    private final String stringValue;
+
+    private final int bitMask;
+
+    ArithmeticFlag(String stringValue, int bitMask) {
+        this.stringValue = stringValue;
+        this.bitMask = bitMask;
     }
 
     @Override
-    public boolean isInstrumentable() {
-        // the instrumentation framework doesn't propagating input events across nodes that are
-        // instrumentable, but not instrumented. for IR-level instrumentation, this means that an
-        // input event could not be propagated from one instrumentable expression to its parent, if
-        // there is a source-level instrumentable node in between
-        if (LLVMLanguage.getLLVMContextReference().get().getEnv().getOptions().get(SulongEngineOption.INSTRUMENT_IR)) {
-            return false;
-        }
-        return getSourceLocation() != null;
+    public String toString() {
+        return stringValue;
     }
 
-    public static final LLVMStatementNode[] NO_STATEMENTS = {};
+    public int set(int otherFlags) {
+        return otherFlags | bitMask;
+    }
 
-    public abstract void execute(VirtualFrame frame);
-
-    public String getSourceDescription() {
-        return getRootNode().getName();
+    public boolean test(int flags) {
+        return (flags & bitMask) != 0;
     }
 }

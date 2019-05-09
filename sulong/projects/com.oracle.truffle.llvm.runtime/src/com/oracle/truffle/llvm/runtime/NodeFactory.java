@@ -253,9 +253,23 @@ public interface NodeFactory extends InteropNodeFactory {
 
     LLVMObjectWriteNode createGlobalContainerWriteNode();
 
-    LLVMExpressionNode createInstrumentableExpression(LLVMExpressionNode expr, Class<? extends Tag>[] tags);
+    LLVMExpressionNode createInstrumentableExpression(LLVMExpressionNode expr, Class<? extends Tag>[] tags, Object nodeObject);
 
-    LLVMStatementNode createInstrumentableStatement(LLVMStatementNode stmt, Class<? extends Tag>[] tags);
+    LLVMStatementNode createInstrumentableStatement(LLVMStatementNode stmt, Class<? extends Tag>[] tags, Object nodeObject);
 
-    void instrumentControlFlow(LLVMControlFlowNode cfNode, Class<? extends Tag>[] tags);
+    void instrumentControlFlow(LLVMControlFlowNode cfNode, Class<? extends Tag>[] tags, Object nodeObject);
+
+    /**
+     * Produces an {@link LLVMExpressionNode} that increments a pointer by a constant offset. The
+     * produced node also receives an index as input. This enables the index to be propagated for
+     * instrumentation, it is not used for execution. Especially it is not used as a multiplier for
+     * the increment.
+     *
+     * @param baseAddress node producing the address to increment
+     * @param index type index represented by the address increment
+     * @param indexedPointerOffset increment to add to the input address
+     *
+     * @return the incoming address incremented by the given offset
+     */
+    LLVMExpressionNode createInstrumentableConstantPointerIncrement(LLVMExpressionNode baseAddress, LLVMExpressionNode index, long indexedPointerOffset);
 }
