@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -49,97 +49,97 @@ import com.oracle.truffle.llvm.parser.model.symbols.instructions.SelectInstructi
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.ShuffleVectorInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.ValueInstruction;
 
-public abstract class ValueInstructionVisitor implements SymbolVisitor {
+public interface ValueInstructionVisitor extends SymbolVisitor {
 
-    public abstract void visitValueInstruction(ValueInstruction valueInstruction);
+    void visitValueInstruction(ValueInstruction valueInstruction);
 
     @Override
-    public void visit(AllocateInstruction allocate) {
+    default void visit(AllocateInstruction allocate) {
         visitValueInstruction(allocate);
     }
 
     @Override
-    public void visit(BinaryOperationInstruction operation) {
+    default void visit(BinaryOperationInstruction operation) {
         visitValueInstruction(operation);
     }
 
     @Override
-    public void visit(CallInstruction call) {
+    default void visit(CallInstruction call) {
         visitValueInstruction(call);
     }
 
     @Override
-    public void visit(InvokeInstruction call) {
+    default void visit(InvokeInstruction call) {
         visitValueInstruction(call);
     }
 
     @Override
-    public void visit(LandingpadInstruction landingpadInstruction) {
+    default void visit(LandingpadInstruction landingpadInstruction) {
         visitValueInstruction(landingpadInstruction);
     }
 
     @Override
-    public void visit(CastInstruction cast) {
+    default void visit(CastInstruction cast) {
         visitValueInstruction(cast);
     }
 
     @Override
-    public void visit(CompareInstruction operation) {
+    default void visit(CompareInstruction operation) {
         visitValueInstruction(operation);
     }
 
     @Override
-    public void visit(ExtractElementInstruction extract) {
+    default void visit(ExtractElementInstruction extract) {
         visitValueInstruction(extract);
     }
 
     @Override
-    public void visit(ExtractValueInstruction extract) {
+    default void visit(ExtractValueInstruction extract) {
         visitValueInstruction(extract);
     }
 
     @Override
-    public void visit(GetElementPointerInstruction gep) {
+    default void visit(GetElementPointerInstruction gep) {
         visitValueInstruction(gep);
     }
 
     @Override
-    public void visit(InsertElementInstruction insert) {
+    default void visit(InsertElementInstruction insert) {
         visitValueInstruction(insert);
     }
 
     @Override
-    public void visit(InsertValueInstruction insert) {
+    default void visit(InsertValueInstruction insert) {
         visitValueInstruction(insert);
     }
 
     @Override
-    public void visit(LoadInstruction load) {
+    default void visit(LoadInstruction load) {
         visitValueInstruction(load);
     }
 
     @Override
-    public void visit(PhiInstruction phi) {
+    default void visit(PhiInstruction phi) {
         visitValueInstruction(phi);
     }
 
     @Override
-    public void visit(SelectInstruction select) {
+    default void visit(SelectInstruction select) {
         visitValueInstruction(select);
     }
 
     @Override
-    public void visit(ShuffleVectorInstruction shuffle) {
+    default void visit(ShuffleVectorInstruction shuffle) {
         visitValueInstruction(shuffle);
     }
 
     @Override
-    public void visit(CompareExchangeInstruction cmpxchg) {
+    default void visit(CompareExchangeInstruction cmpxchg) {
         visitValueInstruction(cmpxchg);
     }
 
     @Override
-    public void visit(ReadModifyWriteInstruction rmw) {
+    default void visit(ReadModifyWriteInstruction rmw) {
         visitValueInstruction(rmw);
     }
 }
