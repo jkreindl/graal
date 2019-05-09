@@ -95,9 +95,6 @@ public final class SulongEngineOption {
     @Option(name = "llvm.printStackTraceOnAbort", category = OptionCategory.INTERNAL, help = "Prints a C stack trace when abort() is called.") //
     public static final OptionKey<Boolean> STACKTRACE_ON_ABORT = new OptionKey<>(false);
 
-    @Option(name = "llvm.traceIR", category = OptionCategory.EXPERT, help = "Prints a trace of the executed bitcode. Requires \'--llvm.llDebug=true\'. Set value to \'stdout\', \'stderr\' or \'file://<path to writable file>\' to enable.") //
-    public static final OptionKey<String> TRACE_IR = new OptionKey<>("");
-
     public static final String LIBRARIES_NAME = "llvm.libraries";
     @Option(name = LIBRARIES_NAME, category = OptionCategory.USER, stability = OptionStability.STABLE, //
             help = "List of libraries (precompiled libraires *.dylib/*.so as well as bitcode libraries *.bc). " + //
@@ -106,6 +103,12 @@ public final class SulongEngineOption {
 
     @Option(name = "llvm.instrumentIR", category = OptionCategory.EXPERT, help = "Enable IR-level instrumentation of executing LLVM bitcode.") //
     public static final OptionKey<Boolean> INSTRUMENT_IR = new OptionKey<>(false);
+
+    @Option(name = "llvm.traceIR", category = OptionCategory.EXPERT, help = "Prints a trace of the executed bitcode. Requires \'--llvm.instrumentIR=true\'. Set value to \'stdout\', \'stderr\' or \'file://<path to writable file>\' to enable.") //
+    public static final OptionKey<String> TRACE_IR = new OptionKey<>("");
+
+    @Option(name = "llvm.traceIR.functions", category = OptionCategory.EXPERT, help = "Limit tracing to select functions. Must be 'all' or an llvm-level function name. Multiple functions can be specified, separated by ':'.") //
+    public static final OptionKey<String> TRACE_IR_FUNCTIONS = new OptionKey<>("all");
     // @formatter:on
 
     public static List<OptionDescriptor> describeOptions() {
