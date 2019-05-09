@@ -34,6 +34,14 @@ import com.oracle.truffle.api.instrumentation.Tag.Identifier;
 
 public final class LLVMTags {
 
+    @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] ALL_TAGS = new Class[]{LLVMTags.SSARead.class, LLVMTags.SSAWrite.class,
+                    LLVMTags.Constant.class, LLVMTags.Call.class, LLVMTags.Invoke.class, LLVMTags.Add.class, LLVMTags.Sub.class, LLVMTags.Mul.class, LLVMTags.Div.class, LLVMTags.Rem.class,
+                    LLVMTags.ShiftLeft.class, LLVMTags.ShiftRight.class, LLVMTags.And.class, LLVMTags.Or.class, LLVMTags.XOr.class, LLVMTags.Phi.class, LLVMTags.Ret.class, LLVMTags.Br.class,
+                    LLVMTags.Switch.class, LLVMTags.IndirectBr.class, LLVMTags.Resume.class, LLVMTags.Unreachable.class, LLVMTags.ICMP.class, LLVMTags.FCMP.class, LLVMTags.Cast.class,
+                    LLVMTags.Alloca.class, LLVMTags.Load.class, LLVMTags.Store.class, LLVMTags.Fence.class, LLVMTags.CmpXchg.class, LLVMTags.AtomicRMW.class, LLVMTags.GetElementPtr.class,
+                    LLVMTags.ExtractElement.class, LLVMTags.InsertElement.class, LLVMTags.ShuffleVector.class, LLVMTags.ExtractValue.class, LLVMTags.InsertValue.class, LLVMTags.Block.class,
+                    LLVMTags.Select.class, LLVMTags.Internal.class, LLVMTags.PrepareCallArg.class, LLVMTags.ReadCallArg.class, LLVMTags.Intrinsic.class, LLVMTags.LandingPad.class};
+
     private LLVMTags() {
     }
 
