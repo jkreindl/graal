@@ -40,6 +40,7 @@ public abstract class LLVMControlFlowNode extends LLVMNode implements Instrument
 
     @CompilationFinal private SourceSection explicitSourceSection = null;
     @CompilationFinal(dimensions = 1) private Class<? extends Tag>[] tags = null;
+    @CompilationFinal private Object nodeObject;
 
     private final LLVMSourceLocation source;
 
@@ -70,14 +71,24 @@ public abstract class LLVMControlFlowNode extends LLVMNode implements Instrument
         this.tags = tags;
     }
 
+    public void setNodeObject(Object nodeObject) {
+        CompilerDirectives.transferToInterpreterAndInvalidate();
+        this.nodeObject = nodeObject;
+    }
+
     @Override
     public boolean isInstrumentable() {
         return source != null || explicitSourceSection != null;
     }
 
     @Override
-    public com.oracle.truffle.api.source.SourceSection getSourceSection() {
+    public SourceSection getSourceSection() {
         return explicitSourceSection != null ? explicitSourceSection : super.getSourceSection();
+    }
+
+    @Override
+    public Object getNodeObject() {
+        return nodeObject;
     }
 
     @Override

@@ -54,13 +54,17 @@ public class InstrumentableStatement extends LLVMStatementNode implements Instru
     }
 
     @CompilationFinal(dimensions = 1) private final Class<? extends Tag>[] tags;
+    private final Object nodeObject;
 
     @Child private LLVMStatementNode expr;
 
-    public InstrumentableStatement(LLVMStatementNode stmt, Class<? extends Tag>[] tags) {
+    public InstrumentableStatement(LLVMStatementNode stmt, Class<? extends Tag>[] tags, Object nodeObject) {
         assert tags != null;
         assert Arrays.stream(tags).allMatch(Objects::nonNull);
         this.tags = tags;
+
+        // null for instructions without additional info, e.g., unreachable
+        this.nodeObject = nodeObject;
 
         assert stmt != null;
         this.expr = stmt;
@@ -83,7 +87,7 @@ public class InstrumentableStatement extends LLVMStatementNode implements Instru
 
     @Override
     public Object getNodeObject() {
-        return super.getNodeObject();
+        return nodeObject;
     }
 
     @Override

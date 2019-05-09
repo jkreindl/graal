@@ -46,8 +46,9 @@ public final class InstrumentableControlFlow {
     private InstrumentableControlFlow() {
     }
 
-    public static void instrument(LLVMControlFlowNode cfNode, Class<? extends Tag>[] tags) {
+    public static void instrument(LLVMControlFlowNode cfNode, Class<? extends Tag>[] tags, Object nodeObject) {
         cfNode.setTags(tags);
         cfNode.setExplicitSourceSection(SOURCE_SECTION);
+        cfNode.setNodeObject(nodeObject);
     }
 }

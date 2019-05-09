@@ -2614,11 +2614,11 @@ public class BasicNodeFactory implements NodeFactory {
 
     @Override
     public LLVMStatementNode createInstrumentableStatement(LLVMStatementNode stmt, Class<? extends Tag>[] tags, Object nodeObject) {
-        return new InstrumentableStatement(stmt, tags);
+        return new InstrumentableStatement(stmt, tags, nodeObject);
     }
 
     @Override
     public void instrumentControlFlow(LLVMControlFlowNode cfNode, Class<? extends Tag>[] tags, Object nodeObject) {
-        InstrumentableControlFlow.instrument(cfNode, tags);
+        InstrumentableControlFlow.instrument(cfNode, tags, nodeObject);
     }
 }
