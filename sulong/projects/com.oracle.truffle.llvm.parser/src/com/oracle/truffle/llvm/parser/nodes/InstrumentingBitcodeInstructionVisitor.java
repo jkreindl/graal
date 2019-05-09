@@ -156,7 +156,8 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
 
     @Override
     public void visit(LandingpadInstruction landingpadInstruction) {
-        throw new UnsupportedOperationException("Not yet implemented!");
+        tags = LLVMTags.LandingPad.SINGLE_EXPRESSION_TAG;
+        super.visit(landingpadInstruction);
     }
 
     @Override

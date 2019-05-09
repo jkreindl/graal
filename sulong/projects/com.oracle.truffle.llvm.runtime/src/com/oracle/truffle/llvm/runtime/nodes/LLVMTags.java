@@ -235,6 +235,15 @@ public final class LLVMTags {
         }
     }
 
+    @Identifier(value = "LANDINGPAD")
+    public static final class LandingPad extends Tag {
+
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{LandingPad.class};
+
+        private LandingPad() {
+        }
+    }
+
     @Identifier(value = "UNREACHABLE")
     public static final class Unreachable extends Tag {
 
