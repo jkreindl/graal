@@ -43,6 +43,7 @@ import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import com.oracle.truffle.llvm.runtime.instruments.LLVMExecutionTracer;
 import org.graalvm.collections.EconomicMap;
 
 import com.oracle.truffle.api.CallTarget;
@@ -62,7 +63,6 @@ import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.nodes.ControlFlowException;
 import com.oracle.truffle.api.nodes.DirectCallNode;
 import com.oracle.truffle.api.nodes.RootNode;
-import com.oracle.truffle.llvm.instruments.trace.LLVMTracerInstrument;
 import com.oracle.truffle.llvm.runtime.LLVMArgumentBuffer.LLVMArgumentArray;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.debug.LLVMSourceContext;
@@ -146,7 +146,7 @@ public final class LLVMContext {
     private boolean initialized;
     private boolean cleanupNecessary;
 
-    private final LLVMTracerInstrument tracer;
+    private final LLVMExecutionTracer tracer;
 
     private final class LLVMFunctionPointerRegistry {
         private int currentFunctionIndex = 1;
@@ -195,11 +195,12 @@ public final class LLVMContext {
 
         final String traceOption = env.getOptions().get(SulongEngineOption.TRACE_IR);
         if (!"".equalsIgnoreCase(traceOption)) {
-            if (!env.getOptions().get(SulongEngineOption.LL_DEBUG)) {
-                throw new IllegalStateException("\'--llvm.traceIR\' requires \'--llvm.llDebug=true\'");
+            if (!env.getOptions().get(SulongEngineOption.INSTRUMENT_IR)) {
+                throw new IllegalStateException("\'--llvm.traceIR\' requires \'--llvm.instrumentIR=true\'");
             }
-            tracer = new LLVMTracerInstrument();
-            tracer.initialize(env, traceOption);
+
+            tracer = new LLVMExecutionTracer();
+            tracer.initialize(env);
         } else {
             tracer = null;
         }
