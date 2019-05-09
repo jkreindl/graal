@@ -35,6 +35,7 @@ public final class LLVMNodeObjects {
     public static final String KEY_COMPARISON_KIND = "COMPARISON_KIND";
     public static final String KEY_CONVERSION_KIND = "CONVERSION_KIND";
     public static final String KEY_BLOCK_ID = "BLOCK_ID";
+    public static final String KEY_BLOCK_NAME = "BLOCK_NAME";
 
     public static final String KEY_CALL_USER_ARGUMENTS_OFFSET = "USER_ARGUMENTS_OFFSET";
 

@@ -40,6 +40,8 @@ import com.oracle.truffle.api.nodes.ControlFlowException;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeUtil;
 import com.oracle.truffle.api.profiles.BranchProfile;
+import com.oracle.truffle.api.source.Source;
+import com.oracle.truffle.api.source.SourceSection;
 import com.oracle.truffle.llvm.nodes.func.LLVMFunctionStartNode;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
@@ -58,6 +60,13 @@ import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
  */
 @GenerateWrapper
 public abstract class LLVMBasicBlockNode extends LLVMStatementNode {
+
+    private static final SourceSection IR_SOURCE;
+
+    static {
+        final Source source = Source.newBuilder("llvm", "LLVM IR basic block", "<llvm block>").mimeType("text/plain").build();
+        IR_SOURCE = source.createUnavailableSection();
+    }
 
     public static final int RETURN_FROM_FUNCTION = -1;
 
@@ -124,13 +133,19 @@ public abstract class LLVMBasicBlockNode extends LLVMStatementNode {
     public abstract void increaseBranchProbability(int successorIndex);
 
     @Override
+    public SourceSection getSourceSection() {
+        final SourceSection debugSection = super.getSourceSection();
+        return debugSection != null ? debugSection : IR_SOURCE;
+    }
+
+    @Override
     public boolean hasTag(Class<? extends Tag> tag) {
         return tag == LLVMTags.Block.class || super.hasTag(tag);
     }
 
     @Override
     public Object getNodeObject() {
-        return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_BLOCK_ID}, new Object[]{blockName});
+        return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_BLOCK_ID, LLVMNodeObjects.KEY_BLOCK_NAME}, new Object[]{blockId, blockName});
     }
 
     @Override
