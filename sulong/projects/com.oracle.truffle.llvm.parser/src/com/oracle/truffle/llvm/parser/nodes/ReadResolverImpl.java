@@ -91,8 +91,6 @@ final class ReadResolverImpl extends LLVMSymbolReadResolver implements ValueInst
     private final FrameDescriptor frame;
     private final GetStackSpaceFactory getStackSpaceFactory;
 
-    private final boolean instrumentIR;
-
     private LLVMExpressionNode resolvedNode = null;
 
     private static void unsupported(Object obj) {
@@ -408,17 +406,12 @@ final class ReadResolverImpl extends LLVMSymbolReadResolver implements ValueInst
     public void visitValueInstruction(ValueInstruction value) {
         final FrameSlot slot = frame.findFrameSlot(value.getName());
         resolvedNode = nodeFactory.createFrameRead(value.getType(), slot);
-
-        if (instrumentIR) {
-            resolvedNode = nodeFactory.createInstrumentableExpression(resolvedNode, LLVMTags.SSARead.SINGLE_EXPRESSION_TAG);
-        }
     }
 
     ReadResolverImpl(LLVMParserRuntime runtime, FrameDescriptor frame, GetStackSpaceFactory getStackSpaceFactory) {
         super(runtime);
         this.frame = frame;
         this.getStackSpaceFactory = getStackSpaceFactory;
-        this.instrumentIR = context.getEnv().getOptions().get(SulongEngineOption.INSTRUMENT_IR);
     }
 
     @Override

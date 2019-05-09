@@ -89,7 +89,6 @@ import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.except.LLVMUserException;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack;
-import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
@@ -116,8 +115,6 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
     private final LLVMRuntimeDebugInformation dbgInfoHandler;
     private final LLVMStack.UniquesRegion uniquesRegion;
 
-    private final boolean instrumentIR;
-
     private final List<LLVMStatementNode> blockInstructions;
     private int instructionIndex;
     private LLVMControlFlowNode controlFlowNode;
@@ -140,8 +137,6 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
         this.uniquesRegion = uniquesRegion;
 
         this.blockInstructions = new ArrayList<>();
-
-        this.instrumentIR = context.getEnv().getOptions().get(SulongEngineOption.INSTRUMENT_IR);
     }
 
     @Override
@@ -199,10 +194,6 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
         LLVMSourceLocation location = null;
         if (context.getEnv().getOptions().get(SulongEngineOption.LL_DEBUG)) {
             location = getSourceLocation(allocate);
-        }
-
-        if (instrumentIR) {
-            result = nodeFactory.createInstrumentableExpression(result, LLVMTags.Alloca.SINGLE_EXPRESSION_TAG);
         }
 
         createFrameWrite(result, allocate, location);
