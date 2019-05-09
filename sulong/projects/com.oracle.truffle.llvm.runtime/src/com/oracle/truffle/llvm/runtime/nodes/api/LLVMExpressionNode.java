@@ -35,8 +35,10 @@ import com.oracle.truffle.api.instrumentation.InstrumentableNode;
 import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.api.nodes.UnexpectedResultException;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
+import com.oracle.truffle.llvm.runtime.LLVMLanguage;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
 import com.oracle.truffle.llvm.runtime.interop.LLVMInternalTruffleObject;
+import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
@@ -68,7 +70,14 @@ public abstract class LLVMExpressionNode extends LLVMNode implements Instrumenta
 
     @Override
     public boolean isInstrumentable() {
-        return getSourceLocation() != null;
+        // the instrumentation framework doesn't propagating input events across nodes that are
+        // instrumentable, but not instrumented. for IR-level instrumentation, this means that an
+        // input event could not be propagated from one instrumentable expression to its parent, if
+        // there is a source-level instrumentable node in between
+        if (LLVMLanguage.getLLVMContextReference().get().getEnv().getOptions().get(SulongEngineOption.INSTRUMENT_IR)) {
+            return false;
+        }
+        return getSourceSection() != null;
     }
 
     public static final LLVMExpressionNode[] NO_EXPRESSIONS = {};
