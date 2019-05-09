@@ -81,11 +81,14 @@ import java.util.List;
 final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVisitorImpl {
 
     private Class<? extends Tag>[] tags;
+    private Object nodeObject;
 
     InstrumentingBitcodeInstructionVisitor(FrameDescriptor frame, LLVMStack.UniquesRegion uniquesRegion, List<LLVMPhiManager.Phi> blockPhis, int argCount, LLVMSymbolReadResolver symbols,
                     LLVMContext context, LLVMContext.ExternalLibrary library, ArrayList<LLVMLivenessAnalysis.NullerInformation> nullerInfos, List<FrameSlot> notNullable,
                     LLVMRuntimeDebugInformation dbgInfoHandler) {
         super(frame, uniquesRegion, blockPhis, argCount, symbols, context, library, nullerInfos, notNullable, dbgInfoHandler);
+        tags = null;
+        nodeObject = null;
     }
 
     @Override
@@ -318,7 +321,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     void createFrameWrite(LLVMExpressionNode result, ValueInstruction source, LLVMSourceLocation sourceLocation) {
         ensureTagsValid();
         // instrument the source of the write
-        final LLVMExpressionNode node = nodeFactory.createInstrumentableExpression(result, tags);
+        final LLVMExpressionNode node = nodeFactory.createInstrumentableExpression(result, tags, nodeObject);
 
         // super.createFrameWrite will call addInstruction, prepare the tags for then
         tags = LLVMTags.SSAWrite.SINGLE_EXPRESSION_TAG;
@@ -328,9 +331,10 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     void addInstruction(LLVMStatementNode node) {
         ensureTagsValid();
-        final LLVMStatementNode instrumentedNode = nodeFactory.createInstrumentableStatement(node, tags);
+        final LLVMStatementNode instrumentedNode = nodeFactory.createInstrumentableStatement(node, tags, nodeObject);
         super.addInstruction(instrumentedNode);
         tags = null;
+        nodeObject = null;
     }
 
     @Override
@@ -338,12 +342,14 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         // this is only ever used for Sulong internal nodes
         super.addInstructionUnchecked(instruction);
         tags = null;
+        nodeObject = null;
     }
 
     @Override
     void setControlFlowNode(LLVMControlFlowNode controlFlowNode) {
         super.setControlFlowNode(controlFlowNode);
         tags = null;
+        nodeObject = null;
     }
 
     private void ensureTagsValid() {

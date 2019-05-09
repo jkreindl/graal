@@ -2608,17 +2608,17 @@ public class BasicNodeFactory implements NodeFactory {
     }
 
     @Override
-    public LLVMExpressionNode createInstrumentableExpression(LLVMExpressionNode expr, Class<? extends Tag>[] tags) {
-        return new InstrumentableExpression(expr, tags);
+    public LLVMExpressionNode createInstrumentableExpression(LLVMExpressionNode expr, Class<? extends Tag>[] tags, Object nodeObject) {
+        return new InstrumentableExpression(expr, tags, nodeObject);
     }
 
     @Override
-    public LLVMStatementNode createInstrumentableStatement(LLVMStatementNode stmt, Class<? extends Tag>[] tags) {
+    public LLVMStatementNode createInstrumentableStatement(LLVMStatementNode stmt, Class<? extends Tag>[] tags, Object nodeObject) {
         return new InstrumentableStatement(stmt, tags);
     }
 
     @Override
-    public void instrumentControlFlow(LLVMControlFlowNode cfNode, Class<? extends Tag>[] tags) {
+    public void instrumentControlFlow(LLVMControlFlowNode cfNode, Class<? extends Tag>[] tags, Object nodeObject) {
         InstrumentableControlFlow.instrument(cfNode, tags);
     }
 }

@@ -54,13 +54,17 @@ public class InstrumentableExpression extends LLVMExpressionNode implements Inst
     }
 
     @CompilationFinal(dimensions = 1) private final Class<? extends Tag>[] tags;
+    private final Object nodeObject;
 
     @Child private LLVMExpressionNode expr;
 
-    public InstrumentableExpression(LLVMExpressionNode expr, Class<? extends Tag>[] tags) {
+    public InstrumentableExpression(LLVMExpressionNode expr, Class<? extends Tag>[] tags, Object nodeObject) {
         assert tags != null;
         assert Arrays.stream(tags).allMatch(Objects::nonNull);
         this.tags = tags;
+
+        // null for instructions without additional info, e.g., unreachable
+        this.nodeObject = nodeObject;
 
         assert expr != null;
         this.expr = expr;
@@ -83,7 +87,7 @@ public class InstrumentableExpression extends LLVMExpressionNode implements Inst
 
     @Override
     public Object getNodeObject() {
-        return super.getNodeObject();
+        return nodeObject;
     }
 
     @Override

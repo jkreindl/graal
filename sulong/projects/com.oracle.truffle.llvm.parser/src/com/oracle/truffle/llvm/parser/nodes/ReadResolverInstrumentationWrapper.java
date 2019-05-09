@@ -50,11 +50,15 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
     private final LLVMSymbolReadResolver impl;
 
     private Class<? extends Tag>[] tags;
+    private Object nodeObject;
 
     ReadResolverInstrumentationWrapper(LLVMParserRuntime runtime, LLVMSymbolReadResolver impl) {
         super(runtime);
+        assert impl != null;
         this.impl = impl;
+
         this.tags = null;
+        this.nodeObject = null;
     }
 
     @Override
@@ -63,13 +67,15 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
 
         // determine instrumentation tags for the symbol
         tags = null;
+        nodeObject = null;
         symbol.accept(this);
         if (tags == null) {
             throw new LLVMParserException("Failed to instrument expression for symbol: " + symbol);
         }
 
-        final LLVMExpressionNode instrumentableNode = nodeFactory.createInstrumentableExpression(resolvedNode, tags);
+        final LLVMExpressionNode instrumentableNode = nodeFactory.createInstrumentableExpression(resolvedNode, tags, nodeObject);
         tags = null;
+        nodeObject = null;
         return instrumentableNode;
     }
 
