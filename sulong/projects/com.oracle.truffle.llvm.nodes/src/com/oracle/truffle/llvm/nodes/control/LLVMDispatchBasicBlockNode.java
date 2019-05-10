@@ -96,14 +96,17 @@ public final class LLVMDispatchBasicBlockNode extends LLVMExpressionNode {
             LLVMBasicBlockNode bb = bodyNodes[basicBlockIndex];
 
             // lazily insert the basic block into the AST
-            bb = bb.initialize();
+            bb.initialize();
+
+            // the newly inserted block may have been instrumented
+            bb = bodyNodes[basicBlockIndex];
 
             // execute all statements
             bb.execute(frame);
 
             // execute control flow node, write phis, null stack frame slots, and dispatch to
             // the correct successor block
-            LLVMControlFlowNode controlFlowNode = bb.termInstruction;
+            LLVMControlFlowNode controlFlowNode = bb.getTerminatingInstruction();
             if (controlFlowNode instanceof LLVMConditionalBranchNode) {
                 LLVMConditionalBranchNode conditionalBranchNode = (LLVMConditionalBranchNode) controlFlowNode;
                 boolean condition = conditionalBranchNode.executeCondition(frame);
