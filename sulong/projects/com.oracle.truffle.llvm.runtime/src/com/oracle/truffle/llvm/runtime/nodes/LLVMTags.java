@@ -48,7 +48,7 @@ public final class LLVMTags {
     @Identifier(value = "SSA_READ")
     public static final class SSARead extends Tag {
 
-        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{SSAWrite.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{SSARead.class};
 
         private SSARead() {
         }
@@ -57,7 +57,7 @@ public final class LLVMTags {
     @Identifier(value = "SSA_WRITE")
     public static final class SSAWrite extends Tag {
 
-        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{SSARead.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{SSAWrite.class};
 
         private SSAWrite() {
         }
