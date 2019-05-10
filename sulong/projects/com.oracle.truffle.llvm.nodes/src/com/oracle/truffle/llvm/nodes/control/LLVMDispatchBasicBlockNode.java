@@ -96,7 +96,10 @@ public final class LLVMDispatchBasicBlockNode extends LLVMExpressionNode {
             LLVMBasicBlockNode bb = bodyNodes[basicBlockIndex];
 
             // lazily insert the basic block into the AST
-            bb = bb.initialize();
+            bb.initialize();
+
+            // the newly inserted block may have been instrumented
+            bb = bodyNodes[basicBlockIndex];
 
             // execute all statements
             bb.execute(frame);
