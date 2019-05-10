@@ -29,6 +29,8 @@
  */
 package com.oracle.truffle.llvm.runtime.types.symbols;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+
 import java.util.regex.Pattern;
 
 public final class LLVMIdentifier {
@@ -52,6 +54,7 @@ public final class LLVMIdentifier {
         return name == asObject(UNKNOWN);
     }
 
+    @TruffleBoundary
     public static String toGlobalIdentifier(String name) {
         if (GLOBAL_VARNAME_PATTERN.matcher(name).matches()) {
             // already a global identifier
@@ -61,6 +64,7 @@ public final class LLVMIdentifier {
         }
     }
 
+    @TruffleBoundary
     public static String toLocalIdentifier(String name) {
         if (LOCAL_VARNAME_PATTERN.matcher(name).matches()) {
             // already a global identifier
