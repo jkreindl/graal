@@ -39,22 +39,27 @@ import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 
 import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.stream.Collectors;
 
 public final class LLVMExecutionTracer {
 
     private LLVMExecutionTracer() {
     }
 
+    @SuppressWarnings("unchecked")
     public static void initialize(TruffleLanguage.Env env) {
         final Instrumenter instrumenter = env.lookup(Instrumenter.class);
         assert instrumenter != null;
 
+        final HashSet<Class<? extends Tag>> llvmTags = new HashSet<>(Arrays.asList(LLVMTags.ALL_TAGS));
         final PrintWriter writer = new PrintWriter(env.err());
-        for (Class<? extends Tag> tag : LLVMTags.ALL_TAGS) {
-            final String tagName = Tag.getIdentifier(tag);
-            final SourceSectionFilter nodeFilter = SourceSectionFilter.newBuilder().tagIs(tag).build();
-            instrumenter.attachExecutionEventFactory(nodeFilter, context -> new TraceNode(tagName, writer));
-        }
+        instrumenter.attachExecutionEventFactory(SourceSectionFilter.newBuilder().tagIs(LLVMTags.ALL_TAGS).includeInternal(true).build(), context -> {
+            final String tags = instrumenter.queryTags(context.getInstrumentedNode()).stream().map(tag -> (Class<? extends Tag>) tag).filter(llvmTags::contains).map(
+                            Tag::getIdentifier).collect(Collectors.joining(", "));
+            return new TraceNode(tags, writer);
+        });
     }
 
     static class TraceNode extends ExecutionEventNode {
