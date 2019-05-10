@@ -76,6 +76,11 @@ public class InstrumentableExpression extends LLVMExpressionNode implements Inst
     }
 
     @Override
+    public boolean isInstrumentable() {
+        return true;
+    }
+
+    @Override
     public boolean hasTag(Class<? extends Tag> tag) {
         for (Class<? extends Tag> containedTag : this.tags) {
             if (containedTag == tag) {

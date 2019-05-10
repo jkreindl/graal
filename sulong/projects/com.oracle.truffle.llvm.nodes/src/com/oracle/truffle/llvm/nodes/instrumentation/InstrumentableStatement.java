@@ -71,6 +71,11 @@ public class InstrumentableStatement extends LLVMStatementNode implements Instru
     }
 
     @Override
+    public boolean isInstrumentable() {
+        return true;
+    }
+
+    @Override
     public void execute(VirtualFrame frame) {
         expr.execute(frame);
     }

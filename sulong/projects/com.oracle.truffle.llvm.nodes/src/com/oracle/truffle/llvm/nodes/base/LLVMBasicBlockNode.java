@@ -144,6 +144,11 @@ public abstract class LLVMBasicBlockNode extends LLVMStatementNode {
     }
 
     @Override
+    public boolean isInstrumentable() {
+        return true;
+    }
+
+    @Override
     public Object getNodeObject() {
         return new LLVMNodeObject(new String[]{LLVMNodeObjects.KEY_BLOCK_ID, LLVMNodeObjects.KEY_BLOCK_NAME}, new Object[]{blockId, blockName});
     }
