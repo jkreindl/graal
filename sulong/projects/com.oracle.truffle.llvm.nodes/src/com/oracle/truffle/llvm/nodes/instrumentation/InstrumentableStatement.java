@@ -33,8 +33,8 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.InstrumentableNode;
 import com.oracle.truffle.api.instrumentation.Tag;
@@ -101,9 +101,9 @@ public class InstrumentableStatement extends LLVMStatementNode implements Instru
     }
 
     @Override
-    @CompilerDirectives.TruffleBoundary
+    @TruffleBoundary
     public String toString() {
-        return Arrays.stream(tags).map(Class::getSimpleName).collect(Collectors.joining(", ", "Instrumentable Expression {", "}"));
+        return Arrays.stream(tags).map(Class::getSimpleName).collect(Collectors.joining(", ", "Instrumentable Statement {", "}"));
     }
 
 }
