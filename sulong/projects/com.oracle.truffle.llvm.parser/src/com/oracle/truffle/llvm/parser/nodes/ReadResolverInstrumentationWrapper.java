@@ -35,6 +35,11 @@ import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDeclaration;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDefinition;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionParameter;
+import com.oracle.truffle.llvm.parser.model.symbols.constants.BinaryOperationConstant;
+import com.oracle.truffle.llvm.parser.model.symbols.constants.CastConstant;
+import com.oracle.truffle.llvm.parser.model.symbols.constants.CompareConstant;
+import com.oracle.truffle.llvm.parser.model.symbols.constants.GetElementPointerConstant;
+import com.oracle.truffle.llvm.parser.model.symbols.constants.SelectConstant;
 import com.oracle.truffle.llvm.parser.model.symbols.globals.GlobalAlias;
 import com.oracle.truffle.llvm.parser.model.symbols.globals.GlobalVariable;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.ValueInstruction;
@@ -43,6 +48,7 @@ import com.oracle.truffle.llvm.parser.model.visitors.ValueInstructionVisitor;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
+import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.runtime.types.symbols.Symbol;
 
 public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver implements ValueInstructionVisitor, ConstantVisitor {
@@ -122,5 +128,76 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
     public void visitConstant(Symbol constant) {
         // TODO (jkreindl) add tag for operation
         tags = LLVMTags.Constant.SINGLE_EXPRESSION_TAG;
+    }
+
+    @Override
+    public void visit(BinaryOperationConstant constant) {
+        switch (constant.getOperator()) {
+            case FP_ADD:
+            case INT_ADD:
+                tags = LLVMTags.Add.CONSTANT_EXPRESSION_TAG;
+                break;
+            case FP_SUBTRACT:
+            case INT_SUBTRACT:
+                tags = LLVMTags.Sub.CONSTANT_EXPRESSION_TAG;
+                break;
+            case FP_MULTIPLY:
+            case INT_MULTIPLY:
+                tags = LLVMTags.Mul.CONSTANT_EXPRESSION_TAG;
+                break;
+            case FP_DIVIDE:
+            case INT_UNSIGNED_DIVIDE:
+            case INT_SIGNED_DIVIDE:
+                tags = LLVMTags.Div.CONSTANT_EXPRESSION_TAG;
+                break;
+            case FP_REMAINDER:
+            case INT_UNSIGNED_REMAINDER:
+            case INT_SIGNED_REMAINDER:
+                tags = LLVMTags.Rem.CONSTANT_EXPRESSION_TAG;
+                break;
+            case INT_SHIFT_LEFT:
+                tags = LLVMTags.ShiftLeft.CONSTANT_EXPRESSION_TAG;
+                break;
+            case INT_LOGICAL_SHIFT_RIGHT:
+            case INT_ARITHMETIC_SHIFT_RIGHT:
+                tags = LLVMTags.ShiftRight.CONSTANT_EXPRESSION_TAG;
+                break;
+            case INT_AND:
+                tags = LLVMTags.And.CONSTANT_EXPRESSION_TAG;
+                break;
+            case INT_OR:
+                tags = LLVMTags.Or.CONSTANT_EXPRESSION_TAG;
+                break;
+            case INT_XOR:
+                tags = LLVMTags.XOr.CONSTANT_EXPRESSION_TAG;
+                break;
+            default:
+                tags = null;
+                break;
+        }
+    }
+
+    @Override
+    public void visit(CastConstant constant) {
+        tags = LLVMTags.Cast.CONSTANT_EXPRESSION_TAG;
+    }
+
+    @Override
+    public void visit(CompareConstant constant) {
+        if (Type.isFloatingpointType(constant.getLHS().getType())) {
+            tags = LLVMTags.FCMP.CONSTANT_EXPRESSION_TAG;
+        } else {
+            tags = LLVMTags.ICMP.CONSTANT_EXPRESSION_TAG;
+        }
+    }
+
+    @Override
+    public void visit(GetElementPointerConstant constant) {
+        tags = LLVMTags.GetElementPtr.CONSTANT_EXPRESSION_TAG;
+    }
+
+    @Override
+    public void visit(SelectConstant constant) {
+        tags = LLVMTags.Select.CONSTANT_EXPRESSION_TAG;
     }
 }

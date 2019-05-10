@@ -86,6 +86,7 @@ public final class LLVMTags {
     public static final class Add extends Tag {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{Add.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAG = new Class[]{Add.class, Constant.class};
 
         private Add() {
         }
@@ -95,6 +96,7 @@ public final class LLVMTags {
     public static final class Sub extends Tag {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{Sub.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAG = new Class[]{Sub.class, Constant.class};
 
         private Sub() {
         }
@@ -104,6 +106,7 @@ public final class LLVMTags {
     public static final class Mul extends Tag {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{Mul.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAG = new Class[]{Mul.class, Constant.class};
 
         private Mul() {
         }
@@ -113,6 +116,7 @@ public final class LLVMTags {
     public static final class Div extends Tag {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{Div.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAG = new Class[]{Div.class, Constant.class};
 
         private Div() {
         }
@@ -122,6 +126,7 @@ public final class LLVMTags {
     public static final class Rem extends Tag {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{Rem.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAG = new Class[]{Rem.class, Constant.class};
 
         private Rem() {
         }
@@ -131,6 +136,7 @@ public final class LLVMTags {
     public static final class ShiftLeft extends Tag {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{ShiftLeft.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAG = new Class[]{ShiftLeft.class, Constant.class};
 
         private ShiftLeft() {
         }
@@ -140,6 +146,7 @@ public final class LLVMTags {
     public static final class ShiftRight extends Tag {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{ShiftRight.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAG = new Class[]{ShiftRight.class, Constant.class};
 
         private ShiftRight() {
         }
@@ -149,6 +156,7 @@ public final class LLVMTags {
     public static final class And extends Tag {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{And.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAG = new Class[]{And.class, Constant.class};
 
         private And() {
         }
@@ -158,6 +166,7 @@ public final class LLVMTags {
     public static final class Or extends Tag {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{Or.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAG = new Class[]{Or.class, Constant.class};
 
         private Or() {
         }
@@ -167,6 +176,7 @@ public final class LLVMTags {
     public static final class XOr extends Tag {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{XOr.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAG = new Class[]{XOr.class, Constant.class};
 
         private XOr() {
         }
@@ -203,6 +213,7 @@ public final class LLVMTags {
     public static final class Select extends Tag {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{Select.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAG = new Class[]{ICMP.class, Constant.class};
 
         private Select() {
         }
@@ -275,6 +286,7 @@ public final class LLVMTags {
     public static final class ICMP extends Tag {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{ICMP.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAG = new Class[]{ICMP.class, Constant.class};
 
         private ICMP() {
         }
@@ -284,6 +296,7 @@ public final class LLVMTags {
     public static final class FCMP extends Tag {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{FCMP.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAG = new Class[]{FCMP.class, Constant.class};
 
         private FCMP() {
         }
@@ -293,6 +306,7 @@ public final class LLVMTags {
     public static final class Cast extends Tag {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{Cast.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAG = new Class[]{Cast.class, Constant.class};
 
         private Cast() {
         }
@@ -356,6 +370,7 @@ public final class LLVMTags {
     public static final class GetElementPtr extends Tag {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{GetElementPtr.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAG = new Class[]{GetElementPtr.class, Constant.class};
 
         private GetElementPtr() {
         }
