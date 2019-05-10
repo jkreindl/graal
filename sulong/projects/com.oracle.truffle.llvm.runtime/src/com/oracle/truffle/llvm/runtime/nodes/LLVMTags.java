@@ -63,6 +63,16 @@ public final class LLVMTags {
         }
     }
 
+    @Identifier(value = "GLOBAL_READ")
+    public static final class GlobalRead extends Tag {
+
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] SINGLE_EXPRESSION_TAG = new Class[]{GlobalRead.class};
+        @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] CONSTANT_GLOBAL_READ_TAGS = new Class[]{GlobalRead.class, Constant.class};
+
+        private GlobalRead() {
+        }
+    }
+
     @Identifier(value = "CONSTANT")
     public static final class Constant extends Tag {
 

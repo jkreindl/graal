@@ -93,25 +93,29 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
     @Override
     public void visit(FunctionDeclaration toResolve) {
         // TODO (jkreindl) add info as nodeobject
-        tags = LLVMTags.Constant.SINGLE_EXPRESSION_TAG;
+        tags = LLVMTags.GlobalRead.SINGLE_EXPRESSION_TAG;
     }
 
     @Override
     public void visit(FunctionDefinition toResolve) {
         // TODO (jkreindl) add info as nodeobject
-        tags = LLVMTags.Constant.SINGLE_EXPRESSION_TAG;
+        tags = LLVMTags.GlobalRead.CONSTANT_GLOBAL_READ_TAGS;
     }
 
     @Override
     public void visit(GlobalAlias alias) {
         // TODO (jkreindl) add info as nodeobject
-        tags = LLVMTags.Constant.SINGLE_EXPRESSION_TAG;
+        tags = LLVMTags.GlobalRead.SINGLE_EXPRESSION_TAG;
     }
 
     @Override
     public void visit(GlobalVariable global) {
         // TODO (jkreindl) add info as nodeobject
-        tags = LLVMTags.Constant.SINGLE_EXPRESSION_TAG;
+        if (global.isReadOnly()) {
+            tags = LLVMTags.GlobalRead.CONSTANT_GLOBAL_READ_TAGS;
+        } else {
+            tags = LLVMTags.GlobalRead.SINGLE_EXPRESSION_TAG;
+        }
     }
 
     @Override
