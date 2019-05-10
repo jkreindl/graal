@@ -684,6 +684,17 @@ public final class LLVMTags {
 
         @SuppressWarnings("unchecked") public static final Class<? extends Tag>[] BLOCK_TAGS = new Class[]{Block.class, LLVMStatement.class};
 
+        /**
+         * The index of the instrumented block in the array of blocks contained in a function.
+         */
+        public static final String EXTRA_DATA_BLOCK_ID = "BLOCK_ID";
+
+        /**
+         * The name of the block, if explicitly assigned. If the block was not explicitly assigned a
+         * name, the default value is {@code null}.
+         */
+        public static final String EXTRA_DATA_BLOCK_NAME = "BLOCK_NAME";
+
         private Block() {
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,6 +29,8 @@
  */
 package com.oracle.truffle.llvm.runtime.types.symbols;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+
 import java.util.regex.Pattern;
 
 public final class LLVMIdentifier {
@@ -41,6 +43,7 @@ public final class LLVMIdentifier {
     private LLVMIdentifier() {
     }
 
+    @TruffleBoundary
     public static String toGlobalIdentifier(String name) {
         if (GLOBAL_VARNAME_PATTERN.matcher(name).matches()) {
             // already a global identifier
@@ -50,6 +53,7 @@ public final class LLVMIdentifier {
         }
     }
 
+    @TruffleBoundary
     public static String toLocalIdentifier(String name) {
         if (LOCAL_VARNAME_PATTERN.matcher(name).matches()) {
             // already a global identifier
@@ -59,14 +63,17 @@ public final class LLVMIdentifier {
         }
     }
 
+    @TruffleBoundary
     public static String toExplicitBlockName(String name) {
         return toLocalIdentifier(name);
     }
 
+    @TruffleBoundary
     public static String toImplicitBlockName(int label) {
         return String.format("%d", label);
     }
 
+    @TruffleBoundary
     public static String toTypeIdentifier(String name) {
         return toLocalIdentifier(name);
     }
