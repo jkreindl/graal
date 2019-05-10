@@ -75,6 +75,10 @@ public class InstrumentableExpression extends LLVMExpressionNode implements Inst
         return expr.executeGeneric(frame);
     }
 
+    public LLVMExpressionNode getExpression() {
+        return expr;
+    }
+
     @Override
     public boolean isInstrumentable() {
         return true;

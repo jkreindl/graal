@@ -1775,7 +1775,11 @@ public class BasicNodeFactory implements NodeFactory {
     }
 
     private static LLVMLandingpadNode.LandingpadEntryNode getLandingpadFilterEntry(LLVMExpressionNode exp) {
-        LLVMArrayLiteralNode array = (LLVMArrayLiteralNode) exp;
+        LLVMExpressionNode arrayNode = exp;
+        if (exp instanceof InstrumentableExpression) {
+            arrayNode = ((InstrumentableExpression) exp).getExpression();
+        }
+        LLVMArrayLiteralNode array = (LLVMArrayLiteralNode) arrayNode;
         LLVMExpressionNode[] types = array == null ? LLVMExpressionNode.NO_EXPRESSIONS : array.getValues();
         return new LLVMLandingpadNode.LandingpadFilterEntryNode(types);
     }
