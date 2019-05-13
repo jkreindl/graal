@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,25 +27,11 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.runtime.except;
+package com.oracle.truffle.llvm.parser.bitcode;
 
-/**
- * Exception during parsing of LLVM bitcode.
- */
-public class LLVMParserException extends LLVMException {
+import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.Node;
 
-    private static final long serialVersionUID = 1L;
-
-    public LLVMParserException(String message, Throwable cause) {
-        super(null, message, cause);
-    }
-
-    public LLVMParserException(String message) {
-        super(null, message);
-    }
-
-    @Override
-    public boolean isSyntaxError() {
-        return true;
-    }
+public abstract class LLVMParserNode extends Node {
+    public abstract Object executeGeneric(VirtualFrame frame);
 }
