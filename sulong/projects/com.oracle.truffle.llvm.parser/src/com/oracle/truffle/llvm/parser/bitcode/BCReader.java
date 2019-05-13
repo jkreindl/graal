@@ -111,7 +111,7 @@ abstract class BCReader extends Node {
         @CompilationFinal private FrameSlot slot;
 
         @Specialization
-        public Object doGeneric(VirtualFrame frame) {
+        Object doGeneric(VirtualFrame frame) {
             if (slot == null) {
                 CompilerDirectives.transferToInterpreterAndInvalidate();
                 final RootNode rootNode = getRootNode();
