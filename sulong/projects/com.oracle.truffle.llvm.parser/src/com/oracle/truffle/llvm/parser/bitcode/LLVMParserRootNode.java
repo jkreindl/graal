@@ -45,7 +45,30 @@ public class LLVMParserRootNode extends RootNode {
         return null;
     }
 
+    /**
+     * Find the bitcode stream in the frame.
+     *
+     * @return the {@link FrameSlot} in which the bitstream is stored
+     */
     FrameSlot getBitStreamSlot() {
+        return null;
+    }
+
+    /**
+     * Find the current offset into the bitcode stream in the frame.
+     *
+     * @return the {@link FrameSlot} in which the offset is stored
+     */
+    FrameSlot getBitStreamOffsetSlot() {
+        return null;
+    }
+
+    /**
+     * Find the current size of record identifiers in the frame.
+     *
+     * @return the {@link FrameSlot} in which the size is stored
+     */
+    FrameSlot getIdSizeSlot() {
         return null;
     }
 }
