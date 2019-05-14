@@ -30,6 +30,7 @@
 package com.oracle.truffle.llvm.parser.bitcode;
 
 import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameUtil;
@@ -38,6 +39,8 @@ import com.oracle.truffle.api.nodes.LoopNode;
 import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.api.nodes.RepeatingNode;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
+
+import java.util.ArrayList;
 
 public abstract class LLVMParserBlockNode extends Node implements RepeatingNode {
 
@@ -53,20 +56,26 @@ public abstract class LLVMParserBlockNode extends Node implements RepeatingNode 
 
     private final FrameSlot idSizeSlot;
     private final FrameSlot bitOffsetSlot;
+    @CompilationFinal(dimensions = 1) private final FrameSlot[] recordSlots;
+    private final FrameSlot spilledRecordEntriesSlot;
 
-    @Child private BCReader readFixedNode = new BCReader.ReadFixedNode();
-    @Child private BCReader readVBRNode = new BCReader.ReadVBRNode();
+    @Child private BCReader readFixedNode;
+    @Child private BCReader readVBRNode;
 
     public LLVMParserBlockNode(LLVMParserRootNode rootNode) {
         this.idSizeSlot = rootNode.getIdSizeSlot();
         this.bitOffsetSlot = rootNode.getBitStreamOffsetSlot();
+        this.recordSlots = rootNode.getRecordSlots();
+        this.spilledRecordEntriesSlot = rootNode.getSpilledRecordSlot();
+
+        this.readFixedNode = new BCReader.ReadFixedNode(rootNode.getBitStreamSlot(), rootNode.getBitStreamOffsetSlot());
+        this.readVBRNode = new BCReader.ReadVBRNode(rootNode.getBitStreamSlot(), rootNode.getBitStreamOffsetSlot());
     }
 
     @Override
     public boolean executeRepeating(VirtualFrame frame) {
-        final long currentOffset = getBitOffset(frame);
         final int currentIdSize = getIdSize(frame);
-        final int id = (int) readFixedNode.executeWithTarget(frame, currentOffset, currentIdSize);
+        final int id = readFixedInt(frame, currentIdSize);
 
         switch (id) {
             case ID_END_BLOCK: {
@@ -86,7 +95,7 @@ public abstract class LLVMParserBlockNode extends Node implements RepeatingNode 
                 break;
 
             case ID_DEFINE_ABBREV:
-                defineAbbreviation();
+                defineAbbreviation(frame);
                 break;
 
             case ID_UNABBREV_RECORD:
@@ -113,8 +122,8 @@ public abstract class LLVMParserBlockNode extends Node implements RepeatingNode 
         final int currentIDSize = getIdSize(frame);
 
         // setup parser for the contained block
-        final int blockId = (int) readFixed(frame, SUBBLOCK_ID_BITS);
-        final int blockSize = (int) readFixed(frame, SUBBLOCK_SIZE_BITS);
+        final int blockId = readVBRInt(frame, SUBBLOCK_ID_BITS);
+        final int blockSize = readVBRInt(frame, SUBBLOCK_SIZE_BITS);
         byteAlignOffset(frame);
 
         // parse the contained block
@@ -143,11 +152,50 @@ public abstract class LLVMParserBlockNode extends Node implements RepeatingNode 
      */
     abstract void handleRecord(int recordId);
 
+    private static final int ABBREVIATED_RECORD_OPERANDS_COUNT_BITS = 5;
+    private static final int ABBREVIATED_RECORD_OPERAND_LITERAL_BIT_BITS = 1;
+    private static final int ABBREVIATED_RECORD_OPERAND_LITERAL_BITS = 8;
+    private static final int ABBREVIATED_RECORD_OPERAND_TYPE_BITS = 3;
+
     /**
      * Define a custom record.
      */
-    private void defineAbbreviation() {
-        // TODO
+    private void defineAbbreviation(VirtualFrame frame) {
+        CompilerDirectives.transferToInterpreterAndInvalidate();
+
+        final int operandCount = readVBRInt(frame, ABBREVIATED_RECORD_OPERANDS_COUNT_BITS);
+        final ArrayList<AbbreviatedRecordNode.EntryWriteNode> recordEntries = new ArrayList<>(operandCount);
+
+        int currentOperand = 0;
+        while (currentOperand < operandCount) {
+            final boolean isLiteral = readFixed(frame, ABBREVIATED_RECORD_OPERAND_LITERAL_BIT_BITS) == 1L;
+            if (isLiteral) {
+                final long literal = readVBR(frame, ABBREVIATED_RECORD_OPERAND_LITERAL_BITS);
+                AbbreviatedRecordNode.EntryReadNode readNode = new AbbreviatedRecordNode.LiteralEntryReadNode(bitOffsetSlot, literal);
+                AbbreviatedRecordNode.EntryWriteNode writeNode = createRecordWriteNode(readNode, currentOperand);
+                recordEntries.add(writeNode);
+
+            } else {
+                final int recordType = readFixedInt(frame, ABBREVIATED_RECORD_OPERAND_TYPE_BITS);
+            }
+
+            currentOperand++;
+        }
+
+        // TODO parse all entry kinds
+
+        final AbbreviatedRecordNode.EntryWriteNode[] entries = recordEntries.toArray(AbbreviatedRecordNode.NO_ENTRIES);
+        final AbbreviatedRecordNode recordNode = new AbbreviatedRecordNode(entries);
+
+        // TODO store and run record parser
+    }
+
+    private AbbreviatedRecordNode.EntryWriteNode createRecordWriteNode(AbbreviatedRecordNode.EntryReadNode readNode, int index) {
+        if (index < recordSlots.length) {
+            return new AbbreviatedRecordNode.EntryWriteSlot(readNode, recordSlots[index]);
+        } else {
+            return AbbreviatedRecordNodeFactory.EntryWriteSpilledSlotNodeGen.create(readNode, spilledRecordEntriesSlot, index, new AbbreviatedRecordNode.ReadFrameNode(spilledRecordEntriesSlot));
+        }
     }
 
     /**
@@ -157,12 +205,24 @@ public abstract class LLVMParserBlockNode extends Node implements RepeatingNode 
         // TODO
     }
 
+    private int readFixedInt(VirtualFrame frame, int bits) {
+        assert bits <= Integer.SIZE;
+        final long datum = readFixedNode.executeWithTarget(frame, bits);
+        return (int) datum;
+    }
+
+    private int readVBRInt(VirtualFrame frame, int bits) {
+        assert bits <= Integer.SIZE;
+        final long datum = readVBRNode.executeWithTarget(frame, bits);
+        return (int) datum;
+    }
+
     private long readFixed(VirtualFrame frame, int bits) {
-        long offset = getBitOffset(frame);
-        long datum = readFixedNode.executeWithTarget(frame, offset, bits);
-        offset += bits;
-        setBitOffset(frame, offset);
-        return datum;
+        return readFixedNode.executeWithTarget(frame, bits);
+    }
+
+    private long readVBR(VirtualFrame frame, int bits) {
+        return readVBRNode.executeWithTarget(frame, bits);
     }
 
     private long byteAlignOffset(VirtualFrame frame) {

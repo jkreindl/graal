@@ -29,20 +29,15 @@
  */
 package com.oracle.truffle.llvm.parser.bitcode;
 
-import com.oracle.truffle.api.CompilerDirectives;
-import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.FrameSlot;
-import com.oracle.truffle.api.frame.FrameSlotTypeException;
+import com.oracle.truffle.api.frame.FrameUtil;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.Node;
-import com.oracle.truffle.api.nodes.RootNode;
-import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import org.graalvm.polyglot.io.ByteSequence;
 
 abstract class BCReader extends Node {
 
-    abstract long executeWithTarget(VirtualFrame frame, long offset, int bits);
+    abstract long executeWithTarget(VirtualFrame frame, int bits);
 
     static class ReadFixedNode extends BCReader {
 
@@ -51,12 +46,21 @@ abstract class BCReader extends Node {
 
         private static final long BYTE_MASK = 0xffL;
 
-        @Child
-        private GetBitStreamNode getBitStreamNode = BCReaderFactory.GetBitStreamNodeGen.create();
+        private final FrameSlot bitStreamSlot;
+        private final FrameSlot offsetSlot;
+
+        ReadFixedNode(FrameSlot bitStreamSlot, FrameSlot offsetSlot) {
+            this.bitStreamSlot = bitStreamSlot;
+            this.offsetSlot = offsetSlot;
+        }
 
         @Override
-        long executeWithTarget(VirtualFrame frame, long offset, int bits) {
-            final ByteSequence bitStream = getBitStreamNode.executeBitStream(frame);
+        long executeWithTarget(VirtualFrame frame, int bits) {
+            final ByteSequence bitStream;
+            bitStream = (ByteSequence) FrameUtil.getObjectSafe(frame, bitStreamSlot);
+
+            long offset = FrameUtil.getLongSafe(frame, offsetSlot);
+            frame.setLong(offsetSlot, offset + bits);
 
             int byteIndex = (int) (offset >> BYTE_BITS_SHIFT);
             int bitOffsetInByte = (int) (offset & BYTE_BITS_MASK);
@@ -84,50 +88,24 @@ abstract class BCReader extends Node {
 
     static class ReadVBRNode extends BCReader {
 
-        @Child
-        private ReadFixedNode readFixedNode = new ReadFixedNode();
+        @Child private ReadFixedNode readFixedNode;
+
+        ReadVBRNode(FrameSlot bitStreamSlot, FrameSlot offsetSlot) {
+            readFixedNode = new ReadFixedNode(bitStreamSlot, offsetSlot);
+        }
 
         @Override
-        long executeWithTarget(VirtualFrame frame, long offset, int width) {
+        long executeWithTarget(VirtualFrame frame, int width) {
             long value = 0;
             long shift = 0;
             long datum;
-            long o = offset;
             long dmask = 1 << (width - 1);
             do {
-                datum = readFixedNode.executeWithTarget(frame, o, width);
-                o += width;
+                datum = readFixedNode.executeWithTarget(frame, width);
                 value += (datum & (dmask - 1)) << shift;
                 shift += width - 1;
             } while ((datum & dmask) != 0);
             return value;
-        }
-    }
-
-    abstract static class GetBitStreamNode extends LLVMParserNode {
-
-        abstract ByteSequence executeBitStream(VirtualFrame frame);
-
-        @CompilationFinal private FrameSlot slot;
-
-        @Specialization
-        Object doGeneric(VirtualFrame frame) {
-            if (slot == null) {
-                CompilerDirectives.transferToInterpreterAndInvalidate();
-                final RootNode rootNode = getRootNode();
-                if (rootNode instanceof LLVMParserRootNode) {
-                    slot = ((LLVMParserRootNode) rootNode).getBitStreamSlot();
-                } else {
-                    throw new LLVMParserException("Parser node cannot find root");
-                }
-            }
-
-            try {
-                return frame.getObject(slot);
-            } catch (FrameSlotTypeException e) {
-                CompilerDirectives.transferToInterpreter();
-                throw new LLVMParserException("Unexpected value provided as bitstream", e);
-            }
         }
     }
 }

@@ -71,4 +71,41 @@ public class LLVMParserRootNode extends RootNode {
     FrameSlot getIdSizeSlot() {
         return null;
     }
+
+    /**
+     * Find the id of the record to parse next in the frame.
+     *
+     * @return the {@link FrameSlot} in which the id is stored
+     */
+    FrameSlot getRecordIdSlot() {
+        return null;
+    }
+
+    /**
+     * Find the stack-allocated parts of the record to parse on the stack.
+     *
+     * @return an array of {@link FrameSlot slots} in which the record is stored
+     */
+    FrameSlot[] getRecordSlots() {
+        return null;
+    }
+
+    /**
+     * Find the parts of the record to parse that did not fit into
+     * {@link LLVMParserRootNode#getRecordSlots}.
+     *
+     * @return the {@link FrameSlot} which contains an array holding the spilled parts of the record
+     */
+    FrameSlot getSpilledRecordSlot() {
+        return null;
+    }
+
+    /**
+     * Find a possible blob from the last parsed record in the frame.
+     *
+     * @return the {@link FrameSlot} in which the blob is stored
+     */
+    FrameSlot getBlobSlot() {
+        return null;
+    }
 }
