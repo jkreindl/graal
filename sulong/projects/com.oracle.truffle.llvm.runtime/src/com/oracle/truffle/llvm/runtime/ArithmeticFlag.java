@@ -33,17 +33,17 @@ public enum ArithmeticFlag {
 
     // flags for integer arithmetic and logical shifts
     INT_NO_UNSIGNED_WRAP("nuw", 1),
-    INT_NO_SIGNED_WRAP("nsw", 1 << 1),
+    INT_NO_SIGNED_WRAP("nsw", 2),
 
     // flags for floating point arithmetic
-    FP_NO_NANS("nnan", 1 << 2),
-    FP_NO_INFINITIES("ninf", 1 << 3),
-    FP_NO_SIGNED_ZEROES("nsz", 1 << 4),
-    FP_ALLOW_RECIPROCAL("arcp", 1 << 5),
-    FP_FAST("fast", 1 << 6),
+    FP_NO_NANS("nnan", 2),
+    FP_NO_INFINITIES("ninf", 4),
+    FP_NO_SIGNED_ZEROES("nsz", 8),
+    FP_ALLOW_RECIPROCAL("arcp", 16),
+    FP_FAST("fast", 31),
 
     // additional flag for integer div
-    INT_EXACT("exact", 1 << 7);
+    INT_EXACT("exact", 1);
 
     public static final int NO_FLAGS = 0;
     public static final ArithmeticFlag[] ALL_VALUES = values();
@@ -67,6 +67,6 @@ public enum ArithmeticFlag {
     }
 
     public boolean test(int flags) {
-        return (flags & bitMask) == bitMask;
+        return (flags & bitMask) != 0;
     }
 }

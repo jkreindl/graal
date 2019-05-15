@@ -30,7 +30,6 @@
 package com.oracle.truffle.llvm.parser.model.symbols.instructions;
 
 import com.oracle.truffle.llvm.parser.model.SymbolTable;
-import com.oracle.truffle.llvm.parser.model.enums.ArithmeticFlag;
 import com.oracle.truffle.llvm.parser.model.enums.BinaryOperator;
 import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
 import com.oracle.truffle.llvm.runtime.types.Type;
@@ -41,13 +40,13 @@ public final class BinaryOperationInstruction extends ValueInstruction {
 
     private final BinaryOperator operator;
 
-    private final ArithmeticFlag[] flags;
+    private final int flags;
 
     private SymbolImpl lhs;
 
     private SymbolImpl rhs;
 
-    private BinaryOperationInstruction(Type type, BinaryOperator operator, ArithmeticFlag[] flags) {
+    private BinaryOperationInstruction(Type type, BinaryOperator operator, int flags) {
         super(type);
         this.operator = operator;
         this.flags = flags;
@@ -58,7 +57,7 @@ public final class BinaryOperationInstruction extends ValueInstruction {
         visitor.visit(this);
     }
 
-    public ArithmeticFlag[] getFlags() {
+    public int getFlags() {
         return flags;
     }
 
@@ -87,7 +86,7 @@ public final class BinaryOperationInstruction extends ValueInstruction {
     public static BinaryOperationInstruction fromSymbols(SymbolTable symbols, Type type, int opcode, int flags, int lhs, int rhs) {
         final boolean isFloatingPoint = Type.isFloatingpointType(type) || (type instanceof VectorType && Type.isFloatingpointType(((VectorType) type).getElementType()));
         final BinaryOperator operator = BinaryOperator.decode(opcode, isFloatingPoint);
-        final BinaryOperationInstruction inst = new BinaryOperationInstruction(type, operator, ArithmeticFlag.decode(operator, flags));
+        final BinaryOperationInstruction inst = new BinaryOperationInstruction(type, operator, flags);
         inst.lhs = symbols.getForwardReferenced(lhs, inst);
         inst.rhs = symbols.getForwardReferenced(rhs, inst);
         return inst;

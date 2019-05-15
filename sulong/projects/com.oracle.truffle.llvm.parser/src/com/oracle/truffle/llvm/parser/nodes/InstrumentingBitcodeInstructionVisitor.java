@@ -65,10 +65,13 @@ import com.oracle.truffle.llvm.parser.model.symbols.instructions.UnreachableInst
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.ValueInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.VoidCallInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.VoidInvokeInstruction;
+import com.oracle.truffle.llvm.parser.util.LLVMBitcodeTypeHelper;
+import com.oracle.truffle.llvm.runtime.ArithmeticFlag;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
@@ -81,7 +84,7 @@ import java.util.List;
 final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVisitorImpl {
 
     private Class<? extends Tag>[] tags;
-    private Object nodeObject;
+    private LLVMNodeObject nodeObject;
 
     InstrumentingBitcodeInstructionVisitor(FrameDescriptor frame, LLVMStack.UniquesRegion uniquesRegion, List<LLVMPhiManager.Phi> blockPhis, int argCount, LLVMSymbolReadResolver symbols,
                     LLVMContext context, LLVMContext.ExternalLibrary library, ArrayList<LLVMLivenessAnalysis.NullerInformation> nullerInfos, List<FrameSlot> notNullable,
@@ -142,6 +145,16 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
                 tags = null;
                 break;
         }
+
+        final ArithmeticFlag[] allFlags = ArithmeticFlag.ALL_VALUES;
+        final String[] keys = new String[allFlags.length];
+        final Object[] values = new Object[allFlags.length];
+        for (int i = 0; i < allFlags.length; i++) {
+            keys[i] = allFlags[i].toString();
+            values[i] = LLVMBitcodeTypeHelper.testArithmeticFlag(allFlags[i], operation.getFlags(), operation.getOperator());
+        }
+        nodeObject = new LLVMNodeObject(keys, values);
+
         super.visit(operation);
     }
 
