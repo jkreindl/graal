@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,6 +29,7 @@
  */
 package com.oracle.truffle.llvm.parser.model.symbols.instructions;
 
+import com.oracle.truffle.llvm.parser.model.IRScope;
 import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 import com.oracle.truffle.llvm.parser.model.SymbolTable;
 import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
@@ -58,18 +59,22 @@ public final class CompareInstruction extends ValueInstruction {
 
     private SymbolImpl rhs;
 
-    private CompareInstruction(Type type, CompareOperator operator) {
-        super(calculateResultType(type));
+    private CompareInstruction(IRScope scope, Type type, CompareOperator operator) {
+        super(calculateResultType(scope, type));
         this.baseType = type;
         this.operator = operator;
     }
 
-    private static Type calculateResultType(Type type) {
+    private static Type calculateResultType(IRScope scope, Type type) {
+        Type resultType;
         // The comparison performed always yields either an i1 or vector of i1 as result
         if (type instanceof VectorType) {
-            return new VectorType(PrimitiveType.I1, ((VectorType) type).getNumberOfElements());
+            resultType = new VectorType(PrimitiveType.I1, ((VectorType) type).getNumberOfElements());
+        } else {
+            resultType = PrimitiveType.I1;
         }
-        return PrimitiveType.I1;
+        scope.initializeType(type);
+        return resultType;
     }
 
     @Override
@@ -103,8 +108,9 @@ public final class CompareInstruction extends ValueInstruction {
         }
     }
 
-    public static CompareInstruction fromSymbols(SymbolTable symbols, Type type, int opcode, int lhs, int rhs) {
-        final CompareInstruction cmpInst = new CompareInstruction(type, decodeCompareOperator(opcode));
+    public static CompareInstruction fromSymbols(IRScope scope, Type type, int opcode, int lhs, int rhs) {
+        final CompareInstruction cmpInst = new CompareInstruction(scope, type, decodeCompareOperator(opcode));
+        SymbolTable symbols = scope.getSymbols();
         cmpInst.lhs = symbols.getForwardReferenced(lhs, cmpInst);
         cmpInst.rhs = symbols.getForwardReferenced(rhs, cmpInst);
         return cmpInst;

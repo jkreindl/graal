@@ -42,7 +42,6 @@ import com.oracle.truffle.llvm.parser.model.functions.FunctionDefinition;
 import com.oracle.truffle.llvm.parser.model.functions.LazyFunctionParser;
 import com.oracle.truffle.llvm.parser.model.symbols.globals.GlobalAlias;
 import com.oracle.truffle.llvm.parser.model.symbols.globals.GlobalVariable;
-import com.oracle.truffle.llvm.parser.model.target.TargetDataLayout;
 import com.oracle.truffle.llvm.parser.model.target.TargetTriple;
 import com.oracle.truffle.llvm.parser.records.Records;
 import com.oracle.truffle.llvm.parser.scanner.Block;
@@ -74,7 +73,7 @@ public final class Module implements ParserListener {
     Module(ModelModule module, StringTable stringTable, IRScope scope, LLSourceBuilder llSource) {
         this.module = module;
         this.stringTable = stringTable;
-        types = new Types(module);
+        types = new Types(module, scope);
         this.scope = scope;
         this.llSource = llSource;
         functionQueue = new LinkedList<>();
@@ -153,6 +152,7 @@ public final class Module implements ParserListener {
         Type type = types.get(typeField);
         if ((flagField & GLOBALVAR_EXPLICICTTYPE_MASK) != 0) {
             type = new PointerType(type);
+            scope.initializeType(type);
         }
 
         final boolean isConstant = (flagField & GLOBALVAR_ISCONSTANT_MASK) != 0;
@@ -180,6 +180,7 @@ public final class Module implements ParserListener {
     private void createGlobalAliasNew(long[] args) {
         final int recordOffset = useStrTab() ? STRTAB_RECORD_OFFSET : 0;
         final PointerType type = new PointerType(types.get(args[GLOBALALIAS_TYPE + recordOffset]));
+        scope.initializeType(type);
 
         // idx = 1 is address space information
         final int value = (int) args[GLOBALALIAS_NEW_VALUE + recordOffset];
@@ -291,8 +292,9 @@ public final class Module implements ParserListener {
                 break;
 
             case MODULE_TARGET_DATALAYOUT:
-                final TargetDataLayout layout = TargetDataLayout.fromString(Records.toString(args));
+                final String layout = Records.toString(args);
                 module.setTargetDataLayout(layout);
+                scope.setDataLayout(module.getTargetDataLayout());
                 break;
 
             case MODULE_GLOBAL_VARIABLE:

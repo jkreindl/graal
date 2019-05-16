@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -30,6 +30,7 @@
 package com.oracle.truffle.llvm.runtime.types;
 
 import com.oracle.truffle.api.Assumption;
+import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
@@ -38,9 +39,12 @@ import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
+import java.util.IdentityHashMap;
+
 public final class PointerType extends AggregateType {
     public static final PointerType I8 = new PointerType(PrimitiveType.I8);
     public static final PointerType VOID = new PointerType(VoidType.INSTANCE);
+    public static final PointerType EMPTY = new PointerType(null);
 
     @CompilationFinal private Type pointeeType;
     @CompilationFinal private Assumption pointeeTypeAssumption;
@@ -48,6 +52,31 @@ public final class PointerType extends AggregateType {
     public PointerType(Type pointeeType) {
         this.pointeeTypeAssumption = Truffle.getRuntime().createAssumption("PointerType.pointeeType");
         this.pointeeType = pointeeType;
+    }
+
+    @Override
+    public void initialize(DataLayout targetDataLayout, IdentityHashMap<Type, Void> previouslyInitialized) {
+        CompilerAsserts.neverPartOfCompilation("Type must be initialized before compilation");
+
+        if (isInitialized() || previouslyInitialized.containsKey(this)) {
+            return;
+        } else {
+            previouslyInitialized.put(this, null);
+        }
+
+        // properties of this pointer type need to be resolved before a circular referencing
+        // structure type that contains it accesses it to compute its own properties
+        int byteAlignment;
+        try {
+            byteAlignment = targetDataLayout.getBitAlignment(this) / Byte.SIZE;
+        } catch (IllegalStateException alignNotSpecified) {
+            byteAlignment = Long.BYTES;
+        }
+        setInitializedProperties(LLVMNode.ADDRESS_SIZE_IN_BYTES, byteAlignment);
+
+        if (pointeeType != null) {
+            pointeeType.initialize(targetDataLayout, previouslyInitialized);
+        }
     }
 
     public Type getPointeeType() {
@@ -65,28 +94,15 @@ public final class PointerType extends AggregateType {
     }
 
     @Override
-    public int getAlignment(DataLayout targetDataLayout) {
-        if (targetDataLayout != null) {
-            return targetDataLayout.getBitAlignment(this) / Byte.SIZE;
-        } else {
-            return Long.BYTES;
-        }
-    }
-
-    @Override
-    public int getSize(DataLayout targetDataLayout) {
-        return LLVMNode.ADDRESS_SIZE_IN_BYTES;
-    }
-
-    @Override
     public Type shallowCopy() {
         final PointerType copy = new PointerType(getPointeeType());
+        copy.setInitializedProperties(getByteSize(), getByteAlignment());
         return copy;
     }
 
     @Override
-    public long getOffsetOf(long index, DataLayout targetDataLayout) {
-        return getPointeeType().getSize(targetDataLayout) * index;
+    public long getOffsetOf(long index) {
+        return getPointeeType().getByteSize() * index;
     }
 
     @Override

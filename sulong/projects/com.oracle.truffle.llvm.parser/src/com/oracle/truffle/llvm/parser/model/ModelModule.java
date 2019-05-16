@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -42,9 +42,9 @@ import com.oracle.truffle.llvm.parser.model.functions.LazyFunctionParser;
 import com.oracle.truffle.llvm.parser.model.symbols.globals.GlobalAlias;
 import com.oracle.truffle.llvm.parser.model.symbols.globals.GlobalValueSymbol;
 import com.oracle.truffle.llvm.parser.model.symbols.globals.GlobalVariable;
-import com.oracle.truffle.llvm.parser.model.target.TargetDataLayout;
 import com.oracle.truffle.llvm.parser.model.target.TargetInformation;
 import com.oracle.truffle.llvm.parser.model.visitors.ModelVisitor;
+import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.debug.type.LLVMSourceStaticMemberType;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceSymbol;
 import com.oracle.truffle.llvm.runtime.types.Type;
@@ -53,7 +53,7 @@ public final class ModelModule {
 
     // when running with Polyglot it can be that there is no layout available - we fall back to this
     // one.
-    private static final TargetDataLayout defaultLayout = TargetDataLayout.fromString("e-i64:64-f80:128-n8:16:32:64-S128");
+    private static final DataLayout defaultLayout = new DataLayout("e-i64:64-f80:128-n8:16:32:64-S128");
 
     private final List<Type> types = new ArrayList<>();
     private final List<GlobalVariable> globalVariables = new ArrayList<>();
@@ -66,22 +66,27 @@ public final class ModelModule {
     private final Map<LLVMSourceSymbol, SymbolImpl> sourceGlobals = new HashMap<>();
     private final Map<LLVMSourceStaticMemberType, SymbolImpl> sourceStaticMembers = new HashMap<>();
     private final Map<FunctionDefinition, LazyFunctionParser> lazyFunctionParsers = new HashMap<>();
-    private TargetDataLayout targetDataLayout = defaultLayout;
+    private DataLayout targetDataLayout = defaultLayout;
+    private String targetDataLayoutString = null;
     private DebugInfoFunctionProcessor functionProcessor = null;
 
     public ModelModule() {
     }
 
-    public void setTargetDataLayout(TargetDataLayout layout) {
-        targetDataLayout = layout;
+    public void setTargetDataLayout(String layout) {
+        targetDataLayout = new DataLayout(layout);
+        targetDataLayoutString = layout;
     }
 
-    public TargetDataLayout getTargetDataLayout() {
+    public DataLayout getTargetDataLayout() {
         return targetDataLayout;
     }
 
+    public String getTargetDataLayoutString() {
+        return targetDataLayoutString;
+    }
+
     public void accept(ModelVisitor visitor) {
-        visitor.visit(targetDataLayout);
         targetInfo.forEach(visitor::visit);
         types.forEach(visitor::visit);
         for (GlobalValueSymbol variable : globalVariables) {

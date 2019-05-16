@@ -1043,6 +1043,7 @@ class AsmFactory {
                 out = getOperandAddress(dstType, src);
                 if (isLeaPointer(src)) {
                     dstType = new PointerType(dstType);
+                    context.initializeType(dstType);
                 }
                 break;
             case "xor":
@@ -1137,7 +1138,7 @@ class AsmFactory {
                 LLVMStatementNode res;
                 if (dstType instanceof PointerType) {
                     dst2 = getRegisterStore("rax");
-                    accumulator = getOperandLoad(new PointerType(PrimitiveType.I8), new AsmRegisterOperand("rax"));
+                    accumulator = getOperandLoad(PointerType.I8, new AsmRegisterOperand("rax"));
                     res = LLVMAMD64CmpXchgqNodeGen.create(getUpdateCPAZSOFlagsNode(), dst1, dst2, accumulator, srcA, srcB);
                 } else {
                     switch (getPrimitiveType(dstType)) {
@@ -1849,7 +1850,9 @@ class AsmFactory {
                 segment = LLVMAMD64GetTlsNodeGen.create();
             }
             if (base != null) {
-                baseAddress = getOperandLoad(new PointerType(type), base);
+                final Type baseType = new PointerType(type);
+                context.initializeType(baseType);
+                baseAddress = getOperandLoad(baseType, base);
             } else if (offset != null) {
                 LLVMExpressionNode offsetNode = getOperandLoad(null, offset);
                 if (op.getSegment() != null) {

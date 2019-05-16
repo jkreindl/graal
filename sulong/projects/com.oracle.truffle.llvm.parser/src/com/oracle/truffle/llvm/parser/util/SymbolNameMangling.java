@@ -40,14 +40,13 @@ import com.oracle.truffle.llvm.parser.model.functions.FunctionDeclaration;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDefinition;
 import com.oracle.truffle.llvm.parser.model.symbols.globals.GlobalAlias;
 import com.oracle.truffle.llvm.parser.model.symbols.globals.GlobalVariable;
-import com.oracle.truffle.llvm.parser.model.target.TargetDataLayout;
 import com.oracle.truffle.llvm.parser.model.visitors.ModelVisitor;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 
 public final class SymbolNameMangling {
 
     public static void demangleGlobals(ModelModule model) {
-        final BiFunction<Linkage, String, String> demangler = getDemangler(model.getTargetDataLayout());
+        final BiFunction<Linkage, String, String> demangler = getDemangler(model.getTargetDataLayoutString());
         model.accept(new DemangleVisitor(demangler));
     }
 
@@ -95,8 +94,11 @@ public final class SymbolNameMangling {
 
     private static final Pattern LAYOUT_MANGLING_PATTERN = Pattern.compile(".*m:(?<mangling>[\\w]).*");
 
-    private static BiFunction<Linkage, String, String> getDemangler(TargetDataLayout targetDataLayout) {
-        final Matcher matcher = LAYOUT_MANGLING_PATTERN.matcher(targetDataLayout.getDataLayout());
+    private static BiFunction<Linkage, String, String> getDemangler(String targetDataLayout) {
+        if (targetDataLayout == null) {
+            return DEFAULT_DEMANGLER;
+        }
+        final Matcher matcher = LAYOUT_MANGLING_PATTERN.matcher(targetDataLayout);
         if (matcher.matches()) {
             final String mangling = matcher.group("mangling");
             switch (mangling) {

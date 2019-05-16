@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -30,7 +30,6 @@
 package com.oracle.truffle.llvm.asm.amd64;
 
 import com.oracle.truffle.llvm.runtime.types.PointerType;
-import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
 import com.oracle.truffle.llvm.runtime.types.Type;
 
 class AsmMemoryOperand implements AsmOperand {
@@ -94,7 +93,7 @@ class AsmMemoryOperand implements AsmOperand {
 
     @Override
     public Type getType() {
-        return new PointerType(PrimitiveType.I8);
+        return PointerType.I8;
     }
 
     @Override

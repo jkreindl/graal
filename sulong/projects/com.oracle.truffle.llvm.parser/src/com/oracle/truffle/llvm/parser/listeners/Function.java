@@ -603,6 +603,7 @@ public final class Function implements ParserListener {
         Type type = types.get(typeRecord);
         if ((alignRecord & ALLOCA_EXPLICITTYPEMASK) != 0L) {
             type = new PointerType(type);
+            scope.initializeType(type);
         } else if (!(type instanceof PointerType)) {
             throw new LLVMParserException("Alloca with unexpected type: " + type);
         }
@@ -713,7 +714,9 @@ public final class Function implements ParserListener {
             }
         }
         // the type may not exist if the value is not being used
-        return new StructureType(true, new Type[]{elementType, PrimitiveType.I1});
+        final StructureType resultType = new StructureType(true, new Type[]{elementType, PrimitiveType.I1});
+        scope.initializeType(resultType);
+        return resultType;
     }
 
     private void parseDebugLocation(long[] args) {
@@ -835,8 +838,9 @@ public final class Function implements ParserListener {
         Type type = operandType instanceof VectorType
                         ? new VectorType(PrimitiveType.I1, Types.castToVector(operandType).getNumberOfElements())
                         : PrimitiveType.I1;
+        scope.initializeType(type);
 
-        emit(CompareInstruction.fromSymbols(scope.getSymbols(), type, opcode, lhs, rhs));
+        emit(CompareInstruction.fromSymbols(scope, type, opcode, lhs, rhs));
     }
 
     private void createExtractElement(long[] args) {
@@ -888,6 +892,7 @@ public final class Function implements ParserListener {
         }
         List<Integer> indices = getIndices(args, i);
         Type type = new PointerType(getElementPointerType(base, indices));
+        scope.initializeType(type);
 
         emit(GetElementPointerInstruction.fromSymbols(scope.getSymbols(), type, pointer, indices, isInbounds));
     }
@@ -903,6 +908,7 @@ public final class Function implements ParserListener {
         }
         List<Integer> indices = getIndices(args, i);
         Type type = new PointerType(getElementPointerType(base, indices));
+        scope.initializeType(type);
 
         emit(GetElementPointerInstruction.fromSymbols(scope.getSymbols(), type, pointer, indices, isInbounds));
     }
@@ -1016,6 +1022,7 @@ public final class Function implements ParserListener {
         Type subtype = Types.castToVector(vectorType).getElementType();
         int length = Types.castToVector(scope.getValueType(mask)).getNumberOfElements();
         Type type = new VectorType(subtype, length);
+        scope.initializeType(type);
 
         emit(ShuffleVectorInstruction.fromSymbols(scope.getSymbols(), type, vector1, vector2, mask));
     }

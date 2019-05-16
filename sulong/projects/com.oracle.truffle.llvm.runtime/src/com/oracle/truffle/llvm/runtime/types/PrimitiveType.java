@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,9 +29,12 @@
  */
 package com.oracle.truffle.llvm.runtime.types;
 
+import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
+
+import java.util.IdentityHashMap;
 
 public final class PrimitiveType extends Type {
 
@@ -108,6 +111,48 @@ public final class PrimitiveType extends Type {
         this.constant = constant;
     }
 
+    @Override
+    protected void initialize(DataLayout targetDataLayout, IdentityHashMap<Type, Void> previouslyInitialized) {
+        CompilerAsserts.neverPartOfCompilation("Type must be initialized before compilation");
+
+        // don't fill the initialized set with types that cannot cause circular initialization
+
+        if (isInitialized()) {
+            return;
+        }
+
+        int byteAlignment;
+        try {
+            byteAlignment = targetDataLayout.getBitAlignment(this) / Byte.SIZE;
+        } catch (IllegalStateException alignNotSpecified) {
+            if (getBitSize() <= Byte.SIZE) {
+                byteAlignment = Byte.BYTES;
+
+            } else if (getBitSize() <= Short.SIZE) {
+                byteAlignment = Short.BYTES;
+
+            } else if (getBitSize() <= Integer.SIZE) {
+                byteAlignment = Integer.BYTES;
+
+            } else {
+                byteAlignment = Long.BYTES;
+            }
+        }
+
+        int byteSize;
+        try {
+            byteSize = targetDataLayout.getSize(this);
+        } catch (IllegalStateException sizeNotSpecified) {
+            byteSize = getBitSize();
+            int mask = Byte.SIZE - 1;
+            if ((byteSize & mask) != 0) {
+                byteSize = (byteSize & ~mask) + Byte.SIZE;
+            }
+        }
+
+        setInitializedProperties(byteSize, byteAlignment);
+    }
+
     public boolean isConstant() {
         return constant != null;
     }
@@ -131,32 +176,9 @@ public final class PrimitiveType extends Type {
     }
 
     @Override
-    public int getAlignment(DataLayout targetDataLayout) {
-        if (targetDataLayout != null) {
-            return targetDataLayout.getBitAlignment(this) / Byte.SIZE;
-
-        } else if (getBitSize() <= Byte.SIZE) {
-            return Byte.BYTES;
-
-        } else if (getBitSize() <= Short.SIZE) {
-            return Short.BYTES;
-
-        } else if (getBitSize() <= Integer.SIZE) {
-            return Integer.BYTES;
-
-        } else {
-            return Long.BYTES;
-        }
-    }
-
-    @Override
-    public int getSize(DataLayout targetDataLayout) {
-        return targetDataLayout.getSize(this);
-    }
-
-    @Override
     public Type shallowCopy() {
         final PrimitiveType copy = new PrimitiveType(kind, constant);
+        copy.setInitializedProperties(getByteSize(), getByteAlignment());
         return copy;
     }
 

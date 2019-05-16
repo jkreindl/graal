@@ -317,29 +317,30 @@ final class Runner {
 
     private static final class DataSection {
 
-        final DataLayout dataLayout;
+        final Type.Initializer typeInitializer;
         final ArrayList<Type> types = new ArrayList<>();
 
         private int offset = 0;
 
         DataSection(DataLayout dataLayout) {
-            this.dataLayout = dataLayout;
+            this.typeInitializer = new Type.Initializer(dataLayout);
         }
 
         long add(GlobalVariable global, Type type) {
-            int alignment = getAlignment(dataLayout, global, type);
+            int alignment = getAlignment(global, type);
             int padding = Type.getPadding(offset, alignment);
-            addPaddingTypes(types, padding);
+            addPaddingTypes(typeInitializer, types, padding);
             offset += padding;
             long ret = offset;
             types.add(type);
-            offset += type.getSize(dataLayout);
+            offset += type.getByteSize();
             return ret;
         }
 
         LLVMAllocateNode getAllocateNode(NodeFactory factory, String typeName, boolean readOnly) {
             if (offset > 0) {
                 StructureType structType = new StructureType(typeName, true, types.toArray(Type.EMPTY_ARRAY));
+                typeInitializer.initializeType(structType);
                 return factory.createAllocateGlobalsBlock(structType, readOnly);
             } else {
                 return null;
@@ -370,7 +371,7 @@ final class Runner {
                     allocGlobalsList.add(new AllocPointerGlobalNode(global));
                 } else {
                     // allocate at least one byte per global (to make the pointers unique)
-                    if (type.getSize(dataLayout) == 0) {
+                    if (type.getByteSize() == 0) {
                         type = PrimitiveType.getIntegerType(8);
                     }
                     allocGlobalsList.add(new AllocOtherGlobalNode(global, type, roSection, rwSection));
@@ -450,18 +451,20 @@ final class Runner {
         }
     }
 
-    private static void addPaddingTypes(ArrayList<Type> result, int padding) {
+    private static void addPaddingTypes(Type.Initializer initializer, ArrayList<Type> result, int padding) {
         assert padding >= 0;
         int remaining = padding;
         while (remaining > 0) {
             int size = Math.min(Long.BYTES, Integer.highestOneBit(remaining));
-            result.add(PrimitiveType.getIntegerType(size * Byte.SIZE));
+            final Type paddingType = PrimitiveType.getIntegerType(size * Byte.SIZE);
+            initializer.initializeType(paddingType);
+            result.add(paddingType);
             remaining -= size;
         }
     }
 
-    private static int getAlignment(DataLayout dataLayout, GlobalVariable global, Type type) {
-        return global.getAlign() > 0 ? 1 << (global.getAlign() - 1) : type.getAlignment(dataLayout);
+    private static int getAlignment(GlobalVariable global, Type type) {
+        return global.getAlign() > 0 ? 1 << (global.getAlign() - 1) : type.getByteAlignment();
     }
 
     private static boolean isSpecialGlobalSlot(Type type) {
@@ -879,12 +882,14 @@ final class Runner {
         LLVMExpressionNode constant = symbolResolver.resolve(global.getValue());
         if (constant != null) {
             final Type type = global.getType().getPointeeType();
-            final int size = context.getByteSize(type);
+            final int size = type.getByteSize();
 
             // for fetching the address of the global that we want to initialize, we must use the
             // file scope because we are initializing the globals of the current file
             LLVMGlobal globalDescriptor = runtime.getFileScope().getGlobalVariable(global.getName());
-            final LLVMExpressionNode globalVarAddress = context.getNodeFactory().createLiteral(globalDescriptor, new PointerType(global.getType()));
+            final PointerType ptrType = new PointerType(global.getType());
+            runtime.getContext().initializeType(ptrType);
+            final LLVMExpressionNode globalVarAddress = context.getNodeFactory().createLiteral(globalDescriptor, ptrType);
             if (size != 0) {
                 if (type instanceof ArrayType || type instanceof StructureType) {
                     return context.getNodeFactory().createStore(globalVarAddress, constant, type, null);
@@ -932,15 +937,18 @@ final class Runner {
         final int elemCount = arrayConstant.getElementCount();
 
         final StructureType elementType = (StructureType) arrayConstant.getType().getElementType();
-        final int elementSize = context.getByteSize(elementType);
+        final int elementSize = elementType.getByteSize();
 
         final FunctionType functionType = (FunctionType) ((PointerType) elementType.getElementType(1)).getPointeeType();
-        final int indexedTypeLength = context.getByteAlignment(functionType);
+        // TODO shouldn't this rather be the size?
+        final int indexedTypeLength = functionType.getByteAlignment();
 
         final ArrayList<Pair<Integer, LLVMStatementNode>> structors = new ArrayList<>(elemCount);
         FrameDescriptor rootFrame = StackManager.createRootFrame();
         for (int i = 0; i < elemCount; i++) {
-            final LLVMExpressionNode globalVarAddress = context.getNodeFactory().createLiteral(global, new PointerType(globalSymbol.getType()));
+            final Type addressType = new PointerType(globalSymbol.getType());
+            context.initializeType(addressType);
+            final LLVMExpressionNode globalVarAddress = context.getNodeFactory().createLiteral(global, addressType);
             final LLVMExpressionNode iNode = context.getNodeFactory().createLiteral(i, PrimitiveType.I32);
             final LLVMExpressionNode structPointer = context.getNodeFactory().createTypedElementPointer(globalVarAddress, iNode, elementSize, elementType);
             final LLVMExpressionNode loadedStruct = context.getNodeFactory().createLoad(elementType, structPointer);

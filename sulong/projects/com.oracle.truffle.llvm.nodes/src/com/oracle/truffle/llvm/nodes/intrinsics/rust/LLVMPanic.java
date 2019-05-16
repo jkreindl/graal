@@ -72,11 +72,11 @@ public abstract class LLVMPanic extends LLVMIntrinsic {
         private final long offsetFilename;
         private final long offsetLineNr;
 
-        private PanicLocType(DataLayout dataLayout, Type type, StrSliceType strslice) {
+        private PanicLocType(Type type, StrSliceType strslice) {
             this.strslice = strslice;
             StructureType structureType = (StructureType) ((PointerType) type).getElementType(0);
-            this.offsetFilename = structureType.getOffsetOf(1, dataLayout);
-            this.offsetLineNr = structureType.getOffsetOf(2, dataLayout);
+            this.offsetFilename = structureType.getOffsetOf(1);
+            this.offsetLineNr = structureType.getOffsetOf(2);
         }
 
         @TruffleBoundary
@@ -92,8 +92,9 @@ public abstract class LLVMPanic extends LLVMIntrinsic {
         static PanicLocType create(DataLayout dataLayout) {
             CompilerAsserts.neverPartOfCompilation();
             StrSliceType strslice = StrSliceType.create(dataLayout);
-            Type type = new PointerType((new StructureType(false, new Type[]{strslice.getType(), strslice.getType(), PrimitiveType.I32})));
-            return new PanicLocType(dataLayout, type, strslice);
+            final Type type = new PointerType((new StructureType(false, new Type[]{strslice.getType(), strslice.getType(), PrimitiveType.I32})));
+            new Type.Initializer(dataLayout).initializeType(type);
+            return new PanicLocType(type, strslice);
         }
     }
 
@@ -102,8 +103,8 @@ public abstract class LLVMPanic extends LLVMIntrinsic {
         private final long lengthOffset;
         private final Type type;
 
-        private StrSliceType(DataLayout dataLayout, Type type) {
-            this.lengthOffset = ((StructureType) type).getOffsetOf(1, dataLayout);
+        private StrSliceType(Type type) {
+            this.lengthOffset = ((StructureType) type).getOffsetOf(1);
             this.type = type;
         }
 
@@ -125,7 +126,8 @@ public abstract class LLVMPanic extends LLVMIntrinsic {
 
         static StrSliceType create(DataLayout dataLayout) {
             Type type = new StructureType(false, new Type[]{new PointerType(PrimitiveType.I8), PrimitiveType.I64});
-            return new StrSliceType(dataLayout, type);
+            new Type.Initializer(dataLayout).initializeType(type);
+            return new StrSliceType(type);
         }
     }
 }

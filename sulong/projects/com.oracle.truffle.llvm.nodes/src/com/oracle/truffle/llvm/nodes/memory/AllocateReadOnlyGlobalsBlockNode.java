@@ -50,7 +50,7 @@ public final class AllocateReadOnlyGlobalsBlockNode extends LLVMNode implements 
     private final TruffleObject allocateGlobalsBlock;
 
     public AllocateReadOnlyGlobalsBlockNode(LLVMContext context, StructureType type) {
-        this.size = context.getByteSize(type);
+        this.size = type.getByteSize();
         this.toNative = LLVMToNativeNode.createToNativeWithTarget();
 
         NFIContextExtension nfiContextExtension = context.getContextExtensionOrNull(NFIContextExtension.class);

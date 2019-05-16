@@ -162,7 +162,7 @@ public final class LLVMSymbolReadResolver {
 
             @Override
             public void visit(ArrayType type) {
-                final int arraySize = context.getByteSize(type);
+                final int arraySize = type.getByteSize();
                 if (arraySize == 0) {
                     resolvedNode = null;
                 } else {
@@ -173,10 +173,12 @@ public final class LLVMSymbolReadResolver {
 
             @Override
             public void visit(StructureType structureType) {
-                final int structSize = context.getByteSize(structureType);
+                final int structSize = structureType.getByteSize();
                 if (structSize == 0) {
                     final LLVMNativePointer minusOneNode = LLVMNativePointer.create(-1);
-                    resolvedNode = nodeFactory.createLiteral(minusOneNode, new PointerType(structureType));
+                    PointerType type = new PointerType(structureType);
+                    context.initializeType(type);
+                    resolvedNode = nodeFactory.createLiteral(minusOneNode, type);
                 } else {
                     LLVMExpressionNode addressnode = getStackSpaceFactory.createGetStackSpace(context, structureType);
                     resolvedNode = nodeFactory.createZeroNode(addressnode, structSize);
@@ -262,6 +264,7 @@ public final class LLVMSymbolReadResolver {
         public void visit(BlockAddressConstant constant) {
             final LLVMNativePointer blockAddress = LLVMNativePointer.create(constant.getBlockIndex());
             final PointerType type = new PointerType(null);
+            context.initializeType(type);
             resolvedNode = nodeFactory.createLiteral(blockAddress, type);
         }
 
@@ -464,14 +467,14 @@ public final class LLVMSymbolReadResolver {
                     throw new LLVMParserException("Indices on structs must be constant integers!");
                 }
                 AggregateType aggregate = (AggregateType) currentType;
-                final long indexedTypeLength = context.getIndexOffset(1, aggregate);
+                final long indexedTypeLength = aggregate.getOffsetOf(1);
                 currentType = aggregate.getElementType(1);
                 final LLVMExpressionNode indexNode = resolve(indexSymbol);
                 currentAddress = nodeFactory.createTypedElementPointer(currentAddress, indexNode, indexedTypeLength, currentType);
             } else {
                 // the index is a constant integer
                 AggregateType aggregate = (AggregateType) currentType;
-                final long addressOffset = context.getIndexOffset(indexInteger, aggregate);
+                final long addressOffset = aggregate.getOffsetOf(indexInteger);
                 currentType = aggregate.getElementType(indexInteger);
 
                 // creating a pointer inserts type information, this needs to happen for the address

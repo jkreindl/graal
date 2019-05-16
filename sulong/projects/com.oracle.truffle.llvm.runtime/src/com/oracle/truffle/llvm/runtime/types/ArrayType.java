@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -30,12 +30,15 @@
 package com.oracle.truffle.llvm.runtime.types;
 
 import com.oracle.truffle.api.Assumption;
+import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
+
+import java.util.IdentityHashMap;
 
 public final class ArrayType extends AggregateType {
 
@@ -49,8 +52,29 @@ public final class ArrayType extends AggregateType {
         this.length = length;
     }
 
+    @Override
+    protected void initialize(DataLayout targetDataLayout, IdentityHashMap<Type, Void> previouslyInitialized) {
+        CompilerAsserts.neverPartOfCompilation("Type must be initialized before compilation");
+
+        if (isInitialized() || previouslyInitialized.containsKey(this)) {
+            return;
+        } else {
+            previouslyInitialized.put(this, null);
+        }
+
+        if (previouslyInitialized.containsKey(elementType)) {
+            elementType.initialize(targetDataLayout, previouslyInitialized);
+        }
+
+        setInitializedProperties(length * elementType.getByteSize(), elementType.getByteAlignment());
+    }
+
     public void setElementType(Type elementType) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
+        if (isInitialized()) {
+            throw new IllegalStateException("Must not modify base of initialized vector type");
+        }
+
         this.elementTypeAssumption.invalidate();
         this.elementType = elementType;
         this.elementTypeAssumption = Truffle.getRuntime().createAssumption("ArrayType.elementType");
@@ -84,24 +108,15 @@ public final class ArrayType extends AggregateType {
     }
 
     @Override
-    public int getAlignment(DataLayout targetDataLayout) {
-        return getElementType().getAlignment(targetDataLayout);
-    }
-
-    @Override
-    public int getSize(DataLayout targetDataLayout) {
-        return getElementType().getSize(targetDataLayout) * length;
-    }
-
-    @Override
     public Type shallowCopy() {
         final ArrayType copy = new ArrayType(getElementType(), length);
+        copy.setInitializedProperties(getByteSize(), getByteAlignment());
         return copy;
     }
 
     @Override
-    public long getOffsetOf(long index, DataLayout targetDataLayout) {
-        return getElementType().getSize(targetDataLayout) * index;
+    public long getOffsetOf(long index) {
+        return getElementType().getByteSize() * index;
     }
 
     @Override

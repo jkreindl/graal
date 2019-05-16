@@ -102,7 +102,9 @@ public final class Constants implements ParserListener {
 
             case CONSTANT_NULL:
                 if (Type.isIntegerType(type)) {
-                    scope.addSymbol(new NullConstant(type), Type.createConstantForType(type, 0));
+                    Type constantType = Type.createConstantForType(type, 0);
+                    scope.initializeType(constantType);
+                    scope.addSymbol(new NullConstant(type), constantType);
                 } else {
                     scope.addSymbol(new NullConstant(type), type);
                 }
@@ -114,7 +116,9 @@ public final class Constants implements ParserListener {
 
             case CONSTANT_INTEGER: {
                 long value = Records.toSignedValue(args[0]);
-                scope.addSymbol(new IntegerConstant(type, value), Type.createConstantForType(type, value));
+                Type constantType = Type.createConstantForType(type, value);
+                scope.initializeType(constantType);
+                scope.addSymbol(new IntegerConstant(type, value), constantType);
                 return;
             }
             case CONSTANT_WIDE_INTEGER: {
@@ -126,7 +130,9 @@ public final class Constants implements ParserListener {
                     temp = temp.shiftLeft(i * Long.SIZE);
                     value = value.add(temp);
                 }
-                scope.addSymbol(new BigIntegerConstant(type, value), Type.createConstantForType(type, value));
+                Type constantType = Type.createConstantForType(type, value);
+                scope.initializeType(constantType);
+                scope.addSymbol(new BigIntegerConstant(type, value), constantType);
                 return;
             }
             case CONSTANT_FLOAT:

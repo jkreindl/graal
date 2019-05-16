@@ -82,7 +82,6 @@ import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
-import com.oracle.truffle.llvm.runtime.types.AggregateType;
 import com.oracle.truffle.llvm.runtime.types.FunctionType;
 import com.oracle.truffle.llvm.runtime.types.Type;
 
@@ -431,22 +430,6 @@ public final class LLVMContext {
         return null;
     }
 
-    public int getByteAlignment(Type type) {
-        return type.getAlignment(dataLayout);
-    }
-
-    public int getByteSize(Type type) {
-        return type.getSize(dataLayout);
-    }
-
-    public int getBytePadding(long offset, Type type) {
-        return Type.getPadding(offset, type, dataLayout);
-    }
-
-    public long getIndexOffset(long index, AggregateType type) {
-        return type.getOffsetOf(index, dataLayout);
-    }
-
     public DataLayout getDataSpecConverter() {
         return dataLayout;
     }
@@ -744,6 +727,10 @@ public final class LLVMContext {
 
     public void addDataLayout(DataLayout layout) {
         this.dataLayout = this.dataLayout.merge(layout);
+    }
+
+    public void initializeType(Type type) {
+        new Type.Initializer(dataLayout).initializeType(type);
     }
 
     public LLVMSourceContext getSourceContext() {

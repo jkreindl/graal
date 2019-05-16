@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -30,12 +30,15 @@
 package com.oracle.truffle.llvm.runtime.types;
 
 import com.oracle.truffle.api.Assumption;
+import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
+
+import java.util.IdentityHashMap;
 
 public final class VectorType extends AggregateType {
 
@@ -51,6 +54,19 @@ public final class VectorType extends AggregateType {
         this.elementTypeAssumption = Truffle.getRuntime().createAssumption("VectorType.elementType");
         this.elementType = elementType;
         this.length = length;
+    }
+
+    @Override
+    public void initialize(DataLayout targetDataLayout, IdentityHashMap<Type, Void> previouslyInitialized) {
+        CompilerAsserts.neverPartOfCompilation("Type must be initialized before compilation");
+
+        if (isInitialized() || previouslyInitialized.containsKey(this)) {
+            return;
+        }
+
+        elementType.initialize(targetDataLayout, previouslyInitialized);
+
+        setInitializedProperties(length * elementType.getByteSize(), elementType.getByteAlignment());
     }
 
     public Type getElementType() {
@@ -74,6 +90,8 @@ public final class VectorType extends AggregateType {
         CompilerDirectives.transferToInterpreterAndInvalidate();
         if (elementType == null || !(elementType instanceof PrimitiveType || elementType instanceof PointerType)) {
             throw new AssertionError("Invalid ElementType of Vector: " + elementType);
+        } else if (isInitialized()) {
+            throw new IllegalStateException("Must not modify base of initialized vector type");
         }
         this.elementTypeAssumption.invalidate();
         this.elementType = elementType;
@@ -95,24 +113,15 @@ public final class VectorType extends AggregateType {
     }
 
     @Override
-    public int getAlignment(DataLayout targetDataLayout) {
-        return getElementType().getAlignment(targetDataLayout);
-    }
-
-    @Override
-    public int getSize(DataLayout targetDataLayout) {
-        return getElementType().getSize(targetDataLayout) * length;
-    }
-
-    @Override
     public Type shallowCopy() {
         final VectorType copy = new VectorType(getElementType(), length);
+        copy.setInitializedProperties(getByteSize(), getByteAlignment());
         return copy;
     }
 
     @Override
-    public long getOffsetOf(long index, DataLayout targetDataLayout) {
-        return getElementType().getSize(targetDataLayout) * index;
+    public long getOffsetOf(long index) {
+        return getElementType().getByteSize() * index;
     }
 
     @Override

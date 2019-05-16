@@ -168,7 +168,7 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         final Type type = allocate.getPointeeType();
         int alignment;
         if (allocate.getAlign() == 0) {
-            alignment = context.getByteAlignment(type);
+            alignment = type.getByteAlignment();
         } else {
             alignment = 1 << (allocate.getAlign() - 1);
         }
@@ -227,11 +227,12 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         int argIndex = 0;
         // stack pointer
         argNodes[argIndex] = nodeFactory.createFrameRead(PointerType.VOID, getStackSlot());
-        argTypes[argIndex] = new PointerType(null);
+        argTypes[argIndex] = PointerType.EMPTY;
         argIndex++;
 
         if (targetType instanceof StructureType) {
             argTypes[argIndex] = new PointerType(targetType);
+            context.initializeType(argTypes[argIndex]);
             argNodes[argIndex] = nodeFactory.createGetUniqueStackSpace(targetType, uniquesRegion);
             argIndex++;
         }
@@ -325,7 +326,7 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
 
         int argIndex = 0;
         args[argIndex] = nodeFactory.createFrameRead(PointerType.VOID, getStackSlot());
-        argsType[argIndex] = new PointerType(null);
+        argsType[argIndex] = PointerType.EMPTY;
         argIndex++;
 
         for (int i = 0; i < call.getArgumentCount(); i++) {
@@ -362,10 +363,11 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         final Type[] argTypes = new Type[argumentCount];
         int argIndex = 0;
         argNodes[argIndex] = nodeFactory.createFrameRead(PointerType.VOID, getStackSlot());
-        argTypes[argIndex] = new PointerType(null);
+        argTypes[argIndex] = PointerType.EMPTY;
         argIndex++;
         if (targetType instanceof StructureType) {
             argTypes[argIndex] = new PointerType(targetType);
+            context.initializeType(argTypes[argIndex]);
             argNodes[argIndex] = nodeFactory.createGetUniqueStackSpace(targetType, uniquesRegion);
             argIndex++;
         }
@@ -431,7 +433,7 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
 
         int argIndex = 0;
         args[argIndex] = nodeFactory.createFrameRead(PointerType.VOID, getStackSlot());
-        argsType[argIndex] = new PointerType(null);
+        argsType[argIndex] = PointerType.EMPTY;
         argIndex++;
 
         for (int i = 0; i < call.getArgumentCount(); i++) {
@@ -552,11 +554,11 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
 
         final AggregateType aggregateType = (AggregateType) baseType;
 
-        long offset = context.getIndexOffset(targetIndex, aggregateType);
+        long offset = aggregateType.getOffsetOf(targetIndex);
 
         final Type targetType = aggregateType.getElementType(targetIndex);
         if (targetType != null && !((targetType instanceof StructureType) && (((StructureType) targetType).isPacked()))) {
-            offset += context.getBytePadding(offset, targetType);
+            offset += Type.getPadding(offset, targetType);
         }
 
         if (offset != 0) {
@@ -616,9 +618,9 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
 
         final LLVMExpressionNode resultAggregate = nodeFactory.createGetUniqueStackSpace(sourceType, uniquesRegion);
 
-        final long offset = context.getIndexOffset(targetIndex, sourceType);
+        final long offset = sourceType.getOffsetOf(targetIndex);
         final LLVMExpressionNode result = nodeFactory.createInsertValue(resultAggregate, sourceAggregate,
-                        context.getByteSize(sourceType), offset, valueToInsert, valueType);
+                        sourceType.getByteSize(), offset, valueToInsert, valueType);
 
         createFrameWrite(result, insert);
     }
@@ -889,8 +891,8 @@ final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
     private LLVMExpressionNode capsuleAddressByValue(LLVMExpressionNode child, Type type, AttributesGroup paramAttr) {
         final Type pointee = ((PointerType) type).getPointeeType();
 
-        final int size = context.getByteSize(pointee);
-        int alignment = context.getByteAlignment(pointee);
+        final int size = pointee.getByteSize();
+        int alignment = pointee.getByteAlignment();
         for (Attribute attr : paramAttr.getAttributes()) {
             if (attr instanceof Attribute.KnownIntegerValueAttribute && ((Attribute.KnownIntegerValueAttribute) attr).getAttr() == Attribute.Kind.ALIGN) {
                 alignment = ((Attribute.KnownIntegerValueAttribute) attr).getValue();

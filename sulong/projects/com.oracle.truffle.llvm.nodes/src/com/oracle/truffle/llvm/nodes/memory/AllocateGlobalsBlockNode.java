@@ -42,7 +42,7 @@ public final class AllocateGlobalsBlockNode extends LLVMNode implements LLVMAllo
     private final LLVMMemory memory;
 
     public AllocateGlobalsBlockNode(LLVMContext context, StructureType type) {
-        this.size = context.getByteSize(type);
+        this.size = type.getByteSize();
         this.memory = context.getLanguage().getCapability(LLVMMemory.class);
     }
 

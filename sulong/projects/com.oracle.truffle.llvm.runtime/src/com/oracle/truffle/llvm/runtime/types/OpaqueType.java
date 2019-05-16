@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,6 +29,7 @@
  */
 package com.oracle.truffle.llvm.runtime.types;
 
+import java.util.IdentityHashMap;
 import java.util.Objects;
 
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
@@ -45,6 +46,12 @@ public final class OpaqueType extends Type {
 
     public OpaqueType(String name) {
         this.name = name;
+        setInitializedProperties(0, Long.BYTES);
+    }
+
+    @Override
+    protected void initialize(DataLayout targetDataLayout, IdentityHashMap<Type, Void> previouslyInitialized) {
+        // opaque type does not require initialization as all its properties are constant defaults
     }
 
     public String getName() {
@@ -62,18 +69,9 @@ public final class OpaqueType extends Type {
     }
 
     @Override
-    public int getAlignment(DataLayout targetDataLayout) {
-        return Long.BYTES;
-    }
-
-    @Override
-    public int getSize(DataLayout targetDataLayout) {
-        return 0;
-    }
-
-    @Override
     public Type shallowCopy() {
         final OpaqueType shallowCopy = new OpaqueType(name);
+        shallowCopy.setInitializedProperties(getByteSize(), getByteAlignment());
         return shallowCopy;
     }
 

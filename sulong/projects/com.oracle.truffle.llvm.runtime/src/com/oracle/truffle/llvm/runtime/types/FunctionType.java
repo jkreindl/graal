@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -30,8 +30,10 @@
 package com.oracle.truffle.llvm.runtime.types;
 
 import java.util.Arrays;
+import java.util.IdentityHashMap;
 
 import com.oracle.truffle.api.Assumption;
+import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
@@ -53,6 +55,31 @@ public final class FunctionType extends Type {
         this.returnType = returnType;
         this.argumentTypes = argumentTypes;
         this.isVarargs = isVarargs;
+    }
+
+    @Override
+    public void initialize(DataLayout targetDataLayout, IdentityHashMap<Type, Void> previouslyInitialized) {
+        CompilerAsserts.neverPartOfCompilation("Type must be initialized before compilation");
+
+        if (isInitialized() || previouslyInitialized.containsKey(this)) {
+            return;
+        } else {
+            previouslyInitialized.put(this, null);
+        }
+
+        int byteAlignment;
+        try {
+            byteAlignment = targetDataLayout.getBitAlignment(this) / Byte.SIZE;
+        } catch (IllegalStateException alignNotSpecified) {
+            byteAlignment = Long.BYTES;
+        }
+
+        setInitializedProperties(LLVMNode.ADDRESS_SIZE_IN_BYTES, byteAlignment);
+
+        returnType.initialize(targetDataLayout, previouslyInitialized);
+        for (Type argType : argumentTypes) {
+            argType.initialize(targetDataLayout, previouslyInitialized);
+        }
     }
 
     public Type[] getArgumentTypes() {
@@ -88,22 +115,9 @@ public final class FunctionType extends Type {
     }
 
     @Override
-    public int getAlignment(DataLayout targetDataLayout) {
-        if (targetDataLayout != null) {
-            return targetDataLayout.getBitAlignment(this) / Byte.SIZE;
-        } else {
-            return Long.BYTES;
-        }
-    }
-
-    @Override
-    public int getSize(DataLayout targetDataLayout) {
-        return LLVMNode.ADDRESS_SIZE_IN_BYTES;
-    }
-
-    @Override
     public Type shallowCopy() {
         final FunctionType copy = new FunctionType(getReturnType(), argumentTypes, isVarargs);
+        copy.setInitializedProperties(getByteSize(), getByteAlignment());
         return copy;
     }
 

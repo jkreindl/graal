@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -37,6 +37,8 @@ import com.oracle.truffle.llvm.parser.metadata.MDAttachment;
 import com.oracle.truffle.llvm.parser.metadata.MetadataValueList;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDefinition;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.Instruction;
+import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
+import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class IRScope {
@@ -51,6 +53,8 @@ public final class IRScope {
     private FunctionDefinition currentFunction;
     private int valueTypesScopeStart;
 
+    private Type.Initializer typeInitializer;
+
     public IRScope() {
         symbols = new SymbolTable();
         valueTypes = new ArrayList<>();
@@ -58,6 +62,22 @@ public final class IRScope {
         metadata = new MetadataValueList();
         currentFunction = null;
         valueTypesScopeStart = GLOBAL_SCOPE_START;
+        typeInitializer = null;
+    }
+
+    public Type.Initializer getTypeInitializer() {
+        if (typeInitializer == null) {
+            throw new LLVMParserException("Require Data Layout to initialize types");
+        }
+        return typeInitializer;
+    }
+
+    public void initializeType(Type type) {
+        getTypeInitializer().initializeType(type);
+    }
+
+    public void setDataLayout(DataLayout layout) {
+        this.typeInitializer = new Type.Initializer(layout);
     }
 
     public void addSymbol(SymbolImpl symbol, Type type) {

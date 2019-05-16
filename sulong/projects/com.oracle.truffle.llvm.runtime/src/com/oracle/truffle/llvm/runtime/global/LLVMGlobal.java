@@ -110,6 +110,10 @@ public final class LLVMGlobal implements LLVMSymbol {
         return type.getPointeeType();
     }
 
+    public Type getPointerType() {
+        return type;
+    }
+
     @Override
     public boolean isDefined() {
         return library != null;

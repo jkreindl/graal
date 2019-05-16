@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -32,6 +32,8 @@ package com.oracle.truffle.llvm.runtime.types;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
+import java.util.IdentityHashMap;
+
 public final class VoidType extends Type {
 
     public static final VoidType INSTANCE = new VoidType();
@@ -40,6 +42,12 @@ public final class VoidType extends Type {
 
     private VoidType() {
         this.identity = new Object();
+        setInitializedProperties(0, 0);
+    }
+
+    @Override
+    protected void initialize(DataLayout targetDataLayout, IdentityHashMap<Type, Void> previouslyInitialized) {
+        // void type does not require initialization as all its properties are constant defaults
     }
 
     @Override
@@ -50,16 +58,6 @@ public final class VoidType extends Type {
     @Override
     public void accept(TypeVisitor visitor) {
         visitor.visit(this);
-    }
-
-    @Override
-    public int getAlignment(DataLayout targetDataLayout) {
-        return 0;
-    }
-
-    @Override
-    public int getSize(DataLayout targetDataLayout) {
-        return 0;
     }
 
     @Override

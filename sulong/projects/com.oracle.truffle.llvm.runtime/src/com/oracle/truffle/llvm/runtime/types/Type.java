@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,22 +29,98 @@
  */
 package com.oracle.truffle.llvm.runtime.types;
 
+import com.oracle.truffle.api.CompilerAsserts;
+import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType.PrimitiveKind;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
+import java.util.IdentityHashMap;
+
 public abstract class Type {
 
+    @CompilationFinal private int byteSize = -1;
+    @CompilationFinal private int byteAlignment = -1;
+
     public static final Type[] EMPTY_ARRAY = {};
+
+    /**
+     * Initialize size and alignment properties of this type after it has been fully parsed. Also
+     * initializes all types referenced by this type. Type structures with circular dependencies are
+     * supported, and each contained type is only initialized once.
+     *
+     * @param targetDataLayout the data layout to use for determining the size
+     * @param previouslyInitialized a set of types that are currently being or have already been
+     *            initialized
+     */
+    protected abstract void initialize(DataLayout targetDataLayout, IdentityHashMap<Type, Void> previouslyInitialized);
+
+    /**
+     * Set the size and alignment properties of this type.
+     *
+     * @param byteSize the size of values of this type in number of bytes
+     * @param byteAlignment the byte-alignment of values of this type
+     */
+    protected void setInitializedProperties(int byteSize, int byteAlignment) {
+        CompilerAsserts.neverPartOfCompilation("Type must be initialized before compilation");
+        this.byteSize = byteSize;
+        this.byteAlignment = byteAlignment;
+    }
+
+    /**
+     * Clear any computed size and alignment properties. This is necessary after a data-layout
+     * change. In execution, this means that type constants, e.g. {@link PrimitiveType#I32}, will
+     * always have the size and alignment specified in the last data-layout parsed. This action is
+     * not transitively applied to contained types.
+     */
+    private void clearInitialization() {
+        byteSize = -1;
+        byteAlignment = -1;
+    }
+
+    boolean isInitialized() {
+        return byteSize != -1 && byteAlignment != -1;
+    }
 
     public abstract int getBitSize();
 
     public abstract void accept(TypeVisitor visitor);
 
-    public abstract int getAlignment(DataLayout targetDataLayout);
+    /**
+     * Get the byte-size of values of this type. This type and all types referenced by it must have
+     * been {@link Initializer initialized} before this method can be used.
+     *
+     * @return the size in number of bytes
+     *
+     * @throws IllegalStateException if this type was not properly initialized
+     */
+    public int getByteSize() {
+        if (!isInitialized()) {
+            CompilerDirectives.transferToInterpreter();
+            throw new IllegalStateException("Size of type was not initialized");
+        }
 
-    public abstract int getSize(DataLayout targetDataLayout);
+        return byteSize;
+    }
+
+    /**
+     * Get the byte-alignment of values of this type. This type and all types referenced by it must
+     * have been {@link Initializer initialized} before this method can be used.
+     *
+     * @return the byte-alignment
+     *
+     * @throws IllegalStateException if this type was not properly initialized
+     */
+    public int getByteAlignment() {
+        if (!isInitialized()) {
+            CompilerDirectives.transferToInterpreter();
+            throw new IllegalStateException("Alignment of type was not initialized");
+        }
+
+        return byteAlignment;
+    }
 
     public abstract Type shallowCopy();
 
@@ -79,7 +155,7 @@ public abstract class Type {
         if (type instanceof PrimitiveType) {
             return new PrimitiveType(((PrimitiveType) type).getPrimitiveKind(), value);
         } else {
-            return new VariableBitWidthType(((VariableBitWidthType) type).getBitSize(), value);
+            return new VariableBitWidthType(type.getBitSize(), value);
         }
     }
 
@@ -143,12 +219,52 @@ public abstract class Type {
     }
 
     public static int getPadding(long offset, int alignment) {
-        assert (alignment == 0 ? 0 : (alignment - (offset % alignment)) % alignment) == (int) (alignment == 0 ? 0 : (alignment - (offset % alignment)) % alignment);
-        return (int) (alignment == 0 ? 0 : (alignment - (offset % alignment)) % alignment);
+        final long padding = alignment == 0 ? 0 : (alignment - (offset % alignment)) % alignment;
+        assert padding == (int) padding;
+        return (int) padding;
     }
 
-    public static int getPadding(long offset, Type type, DataLayout targetDataLayout) {
-        final int alignment = type.getAlignment(targetDataLayout);
+    public static int getPadding(long offset, Type type) {
+        final int alignment = type.getByteAlignment();
         return getPadding(offset, alignment);
+    }
+
+    /**
+     * Class to initialize any number of {@link Type Type} objects.
+     */
+    public static final class Initializer {
+
+        private final DataLayout targetDataLayout;
+        private final IdentityHashMap<Type, Void> previouslyInitialized;
+
+        /**
+         * Constructor setting up the data layout to use for determining the size and alignment
+         * properties of types to initialize.
+         *
+         * @param targetDataLayout the data layout containing target-specific size and alignment
+         *            information
+         */
+        public Initializer(DataLayout targetDataLayout) {
+            this.targetDataLayout = targetDataLayout;
+            this.previouslyInitialized = new IdentityHashMap<>();
+        }
+
+        /**
+         * Initialize the given type and all types referenced by it.
+         *
+         * @param type the type to initialize
+         */
+        public void initializeType(Type type) {
+            type.initialize(targetDataLayout, previouslyInitialized);
+        }
+
+        /**
+         * Clear size and alignment properties of the given type only.
+         *
+         * @param type the type to un-initialize
+         */
+        public static void clearTypeInitialization(Type type) {
+            type.clearInitialization();
+        }
     }
 }

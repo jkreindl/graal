@@ -31,10 +31,12 @@ package com.oracle.truffle.llvm.parser.listeners;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.function.Consumer;
 
 import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.llvm.parser.model.IRScope;
 import com.oracle.truffle.llvm.parser.model.ModelModule;
 import com.oracle.truffle.llvm.parser.records.Records;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
@@ -78,6 +80,7 @@ public final class Types implements ParserListener, Iterable<Type> {
     private static final int TYPE_TOKEN = 22;
 
     private final ModelModule module;
+    private final IRScope scope;
 
     private Type[] table = Type.EMPTY_ARRAY;
 
@@ -85,8 +88,9 @@ public final class Types implements ParserListener, Iterable<Type> {
 
     private int size = 0;
 
-    Types(ModelModule module) {
+    Types(ModelModule module, IRScope scope) {
         this.module = module;
+        this.scope = scope;
     }
 
     @Override
@@ -224,6 +228,46 @@ public final class Types implements ParserListener, Iterable<Type> {
 
     }
 
+    @Override
+    public void exit() {
+        // clear initialization of type constants
+        Type.Initializer.clearTypeInitialization(PointerType.VOID);
+        Type.Initializer.clearTypeInitialization(PointerType.I8);
+        Type.Initializer.clearTypeInitialization(PrimitiveType.I1);
+        Type.Initializer.clearTypeInitialization(PrimitiveType.I8);
+        Type.Initializer.clearTypeInitialization(PrimitiveType.I16);
+        Type.Initializer.clearTypeInitialization(PrimitiveType.I32);
+        Type.Initializer.clearTypeInitialization(PrimitiveType.I64);
+        Type.Initializer.clearTypeInitialization(PrimitiveType.HALF);
+        Type.Initializer.clearTypeInitialization(PrimitiveType.FLOAT);
+        Type.Initializer.clearTypeInitialization(PrimitiveType.DOUBLE);
+        Type.Initializer.clearTypeInitialization(PrimitiveType.F128);
+        Type.Initializer.clearTypeInitialization(PrimitiveType.X86_FP80);
+        Type.Initializer.clearTypeInitialization(PrimitiveType.PPC_FP128);
+
+        final Type.Initializer typeInitializer = scope.getTypeInitializer();
+
+        // initialize all types
+        for (Type type : table) {
+            typeInitializer.initializeType(type);
+        }
+
+        // also static types need to be initialized
+        typeInitializer.initializeType(PointerType.VOID);
+        typeInitializer.initializeType(PointerType.I8);
+        typeInitializer.initializeType(PrimitiveType.I1);
+        typeInitializer.initializeType(PrimitiveType.I8);
+        typeInitializer.initializeType(PrimitiveType.I16);
+        typeInitializer.initializeType(PrimitiveType.I32);
+        typeInitializer.initializeType(PrimitiveType.I64);
+        typeInitializer.initializeType(PrimitiveType.HALF);
+        typeInitializer.initializeType(PrimitiveType.FLOAT);
+        typeInitializer.initializeType(PrimitiveType.DOUBLE);
+        typeInitializer.initializeType(PrimitiveType.F128);
+        typeInitializer.initializeType(PrimitiveType.X86_FP80);
+        typeInitializer.initializeType(PrimitiveType.PPC_FP128);
+    }
+
     private void setType(int typeIndex, Consumer<Type> typeFieldSetter) {
         if (typeIndex < size) {
             typeFieldSetter.accept(table[typeIndex]);
@@ -297,19 +341,25 @@ public final class Types implements ParserListener, Iterable<Type> {
         }
 
         @Override
+        protected void initialize(DataLayout targetDataLayout, IdentityHashMap<Type, Void> previouslyInitialized) {
+            CompilerDirectives.transferToInterpreter();
+            throw new LLVMParserException("Unresolved Forward-Referenced Type!");
+        }
+
+        @Override
         public int getBitSize() {
             CompilerDirectives.transferToInterpreter();
             throw new LLVMParserException("Unresolved Forward-Referenced Type!");
         }
 
         @Override
-        public int getAlignment(DataLayout targetDataLayout) {
+        public int getByteSize() {
             CompilerDirectives.transferToInterpreter();
             throw new LLVMParserException("Unresolved Forward-Referenced Type!");
         }
 
         @Override
-        public int getSize(DataLayout targetDataLayout) {
+        public int getByteAlignment() {
             CompilerDirectives.transferToInterpreter();
             throw new LLVMParserException("Unresolved Forward-Referenced Type!");
         }

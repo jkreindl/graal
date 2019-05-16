@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -30,8 +30,10 @@
 package com.oracle.truffle.llvm.runtime.types;
 
 import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.stream.Collectors;
 
+import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
@@ -53,6 +55,44 @@ public final class StructureType extends AggregateType {
 
     public StructureType(boolean isPacked, Type[] types) {
         this(LLVMIdentifier.UNKNOWN, isPacked, types);
+    }
+
+    @Override
+    protected void initialize(DataLayout targetDataLayout, IdentityHashMap<Type, Void> previouslyInitialized) {
+        CompilerAsserts.neverPartOfCompilation("Type must be initialized before compilation");
+
+        if (isInitialized() || previouslyInitialized.containsKey(this)) {
+            return;
+        } else {
+            previouslyInitialized.put(this, null);
+        }
+
+        // properties of element types will be needed in computation of this type's properties
+        for (Type elementType : types) {
+            elementType.initialize(targetDataLayout, previouslyInitialized);
+        }
+
+        // alignment is needed for computing the size
+        final int byteAlignment = isPacked ? 1 : getLargestAlignment();
+        final int byteSize = computeSize(byteAlignment);
+        setInitializedProperties(byteSize, byteAlignment);
+    }
+
+    private int computeSize(int byteAlignment) {
+        int sumByte = 0;
+        for (final Type elementType : types) {
+            if (!isPacked) {
+                sumByte += Type.getPadding(sumByte, elementType);
+            }
+            sumByte += elementType.getByteSize();
+        }
+
+        int padding = 0;
+        if (!isPacked && sumByte != 0) {
+            padding = Type.getPadding(sumByte, byteAlignment);
+        }
+
+        return sumByte + padding;
     }
 
     public Type[] getElementTypes() {
@@ -94,55 +134,33 @@ public final class StructureType extends AggregateType {
     }
 
     @Override
-    public int getAlignment(DataLayout targetDataLayout) {
-        return isPacked ? 1 : getLargestAlignment(targetDataLayout);
-    }
-
-    @Override
-    public int getSize(DataLayout targetDataLayout) {
-        int sumByte = 0;
-        for (final Type elementType : types) {
-            if (!isPacked) {
-                sumByte += Type.getPadding(sumByte, elementType, targetDataLayout);
-            }
-            sumByte += elementType.getSize(targetDataLayout);
-        }
-
-        int padding = 0;
-        if (!isPacked && sumByte != 0) {
-            padding = Type.getPadding(sumByte, getAlignment(targetDataLayout));
-        }
-
-        return sumByte + padding;
-    }
-
-    @Override
     public Type shallowCopy() {
         final StructureType copy = new StructureType(name, isPacked, types);
+        copy.setInitializedProperties(getByteSize(), getByteAlignment());
         return copy;
     }
 
     @Override
-    public long getOffsetOf(long index, DataLayout targetDataLayout) {
+    public long getOffsetOf(long index) {
         int offset = 0;
         for (int i = 0; i < index; i++) {
             final Type elementType = types[i];
             if (!isPacked) {
-                offset += Type.getPadding(offset, elementType, targetDataLayout);
+                offset += Type.getPadding(offset, elementType);
             }
-            offset += elementType.getSize(targetDataLayout);
+            offset += elementType.getByteSize();
         }
-        if (!isPacked && getSize(targetDataLayout) > offset) {
+        if (!isPacked && getByteSize() > offset) {
             assert index == (int) index;
-            offset += Type.getPadding(offset, types[(int) index], targetDataLayout);
+            offset += Type.getPadding(offset, types[(int) index]);
         }
         return offset;
     }
 
-    private int getLargestAlignment(DataLayout targetDataLayout) {
+    private int getLargestAlignment() {
         int largestAlignment = 0;
         for (final Type elementType : types) {
-            largestAlignment = Math.max(largestAlignment, elementType.getAlignment(targetDataLayout));
+            largestAlignment = Math.max(largestAlignment, elementType.getByteAlignment());
         }
         return largestAlignment;
     }
