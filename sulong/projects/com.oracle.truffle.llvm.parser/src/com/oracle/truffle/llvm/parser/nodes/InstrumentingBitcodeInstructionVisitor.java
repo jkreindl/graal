@@ -98,6 +98,10 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     public void visit(AllocateInstruction allocate) {
         tags = LLVMTags.Alloca.SINGLE_EXPRESSION_TAG;
         super.visit(allocate);
+
+        // TODO ensure there is a child for the count (super does not create one if it is explicitly
+        // 1)
+        // TODO add the type to the nodeObject
     }
 
     @Override
