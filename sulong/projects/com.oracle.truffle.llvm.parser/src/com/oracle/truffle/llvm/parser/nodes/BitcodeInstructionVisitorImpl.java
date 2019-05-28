@@ -123,7 +123,7 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
 
     BitcodeInstructionVisitorImpl(FrameDescriptor frame, LLVMStack.UniquesRegion uniquesRegion, List<LLVMPhiManager.Phi> blockPhis, int argCount, LLVMSymbolReadResolver symbols, LLVMContext context,
                     LLVMContext.ExternalLibrary library, ArrayList<LLVMLivenessAnalysis.NullerInformation> nullerInfos, List<FrameSlot> notNullable, LLVMRuntimeDebugInformation dbgInfoHandler) {
-        super(context.getNodeFactory());
+        super(context.getLanguage().getNodeFactory());
         this.frame = frame;
         this.blockPhis = blockPhis;
         this.argCount = argCount;

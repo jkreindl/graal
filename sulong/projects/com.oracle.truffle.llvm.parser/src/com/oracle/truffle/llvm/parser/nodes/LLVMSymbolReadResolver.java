@@ -57,7 +57,7 @@ public abstract class LLVMSymbolReadResolver {
     protected LLVMSymbolReadResolver(LLVMParserRuntime runtime) {
         this.runtime = runtime;
         this.context = runtime.getContext();
-        this.nodeFactory = context.getNodeFactory();
+        this.nodeFactory = context.getLanguage().getNodeFactory();
     }
 
     public static LLVMSymbolReadResolver createUninstrumenting(LLVMParserRuntime runtime, FrameDescriptor frame, GetStackSpaceFactory getStackSpaceFactory) {
