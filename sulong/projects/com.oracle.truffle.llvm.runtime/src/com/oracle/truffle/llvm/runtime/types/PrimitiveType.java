@@ -30,7 +30,11 @@
 package com.oracle.truffle.llvm.runtime.types;
 
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.TruffleLanguage;
+import com.oracle.truffle.api.interop.UnknownIdentifierException;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
 public final class PrimitiveType extends Type {
@@ -202,5 +206,46 @@ public final class PrimitiveType extends Type {
             return false;
         }
         return true;
+    }
+
+    private static final String MEMBER_BIT_SIZE = "getBitSize";
+
+    @Override
+    public LLVMNodeObjectKeys getMembers(boolean includeInternal) {
+        return Type.extendDefaultMembers(MEMBER_BIT_SIZE);
+    }
+
+    @Override
+    public Object readMember(String member, TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {
+        assert member != null;
+        switch (member) {
+            case MEMBER_IS_INTEGER:
+                switch (kind) {
+                    case I1:
+                    case I8:
+                    case I16:
+                    case I32:
+                    case I64:
+                        return true;
+                    default:
+                        return false;
+                }
+            case MEMBER_IS_FLOATING_POINT:
+                switch (kind) {
+                    case HALF:
+                    case FLOAT:
+                    case DOUBLE:
+                    case X86_FP80:
+                    case F128:
+                    case PPC_FP128:
+                        return true;
+                    default:
+                        return false;
+                }
+            case MEMBER_BIT_SIZE:
+                return getBitSize();
+            default:
+                return super.readMember(member, contextReference);
+        }
     }
 }

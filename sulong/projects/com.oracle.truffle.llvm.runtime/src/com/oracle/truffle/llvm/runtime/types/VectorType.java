@@ -34,7 +34,11 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
+import com.oracle.truffle.api.TruffleLanguage;
+import com.oracle.truffle.api.interop.UnknownIdentifierException;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
 public final class VectorType extends AggregateType {
@@ -153,5 +157,28 @@ public final class VectorType extends AggregateType {
             return false;
         }
         return true;
+    }
+
+    private static final String MEMBER_VECTOR_LENGTH = "getVectorLength";
+    private static final String MEMBER_ELEMENT_TYPE = "getElementType";
+
+    @Override
+    public LLVMNodeObjectKeys getMembers(boolean includeInternal) {
+        return Type.extendDefaultMembers(MEMBER_VECTOR_LENGTH, MEMBER_ELEMENT_TYPE);
+    }
+
+    @Override
+    public Object readMember(String member, TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {
+        assert member != null;
+        switch (member) {
+            case MEMBER_IS_VECTOR:
+                return true;
+            case MEMBER_VECTOR_LENGTH:
+                return length;
+            case MEMBER_ELEMENT_TYPE:
+                return elementType;
+            default:
+                return super.readMember(member, contextReference);
+        }
     }
 }

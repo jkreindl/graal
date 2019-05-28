@@ -31,7 +31,11 @@ package com.oracle.truffle.llvm.runtime.types;
 
 import java.util.Objects;
 
+import com.oracle.truffle.api.TruffleLanguage;
+import com.oracle.truffle.api.interop.UnknownIdentifierException;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.types.symbols.LLVMIdentifier;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
@@ -101,5 +105,28 @@ public final class OpaqueType extends Type {
             return Objects.equals(name, other.name);
         }
         return false;
+    }
+
+    private static final String MEMBER_HAS_NAME = "hasName";
+    private static final String MEMBER_GET_NAME = "getName";
+
+    @Override
+    public LLVMNodeObjectKeys getMembers(boolean includeInternal) {
+        return Type.extendDefaultMembers(MEMBER_HAS_NAME, MEMBER_GET_NAME);
+    }
+
+    @Override
+    public Object readMember(String member, TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {
+        assert member != null;
+        switch (member) {
+            case MEMBER_IS_OPAQUE:
+                return true;
+            case MEMBER_HAS_NAME:
+                return !LLVMIdentifier.UNKNOWN.equals(name);
+            case MEMBER_GET_NAME:
+                return name;
+            default:
+                return super.readMember(member, contextReference);
+        }
     }
 }

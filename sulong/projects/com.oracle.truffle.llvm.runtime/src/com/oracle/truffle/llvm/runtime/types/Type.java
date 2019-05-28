@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,12 +29,26 @@
  */
 package com.oracle.truffle.llvm.runtime.types;
 
+import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.TruffleLanguage;
+import com.oracle.truffle.api.dsl.CachedContext;
 import com.oracle.truffle.api.frame.FrameSlotKind;
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.InvalidArrayIndexException;
+import com.oracle.truffle.api.interop.TruffleObject;
+import com.oracle.truffle.api.interop.UnknownIdentifierException;
+import com.oracle.truffle.api.interop.UnsupportedMessageException;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
+import com.oracle.truffle.llvm.runtime.LLVMLanguage;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType.PrimitiveKind;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
-public abstract class Type {
+@ExportLibrary(InteropLibrary.class)
+public abstract class Type implements TruffleObject {
 
     public static final Type[] EMPTY_ARRAY = {};
 
@@ -150,5 +164,124 @@ public abstract class Type {
     public static int getPadding(long offset, Type type, DataLayout targetDataLayout) {
         final int alignment = type.getAlignment(targetDataLayout);
         return getPadding(offset, alignment);
+    }
+
+    @ExportMessage
+    public boolean hasArrayElements() {
+        return false;
+    }
+
+    @ExportMessage
+    public long getArraySize() throws UnsupportedMessageException {
+        CompilerDirectives.transferToInterpreter();
+        throw UnsupportedMessageException.create();
+    }
+
+    @ExportMessage
+    public boolean isArrayElementReadable(@SuppressWarnings("unused") long index) {
+        return false;
+    }
+
+    @ExportMessage
+    @SuppressWarnings("unused")
+    public Object readArrayElement(long index) throws UnsupportedMessageException, InvalidArrayIndexException {
+        // the @SuppressWarnings is on the method to also encompass the InvalidArrayIndexException
+        // that is only thrown in overriding methods
+        CompilerDirectives.transferToInterpreter();
+        throw UnsupportedMessageException.create();
+    }
+
+    private static final String MEMBER_BYTESIZE = "byteSize";
+    private static final String MEMBER_ALIGNMENT = "byteAlignment";
+    static final String MEMBER_IS_INTEGER = "isIntegerType";
+    static final String MEMBER_IS_FLOATING_POINT = "isFloatingPointType";
+    static final String MEMBER_IS_STRUCTURE = "isStructureType";
+    static final String MEMBER_IS_ARRAY = "isArrayType";
+    static final String MEMBER_IS_VECTOR = "isVectorType";
+    static final String MEMBER_IS_POINTER = "isPointerType";
+    static final String MEMBER_IS_OPAQUE = "isOpaqueType";
+    static final String MEMBER_IS_FUNCTION = "isFunctionType";
+    static final String MEMBER_IS_VOID = "isVoidType";
+    static final String MEMBER_IS_META = "isMetaType";
+
+    private static final int DEFAULT_MEMBER_COUNT = 12;
+
+    @ExportMessage
+    public boolean hasMembers() {
+        return true;
+    }
+
+    @ExportMessage
+    public boolean isMemberReadable(String member) {
+        assert member != null;
+        switch (member) {
+            case MEMBER_BYTESIZE:
+            case MEMBER_ALIGNMENT:
+            case MEMBER_IS_INTEGER:
+            case MEMBER_IS_FLOATING_POINT:
+            case MEMBER_IS_STRUCTURE:
+            case MEMBER_IS_ARRAY:
+            case MEMBER_IS_VECTOR:
+            case MEMBER_IS_POINTER:
+            case MEMBER_IS_OPAQUE:
+            case MEMBER_IS_FUNCTION:
+            case MEMBER_IS_VOID:
+            case MEMBER_IS_META:
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    @ExportMessage
+    public LLVMNodeObjectKeys getMembers(@SuppressWarnings("unused") boolean includeInternal) {
+        return extendDefaultMembers();
+    }
+
+    static LLVMNodeObjectKeys extendDefaultMembers(String... additionalMembers) {
+        final String[] members = new String[DEFAULT_MEMBER_COUNT + additionalMembers.length];
+        members[0] = MEMBER_BYTESIZE;
+        members[1] = MEMBER_ALIGNMENT;
+        members[2] = MEMBER_IS_INTEGER;
+        members[3] = MEMBER_IS_FLOATING_POINT;
+        members[4] = MEMBER_IS_STRUCTURE;
+        members[5] = MEMBER_IS_ARRAY;
+        members[6] = MEMBER_IS_VECTOR;
+        members[7] = MEMBER_IS_POINTER;
+        members[8] = MEMBER_IS_OPAQUE;
+        members[9] = MEMBER_IS_FUNCTION;
+        members[10] = MEMBER_IS_VOID;
+        members[11] = MEMBER_IS_META;
+        for (int i = 0; i < additionalMembers.length; i++) {
+            members[DEFAULT_MEMBER_COUNT + i] = additionalMembers[i];
+        }
+        return new LLVMNodeObjectKeys(members);
+    }
+
+    @ExportMessage
+    public Object readMember(String member, @CachedContext(LLVMLanguage.class) TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {
+        assert member != null;
+        switch (member) {
+            case MEMBER_BYTESIZE:
+                return contextReference.get().getByteSize(this);
+
+            case MEMBER_ALIGNMENT:
+                return contextReference.get().getByteAlignment(this);
+
+            case MEMBER_IS_INTEGER:
+            case MEMBER_IS_FLOATING_POINT:
+            case MEMBER_IS_STRUCTURE:
+            case MEMBER_IS_ARRAY:
+            case MEMBER_IS_VECTOR:
+            case MEMBER_IS_POINTER:
+            case MEMBER_IS_OPAQUE:
+            case MEMBER_IS_FUNCTION:
+            case MEMBER_IS_VOID:
+                return false;
+
+            default:
+                throw UnknownIdentifierException.create(member);
+        }
     }
 }

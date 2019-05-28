@@ -34,6 +34,10 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
+import com.oracle.truffle.api.TruffleLanguage;
+import com.oracle.truffle.api.interop.UnknownIdentifierException;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
@@ -124,5 +128,25 @@ public final class PointerType extends AggregateType {
     @Override
     public boolean equals(Object obj) {
         return obj instanceof PointerType;
+    }
+
+    private static final String MEMBER_BASE_TYPE = "getBaseType";
+
+    @Override
+    public LLVMNodeObjectKeys getMembers(boolean includeInternal) {
+        return Type.extendDefaultMembers(MEMBER_BASE_TYPE);
+    }
+
+    @Override
+    public Object readMember(String member, TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {
+        assert member != null;
+        switch (member) {
+            case MEMBER_IS_POINTER:
+                return true;
+            case MEMBER_BASE_TYPE:
+                return pointeeType;
+            default:
+                return super.readMember(member, contextReference);
+        }
     }
 }

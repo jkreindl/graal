@@ -49,6 +49,10 @@ public class LLVMNodeObjectKeys implements TruffleObject {
         this.properties = properties;
     }
 
+    public String[] getProperties() {
+        return properties;
+    }
+
     @SuppressWarnings("static-method")
     @ExportMessage
     public boolean hasArrayElements() {

@@ -36,6 +36,11 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
+import com.oracle.truffle.api.TruffleLanguage;
+import com.oracle.truffle.api.interop.InvalidArrayIndexException;
+import com.oracle.truffle.api.interop.UnknownIdentifierException;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
@@ -45,7 +50,7 @@ public final class FunctionType extends Type {
     @CompilationFinal private Assumption returnTypeAssumption;
     @CompilationFinal private Type returnType;
 
-    private final Type[] argumentTypes;
+    @CompilationFinal(dimensions = 1) private final Type[] argumentTypes;
     private final boolean isVarargs;
 
     public FunctionType(Type returnType, Type[] argumentTypes, boolean isVarargs) {
@@ -168,5 +173,49 @@ public final class FunctionType extends Type {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public boolean hasArrayElements() {
+        return true;
+    }
+
+    @Override
+    public long getArraySize() {
+        return argumentTypes.length;
+    }
+
+    @Override
+    public boolean isArrayElementReadable(long index) {
+        return index >= 0 && index < argumentTypes.length;
+    }
+
+    @Override
+    public Object readArrayElement(long index) throws InvalidArrayIndexException {
+        if (index >= 0L && index < getArraySize()) {
+            return argumentTypes[(int) index];
+        }
+
+        throw InvalidArrayIndexException.create(index);
+    }
+
+    private static final String MEMBER_IS_FUNCTION_VARARGS = "isVarArgsFunctionType";
+
+    @Override
+    public LLVMNodeObjectKeys getMembers(boolean includeInternal) {
+        return Type.extendDefaultMembers(MEMBER_IS_FUNCTION_VARARGS);
+    }
+
+    @Override
+    public Object readMember(String member, TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {
+        assert member != null;
+        switch (member) {
+            case MEMBER_IS_FUNCTION:
+                return true;
+            case MEMBER_IS_FUNCTION_VARARGS:
+                return isVarargs;
+            default:
+                return super.readMember(member, contextReference);
+        }
     }
 }

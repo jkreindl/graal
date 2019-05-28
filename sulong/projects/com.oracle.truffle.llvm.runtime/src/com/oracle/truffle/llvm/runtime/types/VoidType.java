@@ -29,6 +29,9 @@
  */
 package com.oracle.truffle.llvm.runtime.types;
 
+import com.oracle.truffle.api.TruffleLanguage;
+import com.oracle.truffle.api.interop.UnknownIdentifierException;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
@@ -100,5 +103,14 @@ public final class VoidType extends Type {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public Object readMember(String member, TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {
+        if (MEMBER_IS_VOID.equals(member)) {
+            return true;
+        } else {
+            return super.readMember(member, contextReference);
+        }
     }
 }

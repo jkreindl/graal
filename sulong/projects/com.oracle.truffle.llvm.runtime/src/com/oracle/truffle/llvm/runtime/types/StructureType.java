@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -35,7 +35,12 @@ import java.util.stream.Collectors;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.TruffleLanguage;
+import com.oracle.truffle.api.interop.InvalidArrayIndexException;
+import com.oracle.truffle.api.interop.UnknownIdentifierException;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.types.symbols.LLVMIdentifier;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
@@ -46,6 +51,7 @@ public final class StructureType extends AggregateType {
     @CompilationFinal(dimensions = 1) private final Type[] types;
 
     public StructureType(String name, boolean isPacked, Type[] types) {
+        assert name != null;
         this.name = name;
         this.isPacked = isPacked;
         this.types = types;
@@ -70,7 +76,11 @@ public final class StructureType extends AggregateType {
     @Override
     public int getBitSize() {
         if (isPacked) {
-            return Arrays.stream(types).mapToInt(Type::getBitSize).sum();
+            int sum = 0;
+            for (Type member : types) {
+                sum += member.getBitSize();
+            }
+            return sum;
         } else {
             CompilerDirectives.transferToInterpreter();
             throw new UnsupportedOperationException("TargetDataLayout is necessary to compute Padding information!");
@@ -195,5 +205,55 @@ public final class StructureType extends AggregateType {
             return false;
         }
         return true;
+    }
+
+    private static final String MEMBER_IS_STRUCTURE_PACKED = "isPacked";
+    private static final String MEMBER_HAS_NAME = "hasName";
+    private static final String MEMBER_GET_NAME = "getName";
+
+    @Override
+    public boolean hasArrayElements() {
+        return true;
+    }
+
+    @Override
+    public long getArraySize() {
+        return types.length;
+    }
+
+    @Override
+    public boolean isArrayElementReadable(long index) {
+        return index >= 0 && index < types.length;
+    }
+
+    @Override
+    public Object readArrayElement(long index) throws InvalidArrayIndexException {
+        if (index >= 0L && index < getArraySize()) {
+            return types[(int) index];
+        }
+
+        throw InvalidArrayIndexException.create(index);
+    }
+
+    @Override
+    public LLVMNodeObjectKeys getMembers(boolean includeInternal) {
+        return Type.extendDefaultMembers(MEMBER_IS_STRUCTURE_PACKED, MEMBER_HAS_NAME, MEMBER_GET_NAME);
+    }
+
+    @Override
+    public Object readMember(String member, TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {
+        assert member != null;
+        switch (member) {
+            case MEMBER_IS_STRUCTURE:
+                return true;
+            case MEMBER_IS_STRUCTURE_PACKED:
+                return isPacked;
+            case MEMBER_HAS_NAME:
+                return !LLVMIdentifier.UNKNOWN.equals(name);
+            case MEMBER_GET_NAME:
+                return name;
+            default:
+                return super.readMember(member, contextReference);
+        }
     }
 }
