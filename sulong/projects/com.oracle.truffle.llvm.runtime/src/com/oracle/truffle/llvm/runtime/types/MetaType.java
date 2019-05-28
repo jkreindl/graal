@@ -29,7 +29,11 @@
  */
 package com.oracle.truffle.llvm.runtime.types;
 
+import com.oracle.truffle.api.TruffleLanguage;
+import com.oracle.truffle.api.interop.UnknownIdentifierException;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
 public final class MetaType extends Type {
@@ -103,5 +107,25 @@ public final class MetaType extends Type {
     @Override
     public String toString() {
         return name;
+    }
+
+    private static final String MEMBER_GET_KIND = "getKind";
+
+    @Override
+    public LLVMNodeObjectKeys getMembers(boolean includeInternal) {
+        return Type.extendDefaultMembers(MEMBER_GET_KIND);
+    }
+
+    @Override
+    public Object readMember(String member, TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {
+        assert member != null;
+        switch (member) {
+            case MEMBER_IS_META:
+                return true;
+            case MEMBER_GET_KIND:
+                return name;
+            default:
+                return super.readMember(member, contextReference);
+        }
     }
 }
