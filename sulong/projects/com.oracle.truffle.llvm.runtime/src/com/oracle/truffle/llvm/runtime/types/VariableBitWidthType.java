@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -30,7 +30,11 @@
 package com.oracle.truffle.llvm.runtime.types;
 
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.TruffleLanguage;
+import com.oracle.truffle.api.interop.UnknownIdentifierException;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
 public final class VariableBitWidthType extends Type {
@@ -136,6 +140,26 @@ public final class VariableBitWidthType extends Type {
             return String.format("i%d %s", getBitSize(), getConstant());
         } else {
             return String.format("i%d", getBitSize());
+        }
+    }
+
+    private static final String MEMBER_BIT_SIZE = "getBitSize";
+
+    @Override
+    public LLVMNodeObjectKeys getMembers(boolean includeInternal) {
+        return Type.extendDefaultMembers(MEMBER_BIT_SIZE);
+    }
+
+    @Override
+    public Object readMember(String member, TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {
+        assert member != null;
+        switch (member) {
+            case MEMBER_IS_INTEGER:
+                return true;
+            case MEMBER_BIT_SIZE:
+                return getBitSize();
+            default:
+                return super.readMember(member, contextReference);
         }
     }
 }
