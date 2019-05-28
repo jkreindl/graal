@@ -32,6 +32,8 @@ package com.oracle.truffle.llvm.runtime.datalayout;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayoutParser.DataTypeSpecification;
 import com.oracle.truffle.llvm.runtime.types.FunctionType;
 import com.oracle.truffle.llvm.runtime.types.PointerType;
@@ -68,7 +70,9 @@ public final class DataLayout {
         return Math.max(1, size / Byte.SIZE);
     }
 
+    @TruffleBoundary
     public int getBitAlignment(Type baseType) {
+        CompilerDirectives.transferToInterpreter();
         DataTypeSpecification spec = getDataTypeSpecification(baseType);
         if (spec == null) {
             throw new IllegalStateException("No data specification found for " + baseType);
