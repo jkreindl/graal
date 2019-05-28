@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -33,6 +33,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayoutParser.DataTypeSpecification;
 import com.oracle.truffle.llvm.runtime.types.FunctionType;
 import com.oracle.truffle.llvm.runtime.types.PointerType;
@@ -64,7 +66,9 @@ public final class DataLayout {
         return Math.max(1, getBitAlignment(type) / Byte.SIZE);
     }
 
+    @TruffleBoundary
     public int getBitAlignment(Type baseType) {
+        CompilerDirectives.transferToInterpreter();
         if (baseType instanceof VariableBitWidthType) {
             /*
              * Handling of integer datatypes when the exact match not found
