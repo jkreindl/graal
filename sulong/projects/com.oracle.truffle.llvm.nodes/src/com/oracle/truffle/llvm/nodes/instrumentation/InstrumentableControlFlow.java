@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,45 +27,28 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.nodes.others;
+package com.oracle.truffle.llvm.nodes.instrumentation;
 
-import com.oracle.truffle.api.CompilerDirectives;
-import com.oracle.truffle.api.frame.VirtualFrame;
-import com.oracle.truffle.api.instrumentation.GenerateWrapper;
-import com.oracle.truffle.api.instrumentation.InstrumentableNode;
-import com.oracle.truffle.api.instrumentation.ProbeNode;
-import com.oracle.truffle.api.nodes.ControlFlowException;
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.api.source.Source;
+import com.oracle.truffle.api.source.SourceSection;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
-import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 
-@GenerateWrapper
-public class LLVMUnreachableNode extends LLVMControlFlowNode {
+public final class InstrumentableControlFlow {
 
-    public static class LLVMUnreachableException extends ControlFlowException {
-        private static final long serialVersionUID = 1L;
+    private static final SourceSection SOURCE_SECTION;
+
+    static {
+        final Source source = Source.newBuilder("llvm", "LLVM IR control flow instruction", "<llvm control flow instruction>").mimeType("text/plain").build();
+        SOURCE_SECTION = source.createUnavailableSection();
     }
 
-    public LLVMUnreachableNode() {
-        super(null);
+    private InstrumentableControlFlow() {
     }
 
-    @Override
-    public int getSuccessorCount() {
-        return 0;
-    }
-
-    @Override
-    public LLVMStatementNode getPhiNode(int successorIndex) {
-        return null;
-    }
-
-    public void execute(@SuppressWarnings("unused") VirtualFrame frame) {
-        CompilerDirectives.transferToInterpreter();
-        throw new LLVMUnreachableException();
-    }
-
-    @Override
-    public InstrumentableNode.WrapperNode createWrapper(ProbeNode probe) {
-        return new LLVMUnreachableNodeWrapper(this, probe);
+    public static void instrument(LLVMControlFlowNode cfNode, Class<? extends Tag>[] tags, Object nodeObject) {
+        cfNode.setTags(tags);
+        cfNode.setExplicitSourceSection(SOURCE_SECTION);
+        cfNode.setNodeObject(nodeObject);
     }
 }
