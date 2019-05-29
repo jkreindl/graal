@@ -29,6 +29,12 @@
  */
 package com.oracle.truffle.llvm.runtime;
 
+import java.util.Collections;
+import java.util.List;
+
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
+import org.graalvm.options.OptionDescriptors;
+
 import com.oracle.truffle.api.Assumption;
 import com.oracle.truffle.api.CallTarget;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
@@ -59,7 +65,14 @@ import org.graalvm.options.OptionDescriptors;
 @TruffleLanguage.Registration(id = LLVMLanguage.ID, name = LLVMLanguage.NAME, version = "6.0.0", internal = false, interactive = false, defaultMimeType = LLVMLanguage.LLVM_BITCODE_MIME_TYPE, //
                 byteMimeTypes = {LLVMLanguage.LLVM_BITCODE_MIME_TYPE, LLVMLanguage.LLVM_ELF_SHARED_MIME_TYPE, LLVMLanguage.LLVM_ELF_EXEC_MIME_TYPE}, //
                 characterMimeTypes = {LLVMLanguage.LLVM_BITCODE_BASE64_MIME_TYPE}, fileTypeDetectors = LLVMFileDetector.class)
-@ProvidedTags({StandardTags.StatementTag.class, StandardTags.CallTag.class, StandardTags.RootTag.class, DebuggerTags.AlwaysHalt.class})
+@ProvidedTags({StandardTags.StatementTag.class, StandardTags.CallTag.class, StandardTags.RootTag.class, DebuggerTags.AlwaysHalt.class, LLVMTags.SSARead.class, LLVMTags.SSAWrite.class,
+                LLVMTags.GlobalRead.class, LLVMTags.Constant.class, LLVMTags.Call.class, LLVMTags.Invoke.class, LLVMTags.Add.class, LLVMTags.Sub.class, LLVMTags.Mul.class, LLVMTags.Div.class,
+                LLVMTags.URem.class, LLVMTags.SRem.class, LLVMTags.FRem.class, LLVMTags.ShiftLeft.class, LLVMTags.ShiftRight.class, LLVMTags.And.class, LLVMTags.Or.class, LLVMTags.XOr.class,
+                LLVMTags.Phi.class, LLVMTags.Ret.class, LLVMTags.Br.class, LLVMTags.Switch.class, LLVMTags.IndirectBr.class, LLVMTags.Resume.class, LLVMTags.Unreachable.class, LLVMTags.ICMP.class,
+                LLVMTags.FCMP.class, LLVMTags.Cast.class, LLVMTags.Alloca.class, LLVMTags.Load.class, LLVMTags.Store.class, LLVMTags.Fence.class, LLVMTags.CmpXchg.class, LLVMTags.AtomicRMW.class,
+                LLVMTags.GetElementPtr.class, LLVMTags.ExtractElement.class, LLVMTags.InsertElement.class, LLVMTags.ShuffleVector.class, LLVMTags.ExtractValue.class, LLVMTags.InsertValue.class,
+                LLVMTags.Block.class, LLVMTags.Function.class, LLVMTags.Select.class, LLVMTags.StoreValueAsCallArgument.class, LLVMTags.ReadCallArg.class, LLVMTags.Intrinsic.class,
+                LLVMTags.LandingPad.class, LLVMTags.Block.class, LLVMTags.Function.class, LLVMTags.LLVMExpression.class, LLVMTags.LLVMStatement.class, LLVMTags.Literal.class})
 public class LLVMLanguage extends TruffleLanguage<LLVMContext> {
 
     public static final Assumption SINGLE_CONTEXT_ASSUMPTION = Truffle.getRuntime().createAssumption("Single Context");
