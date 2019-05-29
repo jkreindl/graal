@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,9 +29,19 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes.api;
 
+import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.instrumentation.InstrumentableNode;
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.api.source.SourceSection;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 
-public abstract class LLVMControlFlowNode extends LLVMNode {
+public abstract class LLVMControlFlowNode extends LLVMNode implements InstrumentableNode {
+
+    @CompilationFinal private SourceSection explicitSourceSection = null;
+    @CompilationFinal(dimensions = 1) private Class<? extends Tag>[] tags = null;
+    @CompilationFinal private Object nodeObject;
 
     private final LLVMSourceLocation source;
 
@@ -50,5 +60,40 @@ public abstract class LLVMControlFlowNode extends LLVMNode {
     @Override
     public LLVMSourceLocation getSourceLocation() {
         return source;
+    }
+
+    public void setExplicitSourceSection(SourceSection explicitSourceSection) {
+        CompilerDirectives.transferToInterpreterAndInvalidate();
+        this.explicitSourceSection = explicitSourceSection;
+    }
+
+    public void setTags(Class<? extends Tag>[] tags) {
+        CompilerDirectives.transferToInterpreterAndInvalidate();
+        this.tags = tags;
+    }
+
+    public void setNodeObject(Object nodeObject) {
+        CompilerDirectives.transferToInterpreterAndInvalidate();
+        this.nodeObject = nodeObject;
+    }
+
+    @Override
+    public boolean isInstrumentable() {
+        return source != null || explicitSourceSection != null;
+    }
+
+    @Override
+    public SourceSection getSourceSection() {
+        return explicitSourceSection != null ? explicitSourceSection : super.getSourceSection();
+    }
+
+    @Override
+    public Object getNodeObject() {
+        return nodeObject;
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return LLVMTags.isTagProvided(this.tags, tag);
     }
 }

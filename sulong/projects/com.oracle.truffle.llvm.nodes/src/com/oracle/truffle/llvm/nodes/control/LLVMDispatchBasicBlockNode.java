@@ -256,7 +256,7 @@ public final class LLVMDispatchBasicBlockNode extends LLVMExpressionNode {
             } else if (controlFlowNode instanceof LLVMUnreachableNode) {
                 LLVMUnreachableNode unreachableNode = (LLVMUnreachableNode) controlFlowNode;
                 assert noPhisNecessary(unreachableNode);
-                unreachableNode.execute();
+                unreachableNode.execute(frame);
                 CompilerAsserts.neverPartOfCompilation();
                 throw new IllegalStateException("must not reach here");
             } else {

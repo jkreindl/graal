@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -34,7 +34,6 @@ import com.oracle.truffle.api.dsl.NodeField;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
-import com.oracle.truffle.api.instrumentation.InstrumentableNode;
 import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.llvm.nodes.base.LLVMBasicBlockNode;
 import com.oracle.truffle.llvm.nodes.func.LLVMArgNode;
@@ -56,7 +55,7 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI64Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 @GenerateWrapper
-public abstract class LLVMRetNode extends LLVMControlFlowNode implements InstrumentableNode {
+public abstract class LLVMRetNode extends LLVMControlFlowNode {
 
     public LLVMRetNode(LLVMSourceLocation sourceSection) {
         super(sourceSection);
@@ -74,11 +73,6 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode implements Instrum
     @GenerateWrapper.OutgoingConverter
     Object convertOutgoing(@SuppressWarnings("unused") Object object) {
         return null;
-    }
-
-    @Override
-    public boolean isInstrumentable() {
-        return getSourceLocation() != null;
     }
 
     @Override
