@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -33,7 +33,6 @@ import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
-import com.oracle.truffle.api.instrumentation.InstrumentableNode;
 import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.api.nodes.UnexpectedResultException;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
@@ -42,7 +41,7 @@ import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 
 @GenerateWrapper
-public abstract class LLVMConditionalBranchNode extends LLVMControlFlowNode implements InstrumentableNode {
+public abstract class LLVMConditionalBranchNode extends LLVMControlFlowNode {
 
     public static LLVMConditionalBranchNode create(int trueSuccessor, int falseSuccessor, LLVMStatementNode truePhi, LLVMStatementNode falsePhi, LLVMExpressionNode condition,
                     LLVMSourceLocation sourceSection) {
@@ -63,11 +62,6 @@ public abstract class LLVMConditionalBranchNode extends LLVMControlFlowNode impl
     @Override
     public WrapperNode createWrapper(ProbeNode probe) {
         return new LLVMConditionalBranchNodeWrapper(this, this, probe);
-    }
-
-    @Override
-    public boolean isInstrumentable() {
-        return getSourceLocation() != null;
     }
 
     public abstract boolean executeCondition(VirtualFrame frame);

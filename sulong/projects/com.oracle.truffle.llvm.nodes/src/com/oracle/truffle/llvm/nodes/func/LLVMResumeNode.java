@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -34,7 +34,6 @@ import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotTypeException;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
-import com.oracle.truffle.api.instrumentation.InstrumentableNode;
 import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.llvm.runtime.except.LLVMUserException;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
@@ -42,7 +41,7 @@ import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 
 @GenerateWrapper
-public class LLVMResumeNode extends LLVMControlFlowNode implements InstrumentableNode {
+public class LLVMResumeNode extends LLVMControlFlowNode {
 
     private final FrameSlot exceptionSlot;
 
@@ -59,11 +58,6 @@ public class LLVMResumeNode extends LLVMControlFlowNode implements Instrumentabl
     @Override
     public WrapperNode createWrapper(ProbeNode probe) {
         return new LLVMResumeNodeWrapper(this, this, probe);
-    }
-
-    @Override
-    public boolean isInstrumentable() {
-        return getSourceLocation() != null;
     }
 
     @Override
