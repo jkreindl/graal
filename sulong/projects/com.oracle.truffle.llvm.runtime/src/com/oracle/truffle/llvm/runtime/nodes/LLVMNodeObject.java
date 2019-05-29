@@ -40,6 +40,8 @@ import com.oracle.truffle.api.library.ExportMessage;
 import com.oracle.truffle.api.profiles.BranchProfile;
 import org.graalvm.collections.EconomicMap;
 
+import java.util.Iterator;
+
 @ExportLibrary(InteropLibrary.class)
 public final class LLVMNodeObject implements TruffleObject {
 
@@ -60,6 +62,11 @@ public final class LLVMNodeObject implements TruffleObject {
         for (int i = 0; i < keys.length; i++) {
             this.entries.put(keys[i], values[i]);
         }
+    }
+
+    private LLVMNodeObject(String[] keys, EconomicMap<String, Object> entries) {
+        this.keys = keys;
+        this.entries = entries;
     }
 
     @SuppressWarnings("static-method")
@@ -94,5 +101,34 @@ public final class LLVMNodeObject implements TruffleObject {
     boolean isMemberReadable(String key) {
         final Object element = getValue(key);
         return element != null;
+    }
+
+    public static Builder newBuilder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+
+        private final EconomicMap<String, Object> entries;
+
+        private Builder() {
+            this.entries = EconomicMap.create();
+        }
+
+        public Builder option(String key, Object value) {
+            assert key != null;
+            assert value != null;
+            entries.put(key, value);
+            return this;
+        }
+
+        public LLVMNodeObject build() {
+            final String[] keys = new String[entries.size()];
+            final Iterator<String> keysIterator = entries.getKeys().iterator();
+            for (int i = 0; i < keys.length && keysIterator.hasNext(); i++) {
+                keys[i] = keysIterator.next();
+            }
+            return new LLVMNodeObject(keys, entries);
+        }
     }
 }

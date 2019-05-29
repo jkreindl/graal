@@ -45,6 +45,14 @@ public final class LLVMTags {
     private LLVMTags() {
     }
 
+    /**
+     * The type of the values returned by a value-creating semantic entity such as an expression, a constant, or the access of an ssa-value.
+     */
+    public static final String EXTRA_DATA_VALUE_TYPE = "VALUE_TYPE";
+
+    /**
+     * Represents the access to an ssa-value.
+     */
     @Identifier(value = "SSA_READ")
     public static final class SSARead extends Tag {
 

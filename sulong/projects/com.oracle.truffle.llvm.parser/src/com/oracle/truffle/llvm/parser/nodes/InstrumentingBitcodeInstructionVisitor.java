@@ -81,6 +81,8 @@ import com.oracle.truffle.llvm.runtime.types.Type;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.oracle.truffle.llvm.parser.nodes.InstrumentationUtil.createTypedNodeObject;
+
 final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVisitorImpl {
 
     private Class<? extends Tag>[] tags;
@@ -97,11 +99,11 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(AllocateInstruction allocate) {
         tags = LLVMTags.Alloca.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(allocate).build();
         super.visit(allocate);
 
         // TODO ensure there is a child for the count (super does not create one if it is explicitly
         // 1)
-        // TODO add the type to the nodeObject
     }
 
     @Override
@@ -171,12 +173,14 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(CallInstruction call) {
         tags = LLVMTags.Call.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(call).build();
         super.visit(call);
     }
 
     @Override
     public void visit(LandingpadInstruction landingpadInstruction) {
         tags = LLVMTags.LandingPad.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(landingpadInstruction).build();
         super.visit(landingpadInstruction);
     }
 
@@ -189,6 +193,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(CompareExchangeInstruction cmpxchg) {
         tags = LLVMTags.CmpXchg.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(cmpxchg).build();
         super.visit(cmpxchg);
     }
 
@@ -201,6 +206,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(InvokeInstruction call) {
         tags = LLVMTags.Invoke.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(call).build();
         super.visit(call);
     }
 
@@ -213,6 +219,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(CastInstruction cast) {
         tags = LLVMTags.Cast.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(cast).build();
         super.visit(cast);
     }
 
@@ -223,6 +230,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         } else {
             tags = LLVMTags.ICMP.SINGLE_EXPRESSION_TAG;
         }
+        nodeObject = createTypedNodeObject(compare).build();
         super.visit(compare);
     }
 
@@ -235,18 +243,21 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(ExtractElementInstruction extract) {
         tags = LLVMTags.ExtractElement.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(extract).build();
         super.visit(extract);
     }
 
     @Override
     public void visit(ExtractValueInstruction extract) {
         tags = LLVMTags.ExtractValue.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(extract).build();
         super.visit(extract);
     }
 
     @Override
     public void visit(GetElementPointerInstruction gep) {
         tags = LLVMTags.GetElementPtr.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(gep).build();
         super.visit(gep);
     }
 
@@ -259,24 +270,28 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(InsertElementInstruction insert) {
         tags = LLVMTags.InsertElement.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(insert).build();
         super.visit(insert);
     }
 
     @Override
     public void visit(InsertValueInstruction insert) {
         tags = LLVMTags.InsertValue.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(insert).build();
         super.visit(insert);
     }
 
     @Override
     public void visit(LoadInstruction load) {
         tags = LLVMTags.Load.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(load).build();
         super.visit(load);
     }
 
     @Override
     public void visit(PhiInstruction phi) {
         tags = LLVMTags.Phi.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(phi).build();
         super.visit(phi);
     }
 
@@ -289,12 +304,14 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(SelectInstruction select) {
         tags = LLVMTags.Select.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(select).build();
         super.visit(select);
     }
 
     @Override
     public void visit(ShuffleVectorInstruction shuffle) {
         tags = LLVMTags.ShuffleVector.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(shuffle).build();
         super.visit(shuffle);
     }
 
@@ -307,6 +324,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(ReadModifyWriteInstruction rmw) {
         tags = LLVMTags.AtomicRMW.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(rmw).build();
         super.visit(rmw);
     }
 

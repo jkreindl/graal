@@ -46,17 +46,20 @@ import com.oracle.truffle.llvm.parser.model.symbols.instructions.ValueInstructio
 import com.oracle.truffle.llvm.parser.model.visitors.ConstantVisitor;
 import com.oracle.truffle.llvm.parser.model.visitors.ValueInstructionVisitor;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
+import com.oracle.truffle.llvm.runtime.nodes.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.nodes.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.runtime.types.symbols.Symbol;
+
+import static com.oracle.truffle.llvm.parser.nodes.InstrumentationUtil.createTypedNodeObject;
 
 public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver implements ValueInstructionVisitor, ConstantVisitor {
 
     private final LLVMSymbolReadResolver impl;
 
     private Class<? extends Tag>[] tags;
-    private Object nodeObject;
+    private LLVMNodeObject nodeObject;
 
     ReadResolverInstrumentationWrapper(LLVMParserRuntime runtime, LLVMSymbolReadResolver impl) {
         super(runtime);
@@ -89,29 +92,34 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
     public void visitValueInstruction(ValueInstruction valueInstruction) {
         // a value instruction writes its result to an SSA slot
         tags = LLVMTags.SSARead.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(valueInstruction).build();
     }
 
     @Override
     public void visit(FunctionParameter param) {
         tags = LLVMTags.SSARead.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(param).build();
     }
 
     @Override
     public void visit(FunctionDeclaration toResolve) {
         // TODO (jkreindl) add info as nodeobject
         tags = LLVMTags.GlobalRead.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(toResolve).build();
     }
 
     @Override
     public void visit(FunctionDefinition toResolve) {
         // TODO (jkreindl) add info as nodeobject
         tags = LLVMTags.GlobalRead.CONSTANT_GLOBAL_READ_TAGS;
+        nodeObject = createTypedNodeObject(toResolve).build();
     }
 
     @Override
     public void visit(GlobalAlias alias) {
         // TODO (jkreindl) add info as nodeobject
         tags = LLVMTags.GlobalRead.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(alias).build();
     }
 
     @Override
@@ -122,12 +130,14 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
         } else {
             tags = LLVMTags.GlobalRead.SINGLE_EXPRESSION_TAG;
         }
+        nodeObject = createTypedNodeObject(global).build();
     }
 
     @Override
     public void visitConstant(Symbol constant) {
         // TODO (jkreindl) add tag for operation
         tags = LLVMTags.Constant.SINGLE_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(constant).build();
     }
 
     @Override
@@ -172,14 +182,15 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
                 tags = LLVMTags.XOr.CONSTANT_EXPRESSION_TAG;
                 break;
             default:
-                tags = null;
-                break;
+                throw new LLVMParserException("unknown constant operation: " + constant.getOperator());
         }
+        nodeObject = createTypedNodeObject(constant).build();
     }
 
     @Override
     public void visit(CastConstant constant) {
         tags = LLVMTags.Cast.CONSTANT_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(constant).build();
     }
 
     @Override
@@ -189,15 +200,18 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
         } else {
             tags = LLVMTags.ICMP.CONSTANT_EXPRESSION_TAG;
         }
+        nodeObject = createTypedNodeObject(constant).build();
     }
 
     @Override
     public void visit(GetElementPointerConstant constant) {
         tags = LLVMTags.GetElementPtr.CONSTANT_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(constant).build();
     }
 
     @Override
     public void visit(SelectConstant constant) {
         tags = LLVMTags.Select.CONSTANT_EXPRESSION_TAG;
+        nodeObject = createTypedNodeObject(constant).build();
     }
 }
