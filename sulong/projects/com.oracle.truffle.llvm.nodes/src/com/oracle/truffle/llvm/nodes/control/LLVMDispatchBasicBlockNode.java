@@ -39,17 +39,24 @@ import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.ExplodeLoop.LoopExplosionKind;
 import com.oracle.truffle.api.nodes.LoopNode;
+import com.oracle.truffle.api.source.Source;
+import com.oracle.truffle.api.source.SourceSection;
 import com.oracle.truffle.llvm.nodes.base.LLVMBasicBlockNode;
 import com.oracle.truffle.llvm.nodes.base.LLVMFrameNullerUtil;
+import com.oracle.truffle.llvm.nodes.func.LLVMFunctionStartNode;
 import com.oracle.truffle.llvm.nodes.func.LLVMInvokeNode;
 import com.oracle.truffle.llvm.nodes.func.LLVMResumeNode;
 import com.oracle.truffle.llvm.nodes.others.LLVMUnreachableNode;
+import com.oracle.truffle.llvm.runtime.LLVMLanguage;
 import com.oracle.truffle.llvm.runtime.except.LLVMUserException;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.memory.LLVMUniquesRegionAllocNode;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
+import com.oracle.truffle.llvm.runtime.types.symbols.LLVMIdentifier;
 
 public final class LLVMDispatchBasicBlockNode extends LLVMExpressionNode {
 
@@ -295,9 +302,45 @@ public final class LLVMDispatchBasicBlockNode extends LLVMExpressionNode {
         return controlFlowNode.getSuccessorCount() == 0 || controlFlowNode.getSuccessorCount() == 1 && controlFlowNode.getPhiNode(0) == null;
     }
 
+    private LLVMFunctionStartNode getFunctionStartNode() {
+        assert getRootNode() instanceof LLVMFunctionStartNode;
+        return (LLVMFunctionStartNode) getRootNode();
+    }
+
     @Override
     public boolean hasTag(Class<? extends Tag> tag) {
-        return tag == StandardTags.RootTag.class;
+        // this node is only a function root for the debugger if it has an explicit SourceSection
+        // attached
+        if (tag == StandardTags.RootTag.class) {
+            return super.getSourceSection() != null;
+        }
+
+        return LLVMTags.isTagProvided(LLVMTags.Function.FUNCTION_TAGS, tag) || super.hasTag(tag);
+    }
+
+    @Override
+    public SourceSection getSourceSection() {
+        final SourceSection explicitSourceSection = super.getSourceSection();
+        if (explicitSourceSection != null) {
+            return explicitSourceSection;
+        }
+
+        final String llvmName = getFunctionStartNode().getBcName();
+        final Source nameAsSource = Source.newBuilder(LLVMLanguage.ID, llvmName, llvmName).build();
+        return nameAsSource.createSection(1);
+    }
+
+    @Override
+    public boolean isInstrumentable() {
+        return true;
+    }
+
+    @Override
+    public Object getNodeObject() {
+        final LLVMFunctionStartNode functionStartNode = getFunctionStartNode();
+        final String llvmName = LLVMIdentifier.toGlobalIdentifier(functionStartNode.getBcName());
+        return LLVMNodeObject.newBuilder().option(LLVMTags.Function.EXTRA_DATA_LLVM_NAME, llvmName).option(LLVMTags.Function.EXTRA_DATA_SOURCE_NAME,
+                        functionStartNode.getOriginalName()).build();
     }
 
     @Override
