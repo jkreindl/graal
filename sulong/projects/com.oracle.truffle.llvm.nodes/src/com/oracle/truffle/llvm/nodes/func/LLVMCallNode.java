@@ -31,20 +31,15 @@ package com.oracle.truffle.llvm.nodes.func;
 
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.dsl.Fallback;
-import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.StandardTags;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.Node;
-import com.oracle.truffle.llvm.nodes.func.LLVMCallNodeFactory.ArgumentNodeGen;
 import com.oracle.truffle.llvm.runtime.LLVMFunctionDescriptor;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.except.LLVMPolyglotException;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
-import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
-import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 import com.oracle.truffle.llvm.runtime.types.FunctionType;
 
 public final class LLVMCallNode extends LLVMExpressionNode {
@@ -77,7 +72,7 @@ public final class LLVMCallNode extends LLVMExpressionNode {
     private final FunctionType functionType;
 
     @Children private final LLVMExpressionNode[] argumentNodes;
-    @Children private ArgumentNode[] prepareArgumentNodes;
+    @Children private LLVMPrepareArgumentNode[] prepareArgumentNodes;
     @Child private LLVMLookupDispatchTargetNode dispatchTargetNode;
     @Child private LLVMDispatchNode dispatchNode;
     @Child private IntrinsicDispatch intrinsicDispatch;
@@ -128,31 +123,17 @@ public final class LLVMCallNode extends LLVMExpressionNode {
         Object[] argValues = new Object[argumentNodes.length];
         if (prepareArgumentNodes == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
-            prepareArgumentNodes = new ArgumentNode[argumentNodes.length];
+            prepareArgumentNodes = new LLVMPrepareArgumentNode[argumentNodes.length];
         }
         for (int i = 0; i < argumentNodes.length; i++) {
             if (prepareArgumentNodes[i] == null) {
                 CompilerDirectives.transferToInterpreterAndInvalidate();
-                prepareArgumentNodes[i] = insert(ArgumentNodeGen.create());
+                prepareArgumentNodes[i] = insert(LLVMPrepareArgumentNodeGen.create(i));
+                notifyInserted(prepareArgumentNodes[i]);
             }
-            argValues[i] = prepareArgumentNodes[i].executeWithTarget(argumentNodes[i].executeGeneric(frame));
+            argValues[i] = prepareArgumentNodes[i].executeWithTarget(frame, argumentNodes[i].executeGeneric(frame));
         }
         return dispatchNode.executeDispatch(function, argValues);
-    }
-
-    protected abstract static class ArgumentNode extends LLVMNode {
-
-        protected abstract Object executeWithTarget(Object value);
-
-        @Specialization
-        protected LLVMPointer doPointer(LLVMPointer address) {
-            return address.copy();
-        }
-
-        @Fallback
-        protected Object doOther(Object value) {
-            return value;
-        }
     }
 
     @Override
