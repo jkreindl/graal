@@ -70,11 +70,6 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode {
         return new LLVMRetNodeWrapper(this, this, probe);
     }
 
-    @GenerateWrapper.OutgoingConverter
-    Object convertOutgoing(@SuppressWarnings("unused") Object object) {
-        return null;
-    }
-
     @Override
     public int getSuccessorCount() {
         return 1;
@@ -304,7 +299,7 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode {
 
         @Specialization
         protected Object doOp() {
-            return null;
+            return 0L;
         }
     }
 }
