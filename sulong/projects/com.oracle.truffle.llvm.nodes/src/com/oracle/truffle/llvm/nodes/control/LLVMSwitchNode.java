@@ -57,11 +57,6 @@ public abstract class LLVMSwitchNode extends LLVMControlFlowNode {
         return new LLVMSwitchNodeWrapper(this, this, probe);
     }
 
-    @GenerateWrapper.OutgoingConverter
-    Object convertOutgoing(@SuppressWarnings("unused") Object object) {
-        return null;
-    }
-
     public abstract Object executeCondition(VirtualFrame frame);
 
     public abstract int[] getSuccessors();
