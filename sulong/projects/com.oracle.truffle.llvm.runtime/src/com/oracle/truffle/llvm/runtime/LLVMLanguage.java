@@ -33,7 +33,6 @@ import java.util.Collections;
 import java.util.List;
 
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
-import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTaintTags;
 import org.graalvm.options.OptionDescriptors;
 
 import com.oracle.truffle.api.CallTarget;
