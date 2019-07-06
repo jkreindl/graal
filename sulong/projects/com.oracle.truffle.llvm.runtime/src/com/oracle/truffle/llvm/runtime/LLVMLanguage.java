@@ -29,12 +29,6 @@
  */
 package com.oracle.truffle.llvm.runtime;
 
-import java.util.Collections;
-import java.util.List;
-
-import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
-import org.graalvm.options.OptionDescriptors;
-
 import com.oracle.truffle.api.Assumption;
 import com.oracle.truffle.api.CallTarget;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
@@ -54,13 +48,15 @@ import com.oracle.truffle.llvm.runtime.debug.scope.LLVMDebuggerScopeFactory;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.debug.type.LLVMSourceType;
 import com.oracle.truffle.llvm.runtime.debug.value.LLVMDebugObject;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.interop.LLVMInternalTruffleObject;
 import com.oracle.truffle.llvm.runtime.interop.access.LLVMInteropType;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory;
 import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
-import java.util.Collections;
 import org.graalvm.options.OptionDescriptors;
+
+import java.util.Collections;
 
 @TruffleLanguage.Registration(id = LLVMLanguage.ID, name = LLVMLanguage.NAME, version = "6.0.0", internal = false, interactive = false, defaultMimeType = LLVMLanguage.LLVM_BITCODE_MIME_TYPE, //
                 byteMimeTypes = {LLVMLanguage.LLVM_BITCODE_MIME_TYPE, LLVMLanguage.LLVM_ELF_SHARED_MIME_TYPE, LLVMLanguage.LLVM_ELF_EXEC_MIME_TYPE}, //

@@ -63,7 +63,6 @@ import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.nodes.ControlFlowException;
 import com.oracle.truffle.api.nodes.DirectCallNode;
 import com.oracle.truffle.api.nodes.RootNode;
-import com.oracle.truffle.llvm.runtime.LLVMArgumentBuffer.LLVMArgumentArray;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.debug.LLVMSourceContext;
 import com.oracle.truffle.llvm.runtime.debug.type.LLVMSourceType;
@@ -165,6 +164,8 @@ public final class LLVMContext {
             return LLVMFunctionDescriptor.createDescriptor(LLVMContext.this, name, type, currentFunctionIndex++);
         }
     }
+
+    private final NodeFactory nodeFactory;
 
     public LLVMContext(LLVMLanguage language, Env env, Configuration activeConfiguration, String languageHome) {
         this.language = language;

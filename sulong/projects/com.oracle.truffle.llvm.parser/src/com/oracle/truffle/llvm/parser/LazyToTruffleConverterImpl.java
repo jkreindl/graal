@@ -174,7 +174,7 @@ public class LazyToTruffleConverterImpl implements LazyToTruffleConverter {
     }
 
     private List<LLVMStatementNode> copyArgumentsToFrame(FrameDescriptor frame) {
-        final NodeFactory nodeFactory = runtime.getContext().getLanguage().getNodeFactory();
+        final NodeFactory nodeFactory = runtime.getContext().getNodeFactory();
 
         List<FunctionParameter> parameters = method.getParameters();
         List<LLVMStatementNode> formalParamInits = new ArrayList<>();
