@@ -41,16 +41,12 @@ import com.oracle.truffle.api.nodes.ControlFlowException;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeUtil;
 import com.oracle.truffle.api.profiles.BranchProfile;
-import com.oracle.truffle.api.source.Source;
-import com.oracle.truffle.api.source.SourceSection;
 import com.oracle.truffle.llvm.nodes.func.LLVMFunctionStartNode;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
-import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
-import com.oracle.truffle.llvm.runtime.types.symbols.LLVMIdentifier;
 
 import java.util.Set;
 
@@ -63,13 +59,6 @@ import java.util.Set;
  */
 @GenerateWrapper
 public abstract class LLVMBasicBlockNode extends LLVMStatementNode {
-
-    private static final SourceSection IR_SOURCE;
-
-    static {
-        final Source source = Source.newBuilder("llvm", "LLVM IR basic block", "<llvm block>").mimeType("text/plain").build();
-        IR_SOURCE = source.createUnavailableSection();
-    }
 
     public static final int RETURN_FROM_FUNCTION = -1;
 
@@ -134,26 +123,6 @@ public abstract class LLVMBasicBlockNode extends LLVMStatementNode {
     public abstract double getBranchProbability(int successorIndex);
 
     public abstract void increaseBranchProbability(int successorIndex);
-
-    @Override
-    public boolean isInstrumentable() {
-        return true;
-    }
-
-    @Override
-    public boolean hasTag(Class<? extends Tag> tag) {
-        return LLVMTags.isTagProvided(LLVMTags.Block.BLOCK_TAGS, tag) || super.hasTag(tag);
-    }
-
-    @Override
-    public SourceSection getSourceSection() {
-        return IR_SOURCE;
-    }
-
-    @Override
-    public Object getNodeObject() {
-        return LLVMNodeObject.newBuilder().option(LLVMTags.Block.EXTRA_DATA_BLOCK_ID, blockId).option(LLVMTags.Block.EXTRA_DATA_BLOCK_NAME, LLVMIdentifier.toExplicitBlockName(blockName)).build();
-    }
 
     @Override
     public String toString() {
@@ -267,6 +236,7 @@ public abstract class LLVMBasicBlockNode extends LLVMStatementNode {
         public LLVMBasicBlockNode initialize() {
             CompilerDirectives.transferToInterpreterAndInvalidate();
             final LLVMBasicBlockNode materializedBlock = new InitializedBlock(statements, termInstruction, getBlockId(), getBlockName());
+            materializedBlock.setSourceDescriptor(this.getSourceDescriptor());
             replace(materializedBlock, "Lazily Inserting LLVM Basic Block");
             notifyInserted(materializedBlock);
             return materializedBlock;
@@ -302,7 +272,9 @@ public abstract class LLVMBasicBlockNode extends LLVMStatementNode {
         public InstrumentableNode materializeInstrumentableNodes(Set<Class<? extends Tag>> materializedTags) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
             if (materializedTags.contains(LLVMTags.Block.class)) {
-                return new InitializedBlock(statements, termInstruction, getBlockId(), getBlockName());
+                final InitializedBlock initializedBlock = new InitializedBlock(statements, termInstruction, getBlockId(), getBlockName());
+                initializedBlock.setSourceDescriptor(this.getSourceDescriptor());
+                return initializedBlock;
             }
             return this;
         }

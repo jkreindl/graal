@@ -65,8 +65,8 @@ import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack.UniquesRegion;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNodeSourceDescriptor;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
-import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
 import com.oracle.truffle.llvm.runtime.types.PointerType;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
 import com.oracle.truffle.llvm.runtime.types.StructureType;
@@ -136,7 +136,13 @@ public class LazyToTruffleConverterImpl implements LazyToTruffleConverter {
         LLVMStatementNode[] copyArgumentsToFrameArray = copyArgumentsToFrame.toArray(LLVMStatementNode.NO_STATEMENTS);
         LLVMExpressionNode body = runtime.getContext().getLanguage().getNodeFactory().createFunctionBlockNode(frame.findFrameSlot(LLVMUserException.FRAME_SLOT_ID), visitor.getBlocks(),
                         uniquesRegion.build(),
-                        nullableBeforeBlock, nullableAfterBlock, location, copyArgumentsToFrameArray);
+                        nullableBeforeBlock, nullableAfterBlock, copyArgumentsToFrameArray);
+
+        final LLVMNodeSourceDescriptor sourceDescriptor = body.getOrCreateSourceDescriptor();
+        sourceDescriptor.setTags(LLVMTags.Function.FUNCTION_TAGS);
+        sourceDescriptor.setNodeObject(
+                        LLVMNodeObject.newBuilder().option(LLVMTags.Function.EXTRA_DATA_LLVM_NAME, method.getName()).option(LLVMTags.Function.EXTRA_DATA_SOURCE_NAME, method.getSourceName()).build());
+        sourceDescriptor.setSourceLocation(location);
 
         RootNode rootNode = runtime.getContext().getLanguage().getNodeFactory().createFunctionStartNode(body, frame, method.getName(), method.getSourceName(),
                         method.getParameters().size(), source, location);
@@ -180,33 +186,31 @@ public class LazyToTruffleConverterImpl implements LazyToTruffleConverter {
         List<FunctionParameter> parameters = method.getParameters();
         List<LLVMStatementNode> formalParamInits = new ArrayList<>();
         LLVMExpressionNode stackPointerNode = nodeFactory.createFunctionArgNode(0, PrimitiveType.I64);
-        formalParamInits.add(nodeFactory.createFrameWrite(PointerType.VOID, stackPointerNode, frame.findFrameSlot(LLVMStack.FRAME_ID), null));
+        formalParamInits.add(nodeFactory.createFrameWrite(PointerType.VOID, stackPointerNode, frame.findFrameSlot(LLVMStack.FRAME_ID)));
 
         int argIndex = 1;
         if (method.getType().getReturnType() instanceof StructureType) {
             argIndex++;
         }
 
-        final boolean instrumentationEnabled = runtime.getContext().getEnv().getOptions().get(SulongEngineOption.INSTRUMENT_IR);
-
         for (int i = 0; i < parameters.size(); i++) {
             final FunctionParameter parameter = parameters.get(i);
             LLVMExpressionNode parameterNode = nodeFactory.createFunctionArgNode(argIndex++, parameter.getType());
 
-            if (instrumentationEnabled) {
-                final LLVMNodeObject nodeObject = LLVMNodeObject.newBuilder().option(LLVMTags.ReadCallArg.EXTRA_DATA_SSA_SOURCE, LLVMIdentifier.toLocalIdentifier(parameter.getName())).option(
-                                LLVMTags.ReadCallArg.EXTRA_DATA_ARG_INDEX, i).build();
-                parameterNode = nodeFactory.createInstrumentableExpression(parameterNode, LLVMTags.ReadCallArg.EXPRESSION_TAGS, nodeObject);
-            }
+            final LLVMNodeObject nodeObject = LLVMNodeObject.newBuilder().option(LLVMTags.ReadCallArg.EXTRA_DATA_SSA_SOURCE, LLVMIdentifier.toLocalIdentifier(parameter.getName())).option(
+                            LLVMTags.ReadCallArg.EXTRA_DATA_ARG_INDEX, i).build();
+            final LLVMNodeSourceDescriptor sourceDescriptor = parameterNode.getOrCreateSourceDescriptor();
+            sourceDescriptor.setTags(LLVMTags.ReadCallArg.EXPRESSION_TAGS);
+            sourceDescriptor.setNodeObject(nodeObject);
 
             FrameSlot slot = frame.findFrameSlot(parameter.getName());
             if (isStructByValue(parameter)) {
                 final Type type = ((PointerType) parameter.getType()).getPointeeType();
                 final LLVMExpressionNode readParameterValueNode = nodeFactory.createCopyStructByValue(type, GetStackSpaceFactory.createAllocaFactory(), parameterNode);
-                final LLVMStatementNode writeParameterValueToFrameNode = nodeFactory.createFrameWrite(parameter.getType(), readParameterValueNode, slot, null);
+                final LLVMStatementNode writeParameterValueToFrameNode = nodeFactory.createFrameWrite(parameter.getType(), readParameterValueNode, slot);
                 formalParamInits.add(writeParameterValueToFrameNode);
             } else {
-                formalParamInits.add(nodeFactory.createFrameWrite(parameter.getType(), parameterNode, slot, null));
+                formalParamInits.add(nodeFactory.createFrameWrite(parameter.getType(), parameterNode, slot));
             }
         }
 

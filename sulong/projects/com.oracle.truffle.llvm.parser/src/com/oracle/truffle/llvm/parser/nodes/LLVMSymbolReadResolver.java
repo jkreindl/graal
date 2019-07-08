@@ -42,7 +42,6 @@ import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.NodeFactory;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
-import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
 import com.oracle.truffle.llvm.runtime.types.AggregateType;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
 import com.oracle.truffle.llvm.runtime.types.StructureType;
@@ -66,11 +65,7 @@ public abstract class LLVMSymbolReadResolver {
 
     public static LLVMSymbolReadResolver create(LLVMParserRuntime runtime, FrameDescriptor frame, GetStackSpaceFactory getStackSpaceFactory) {
         LLVMSymbolReadResolver impl = new ReadResolverImpl(runtime, frame, getStackSpaceFactory);
-
-        if (runtime.getContext().getEnv().getOptions().get(SulongEngineOption.INSTRUMENT_IR)) {
-            impl = new ReadResolverInstrumentationWrapper(runtime, impl);
-        }
-
+        impl = new ReadResolverInstrumentationWrapper(runtime, impl);
         return impl;
     }
 
@@ -101,7 +96,7 @@ public abstract class LLVMSymbolReadResolver {
         }
     }
 
-    LLVMExpressionNode createConstantElementPointerIndex(@SuppressWarnings("unused") long actualIndex, Type indexType, LLVMExpressionNode currentAddress, long indexedAddressOffset, Type newType,
+    private LLVMExpressionNode createConstantElementPointerIndex(Type indexType, LLVMExpressionNode currentAddress, long indexedAddressOffset, Type newType,
                     boolean isLastIndex) {
         // creating a pointer inserts type information, this needs to happen for the address
         // computed by getelementptr even if it is the same as the basepointer
@@ -147,7 +142,7 @@ public abstract class LLVMSymbolReadResolver {
                 AggregateType aggregate = (AggregateType) currentType;
                 final long addressOffset = context.getIndexOffset(indexInteger, aggregate);
                 currentType = aggregate.getElementType(indexInteger);
-                currentAddress = createConstantElementPointerIndex(indexInteger, indexType, currentAddress, addressOffset, currentType, i == indicesSize - 1);
+                currentAddress = createConstantElementPointerIndex(indexType, currentAddress, addressOffset, currentType, i == indicesSize - 1);
             }
         }
 

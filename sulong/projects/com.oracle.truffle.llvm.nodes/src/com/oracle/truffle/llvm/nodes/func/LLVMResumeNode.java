@@ -36,7 +36,6 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
 import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.llvm.runtime.except.LLVMUserException;
-import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 
@@ -45,13 +44,11 @@ public class LLVMResumeNode extends LLVMControlFlowNode {
 
     private final FrameSlot exceptionSlot;
 
-    public LLVMResumeNode(FrameSlot exceptionSlot, LLVMSourceLocation sourceSection) {
-        super(sourceSection);
+    public LLVMResumeNode(FrameSlot exceptionSlot) {
         this.exceptionSlot = exceptionSlot;
     }
 
     public LLVMResumeNode(LLVMResumeNode delegate) {
-        super(delegate.getSourceLocation());
         this.exceptionSlot = delegate.exceptionSlot;
     }
 

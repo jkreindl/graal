@@ -694,6 +694,21 @@ public final class LLVMTags {
          */
         public static final String EXTRA_DATA_IS_INBOUND = "IS_INBOUND";
 
+        /**
+         * Provides an array containing the types of the indices.
+         */
+        public static final String EXTRA_DATA_INDEX_TYPES = "INDEX_TYPES";
+
+        /**
+         * Provides an array providing the values of the indices. If the indices are constant
+         * values, these values are contained in the array directly. If the indices are dynamic
+         * values, the provided array contains {@link GetElementPtr#INDEX_DYNAMIC_VALUE} and the
+         * actual index value will be provided as expression input.
+         */
+        public static final String EXTRA_DATA_INDEX_VALUES = "INDEX_VALUES";
+
+        public static final String INDEX_DYNAMIC_VALUE = "DYNAMIC";
+
         private GetElementPtr() {
         }
     }

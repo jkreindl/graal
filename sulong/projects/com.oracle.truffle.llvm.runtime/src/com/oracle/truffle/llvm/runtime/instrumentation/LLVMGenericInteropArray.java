@@ -27,28 +27,55 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.nodes.instrumentation;
+package com.oracle.truffle.llvm.runtime.instrumentation;
 
-import com.oracle.truffle.api.instrumentation.Tag;
-import com.oracle.truffle.api.source.Source;
-import com.oracle.truffle.api.source.SourceSection;
-import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.InvalidArrayIndexException;
+import com.oracle.truffle.api.interop.TruffleObject;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
 
-public final class InstrumentableControlFlow {
+import java.util.Arrays;
 
-    private static final SourceSection SOURCE_SECTION;
+@ExportLibrary(InteropLibrary.class)
+public class LLVMGenericInteropArray implements TruffleObject {
 
-    static {
-        final Source source = Source.newBuilder("llvm", "LLVM IR control flow instruction", "<llvm control flow instruction>").mimeType("text/plain").build();
-        SOURCE_SECTION = source.createUnavailableSection();
+    @CompilationFinal(dimensions = 1) private final Object[] properties;
+
+    public LLVMGenericInteropArray(Object[] properties) {
+        this.properties = properties;
     }
 
-    private InstrumentableControlFlow() {
+    @SuppressWarnings("static-method")
+    @ExportMessage
+    public boolean hasArrayElements() {
+        return true;
     }
 
-    public static void instrument(LLVMControlFlowNode cfNode, Class<? extends Tag>[] tags, Object nodeObject) {
-        cfNode.setTags(tags);
-        cfNode.setExplicitSourceSection(SOURCE_SECTION);
-        cfNode.setNodeObject(nodeObject);
+    @ExportMessage
+    public long getArraySize() {
+        return properties.length;
+    }
+
+    @ExportMessage
+    public boolean isArrayElementReadable(long index) {
+        return index >= 0 && index < properties.length;
+    }
+
+    @ExportMessage
+    public Object readArrayElement(long index) throws InvalidArrayIndexException {
+        if (index >= 0 && index < properties.length) {
+            return properties[(int) index];
+        } else {
+            throw InvalidArrayIndexException.create(index);
+        }
+    }
+
+    @Override
+    @TruffleBoundary
+    public String toString() {
+        return Arrays.toString(properties);
     }
 }

@@ -35,12 +35,9 @@ import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
 import com.oracle.truffle.api.instrumentation.ProbeNode;
-import com.oracle.truffle.api.instrumentation.StandardTags;
-import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.profiles.ConditionProfile;
 import com.oracle.truffle.llvm.nodes.others.LLVMValueProfilingNode;
-import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
@@ -70,8 +67,7 @@ public abstract class LLVMInvokeNode extends LLVMControlFlowNode {
 
         LLVMInvokeNodeImpl(FunctionType type, FrameSlot resultLocation,
                         int normalSuccessor, int unwindSuccessor,
-                        LLVMStatementNode normalPhiNode, LLVMStatementNode unwindPhiNode, LLVMSourceLocation sourceSection) {
-            super(sourceSection);
+                        LLVMStatementNode normalPhiNode, LLVMStatementNode unwindPhiNode) {
             this.normalSuccessor = normalSuccessor;
             this.unwindSuccessor = unwindSuccessor;
             this.type = type;
@@ -175,17 +171,12 @@ public abstract class LLVMInvokeNode extends LLVMControlFlowNode {
     public static final int NORMAL_SUCCESSOR = 0;
     public static final int UNWIND_SUCCESSOR = 1;
 
-    public LLVMInvokeNode(LLVMSourceLocation sourceSection) {
-        super(sourceSection);
-    }
-
-    protected LLVMInvokeNode(LLVMInvokeNode delegate) {
-        super(delegate.getSourceLocation());
+    public LLVMInvokeNode() {
     }
 
     @Override
     public WrapperNode createWrapper(ProbeNode probe) {
-        return new LLVMInvokeNodeWrapper(this, this, probe);
+        return new LLVMInvokeNodeWrapper(this, probe);
     }
 
     public abstract int getNormalSuccessor();
@@ -205,8 +196,8 @@ public abstract class LLVMInvokeNode extends LLVMControlFlowNode {
     }
 
     @Override
-    public boolean hasTag(Class<? extends Tag> tag) {
-        return tag == StandardTags.StatementTag.class || tag == StandardTags.CallTag.class || super.hasTag(tag);
+    public boolean hasCallTag() {
+        return true;
     }
 
     public static final class LLVMSubstitutionInvokeNode extends LLVMInvokeNodeImpl {
@@ -215,8 +206,8 @@ public abstract class LLVMInvokeNode extends LLVMControlFlowNode {
 
         public LLVMSubstitutionInvokeNode(FunctionType type, FrameSlot resultLocation, LLVMExpressionNode substitution,
                         int normalSuccessor, int unwindSuccessor,
-                        LLVMStatementNode normalPhiNode, LLVMStatementNode unwindPhiNode, LLVMSourceLocation sourceSection) {
-            super(type, resultLocation, normalSuccessor, unwindSuccessor, normalPhiNode, unwindPhiNode, sourceSection);
+                        LLVMStatementNode normalPhiNode, LLVMStatementNode unwindPhiNode) {
+            super(type, resultLocation, normalSuccessor, unwindSuccessor, normalPhiNode, unwindPhiNode);
             this.substitution = substitution;
         }
 
@@ -234,8 +225,8 @@ public abstract class LLVMInvokeNode extends LLVMControlFlowNode {
 
         public LLVMFunctionInvokeNode(FunctionType type, FrameSlot resultLocation, LLVMExpressionNode functionNode, LLVMExpressionNode[] argumentNodes,
                         int normalSuccessor, int unwindSuccessor,
-                        LLVMStatementNode normalPhiNode, LLVMStatementNode unwindPhiNode, LLVMSourceLocation sourceSection) {
-            super(type, resultLocation, normalSuccessor, unwindSuccessor, normalPhiNode, unwindPhiNode, sourceSection);
+                        LLVMStatementNode normalPhiNode, LLVMStatementNode unwindPhiNode) {
+            super(type, resultLocation, normalSuccessor, unwindSuccessor, normalPhiNode, unwindPhiNode);
             this.argumentNodes = argumentNodes;
             this.dispatchTargetNode = LLVMLookupDispatchTargetNodeGen.create(functionNode);
             this.dispatchNode = LLVMDispatchNodeGen.create(type);

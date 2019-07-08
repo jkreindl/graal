@@ -36,7 +36,6 @@ import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.api.profiles.ValueProfile;
 import com.oracle.truffle.llvm.nodes.op.LLVMCompareNode.LLVMEqNode;
 import com.oracle.truffle.llvm.nodes.op.LLVMCompareNodeFactory.LLVMEqNodeGen;
-import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
@@ -44,17 +43,9 @@ import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 @GenerateWrapper
 public abstract class LLVMSwitchNode extends LLVMControlFlowNode {
 
-    public LLVMSwitchNode(LLVMSourceLocation sourceSection) {
-        super(sourceSection);
-    }
-
-    protected LLVMSwitchNode(LLVMSwitchNode delegate) {
-        super(delegate.getSourceLocation());
-    }
-
     @Override
     public WrapperNode createWrapper(ProbeNode probe) {
-        return new LLVMSwitchNodeWrapper(this, this, probe);
+        return new LLVMSwitchNodeWrapper(this, probe);
     }
 
     public abstract Object executeCondition(VirtualFrame frame);
@@ -72,8 +63,7 @@ public abstract class LLVMSwitchNode extends LLVMControlFlowNode {
 
         private final ValueProfile conditionValueClass = ValueProfile.createClassProfile();
 
-        public LLVMSwitchNodeImpl(int[] successors, LLVMStatementNode[] phiNodes, LLVMExpressionNode cond, LLVMExpressionNode[] cases, LLVMSourceLocation sourceSection) {
-            super(sourceSection);
+        public LLVMSwitchNodeImpl(int[] successors, LLVMStatementNode[] phiNodes, LLVMExpressionNode cond, LLVMExpressionNode[] cases) {
             assert successors.length == cases.length + 1 : "the last entry of the successors array must be the default case";
             this.successors = successors;
             this.phiNodes = phiNodes;

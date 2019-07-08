@@ -29,24 +29,14 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes.api;
 
-import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.instrumentation.InstrumentableNode;
-import com.oracle.truffle.api.instrumentation.Tag;
-import com.oracle.truffle.api.source.SourceSection;
-import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
-import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 
-public abstract class LLVMControlFlowNode extends LLVMNode implements InstrumentableNode {
+public abstract class LLVMControlFlowNode extends LLVMNode implements LLVMInstrumentableNode {
 
-    @CompilationFinal private SourceSection explicitSourceSection = null;
-    @CompilationFinal(dimensions = 1) private Class<? extends Tag>[] tags = null;
-    @CompilationFinal private Object nodeObject;
+    @CompilationFinal private LLVMNodeSourceDescriptor sourceDescriptor = null;
 
-    private final LLVMSourceLocation source;
-
-    public LLVMControlFlowNode(LLVMSourceLocation source) {
-        this.source = source;
+    public LLVMControlFlowNode() {
     }
 
     public abstract int getSuccessorCount();
@@ -58,42 +48,28 @@ public abstract class LLVMControlFlowNode extends LLVMNode implements Instrument
     }
 
     @Override
-    public LLVMSourceLocation getSourceLocation() {
-        return source;
-    }
-
-    public void setExplicitSourceSection(SourceSection explicitSourceSection) {
-        CompilerDirectives.transferToInterpreterAndInvalidate();
-        this.explicitSourceSection = explicitSourceSection;
-    }
-
-    public void setTags(Class<? extends Tag>[] tags) {
-        CompilerDirectives.transferToInterpreterAndInvalidate();
-        this.tags = tags;
-    }
-
-    public void setNodeObject(Object nodeObject) {
-        CompilerDirectives.transferToInterpreterAndInvalidate();
-        this.nodeObject = nodeObject;
+    public LLVMNodeSourceDescriptor getSourceDescriptor() {
+        return sourceDescriptor;
     }
 
     @Override
-    public boolean isInstrumentable() {
-        return source != null || explicitSourceSection != null;
+    public LLVMNodeSourceDescriptor getOrCreateSourceDescriptor() {
+        if (sourceDescriptor == null) {
+            setSourceDescriptor(new LLVMNodeSourceDescriptor());
+        }
+        return sourceDescriptor;
     }
 
     @Override
-    public SourceSection getSourceSection() {
-        return explicitSourceSection != null ? explicitSourceSection : super.getSourceSection();
+    public void setSourceDescriptor(LLVMNodeSourceDescriptor sourceDescriptor) {
+        // the source descriptor should only be set in the parser, and should only be modified
+        // before this node is first executed
+        CompilerAsserts.neverPartOfCompilation();
+        this.sourceDescriptor = sourceDescriptor;
     }
 
     @Override
-    public Object getNodeObject() {
-        return nodeObject;
-    }
-
-    @Override
-    public boolean hasTag(Class<? extends Tag> tag) {
-        return LLVMTags.isTagProvided(this.tags, tag);
+    public boolean hasStatementTag() {
+        return true;
     }
 }

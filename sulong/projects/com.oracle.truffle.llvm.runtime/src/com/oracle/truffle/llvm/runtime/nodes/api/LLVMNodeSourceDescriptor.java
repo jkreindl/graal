@@ -27,79 +27,64 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.nodes.instrumentation;
+package com.oracle.truffle.llvm.runtime.nodes.api;
 
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.stream.Collectors;
-
+import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
-import com.oracle.truffle.api.frame.VirtualFrame;
-import com.oracle.truffle.api.instrumentation.InstrumentableNode;
 import com.oracle.truffle.api.instrumentation.Tag;
-import com.oracle.truffle.api.nodes.NodeInfo;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.source.SourceSection;
+import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
-import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 
-@NodeInfo(shortName = "IR statement", description = "wrapper node marking IR-Level statements for instrumentation", language = "LLVM IR")
-public class InstrumentableStatement extends LLVMStatementNode implements InstrumentableNode {
+public final class LLVMNodeSourceDescriptor {
 
-    private static final SourceSection SOURCE_SECTION;
+    private static final SourceSection DEFAULT_SOURCE_SECTION;
 
     static {
-        final Source source = Source.newBuilder("llvm", "LLVM IR expression", "<llvm expression>").mimeType("text/plain").build();
-        SOURCE_SECTION = source.createUnavailableSection();
+        final Source source = Source.newBuilder("llvm", "LLVM IR", "<llvm ir>").mimeType("text/plain").build();
+        DEFAULT_SOURCE_SECTION = source.createUnavailableSection();
     }
 
-    @CompilationFinal(dimensions = 1) private final Class<? extends Tag>[] tags;
-    private final Object nodeObject;
+    @CompilationFinal private LLVMSourceLocation sourceLocation;
+    @CompilationFinal(dimensions = 1) private Class<? extends Tag>[] tags;
+    @CompilationFinal private Object nodeObject;
 
-    @Child private LLVMStatementNode stmt;
-
-    public InstrumentableStatement(LLVMStatementNode stmt, Class<? extends Tag>[] tags, Object nodeObject) {
-        assert tags != null;
-        assert Arrays.stream(tags).allMatch(Objects::nonNull);
-        this.tags = tags;
-
-        // null for instructions without additional info, e.g., unreachable
-        this.nodeObject = nodeObject;
-
-        assert stmt != null;
-        this.stmt = stmt;
+    public LLVMSourceLocation getSourceLocation() {
+        return sourceLocation;
     }
 
-    @Override
-    public boolean isInstrumentable() {
-        return true;
+    public SourceSection getSourceSection() {
+        if (sourceLocation == null) {
+            return DEFAULT_SOURCE_SECTION;
+        }
+        return sourceLocation.getSourceSection();
     }
 
-    @Override
-    public void execute(VirtualFrame frame) {
-        stmt.execute(frame);
+    public Class<? extends Tag>[] getTags() {
+        return tags;
     }
 
-    @Override
     public boolean hasTag(Class<? extends Tag> tag) {
         return LLVMTags.isTagProvided(this.tags, tag);
     }
 
-    @Override
     public Object getNodeObject() {
         return nodeObject;
     }
 
-    @Override
-    public SourceSection getSourceSection() {
-        return SOURCE_SECTION;
+    public void setSourceLocation(LLVMSourceLocation sourceLocation) {
+        CompilerAsserts.neverPartOfCompilation();
+        this.sourceLocation = sourceLocation;
     }
 
-    @Override
-    @TruffleBoundary
-    public String toString() {
-        return Arrays.stream(tags).map(Class::getSimpleName).collect(Collectors.joining(", ", "Instrumentable Statement {", "}"));
+    public void setTags(Class<? extends Tag>[] tags) {
+        CompilerAsserts.neverPartOfCompilation();
+        this.tags = tags;
     }
 
+    public void setNodeObject(Object nodeObject) {
+        CompilerAsserts.neverPartOfCompilation();
+        this.nodeObject = nodeObject;
+    }
 }

@@ -48,7 +48,10 @@ import com.oracle.truffle.llvm.parser.nodes.LLVMRuntimeDebugInformation;
 import com.oracle.truffle.llvm.parser.nodes.LLVMSymbolReadResolver;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.LLVMContext.ExternalLibrary;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack.UniquesRegion;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNodeSourceDescriptor;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 
 final class LLVMBitcodeFunctionVisitor implements FunctionVisitor {
@@ -115,6 +118,13 @@ final class LLVMBitcodeFunctionVisitor implements FunctionVisitor {
             visitor.setInstructionIndex(i);
             instruction.accept(visitor);
         }
-        blocks.add(context.getLanguage().getNodeFactory().createBasicBlockNode(visitor.getInstructions(), visitor.getControlFlowNode(), block.getBlockIndex(), block.getName()));
+
+        final LLVMStatementNode blockNode = context.getLanguage().getNodeFactory().createBasicBlockNode(visitor.getInstructions(), visitor.getControlFlowNode(), block.getBlockIndex(),
+                        block.getName());
+        final LLVMNodeSourceDescriptor sourceDescriptor = blockNode.getOrCreateSourceDescriptor();
+        sourceDescriptor.setTags(LLVMTags.Block.BLOCK_TAGS);
+        sourceDescriptor.setNodeObject(
+                        LLVMNodeObject.newBuilder().option(LLVMTags.Block.EXTRA_DATA_BLOCK_ID, block.getBlockIndex()).option(LLVMTags.Block.EXTRA_DATA_BLOCK_NAME, block.getName()).build());
+        blocks.add(blockNode);
     }
 }

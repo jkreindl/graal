@@ -35,7 +35,6 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
 import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.api.nodes.UnexpectedResultException;
-import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
@@ -44,21 +43,13 @@ import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 @GenerateWrapper
 public abstract class LLVMIndirectBranchNode extends LLVMControlFlowNode {
 
-    public static LLVMIndirectBranchNode create(LLVMBranchAddressNode branchAddress, int[] indices, LLVMStatementNode[] phiWriteNodes, LLVMSourceLocation sourceSection) {
-        return new LLVMIndirectBranchNodeImpl(branchAddress, indices, phiWriteNodes, sourceSection);
-    }
-
-    public LLVMIndirectBranchNode(LLVMSourceLocation sourceSection) {
-        super(sourceSection);
-    }
-
-    protected LLVMIndirectBranchNode(LLVMIndirectBranchNode delegate) {
-        super(delegate.getSourceLocation());
+    public static LLVMIndirectBranchNode create(LLVMBranchAddressNode branchAddress, int[] indices, LLVMStatementNode[] phiWriteNodes) {
+        return new LLVMIndirectBranchNodeImpl(branchAddress, indices, phiWriteNodes);
     }
 
     @Override
     public WrapperNode createWrapper(ProbeNode probe) {
-        return new LLVMIndirectBranchNodeWrapper(this, this, probe);
+        return new LLVMIndirectBranchNodeWrapper(this, probe);
     }
 
     public abstract int executeCondition(VirtualFrame frame);
@@ -71,8 +62,7 @@ public abstract class LLVMIndirectBranchNode extends LLVMControlFlowNode {
         @Children private final LLVMStatementNode[] phiWriteNodes;
         @CompilationFinal(dimensions = 1) private final int[] successors;
 
-        private LLVMIndirectBranchNodeImpl(LLVMBranchAddressNode branchAddress, int[] indices, LLVMStatementNode[] phiWriteNodes, LLVMSourceLocation sourceSection) {
-            super(sourceSection);
+        private LLVMIndirectBranchNodeImpl(LLVMBranchAddressNode branchAddress, int[] indices, LLVMStatementNode[] phiWriteNodes) {
             assert indices.length > 1;
             this.successors = indices;
             this.branchAddress = branchAddress;

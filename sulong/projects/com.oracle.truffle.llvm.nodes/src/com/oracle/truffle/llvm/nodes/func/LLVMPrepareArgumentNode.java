@@ -77,7 +77,7 @@ abstract class LLVMPrepareArgumentNode extends LLVMNode implements Instrumentabl
 
     @Override
     public boolean hasTag(Class<? extends Tag> tag) {
-        return LLVMTags.isTagProvided(LLVMTags.StoreValueAsCallArgument.EXPRESSION_TAGS, tag) || super.hasTag(tag);
+        return LLVMTags.isTagProvided(LLVMTags.StoreValueAsCallArgument.EXPRESSION_TAGS, tag);
     }
 
     @Override
