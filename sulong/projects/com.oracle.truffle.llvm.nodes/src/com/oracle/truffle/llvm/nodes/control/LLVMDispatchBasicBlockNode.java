@@ -34,8 +34,6 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.VirtualFrame;
-import com.oracle.truffle.api.instrumentation.StandardTags;
-import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.ExplodeLoop.LoopExplosionKind;
 import com.oracle.truffle.api.nodes.LoopNode;
@@ -49,19 +47,14 @@ import com.oracle.truffle.llvm.nodes.func.LLVMResumeNode;
 import com.oracle.truffle.llvm.nodes.others.LLVMUnreachableNode;
 import com.oracle.truffle.llvm.runtime.LLVMLanguage;
 import com.oracle.truffle.llvm.runtime.except.LLVMUserException;
-import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
-import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.memory.LLVMUniquesRegionAllocNode;
-import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
-import com.oracle.truffle.llvm.runtime.types.symbols.LLVMIdentifier;
 
 public final class LLVMDispatchBasicBlockNode extends LLVMExpressionNode {
 
     private final FrameSlot exceptionValueSlot;
-    private final LLVMSourceLocation source;
     @Children private final LLVMBasicBlockNode[] bodyNodes;
     @CompilationFinal(dimensions = 2) private final FrameSlot[][] beforeBlockNuller;
     @CompilationFinal(dimensions = 2) private final FrameSlot[][] afterBlockNuller;
@@ -293,14 +286,13 @@ public final class LLVMDispatchBasicBlockNode extends LLVMExpressionNode {
     }
 
     @Override
-    public boolean hasTag(Class<? extends Tag> tag) {
-        // this node is only a function root for the debugger if it has an explicit SourceSection
-        // attached
-        if (tag == StandardTags.RootTag.class) {
-            return super.getSourceSection() != null;
-        }
+    public boolean hasRootTag() {
+        return true;
+    }
 
-        return LLVMTags.isTagProvided(LLVMTags.Function.FUNCTION_TAGS, tag) || super.hasTag(tag);
+    @Override
+    public boolean hasStatementTag() {
+        return false;
     }
 
     @Override
@@ -310,26 +302,9 @@ public final class LLVMDispatchBasicBlockNode extends LLVMExpressionNode {
             return explicitSourceSection;
         }
 
+        // this node must always return a SourceSection for IR-level instrumentation
         final String llvmName = getFunctionStartNode().getBcName();
         final Source nameAsSource = Source.newBuilder(LLVMLanguage.ID, llvmName, llvmName).build();
         return nameAsSource.createSection(1);
-    }
-
-    @Override
-    public boolean isInstrumentable() {
-        return true;
-    }
-
-    @Override
-    public Object getNodeObject() {
-        final LLVMFunctionStartNode functionStartNode = getFunctionStartNode();
-        final String llvmName = LLVMIdentifier.toGlobalIdentifier(functionStartNode.getBcName());
-        return LLVMNodeObject.newBuilder().option(LLVMTags.Function.EXTRA_DATA_LLVM_NAME, llvmName).option(LLVMTags.Function.EXTRA_DATA_SOURCE_NAME,
-                        functionStartNode.getOriginalName()).build();
-    }
-
-    @Override
-    public LLVMSourceLocation getSourceLocation() {
-        return source;
     }
 }

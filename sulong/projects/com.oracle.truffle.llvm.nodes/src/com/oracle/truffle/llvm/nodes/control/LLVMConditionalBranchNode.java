@@ -35,7 +35,6 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
 import com.oracle.truffle.api.instrumentation.ProbeNode;
 import com.oracle.truffle.api.nodes.UnexpectedResultException;
-import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
@@ -43,25 +42,16 @@ import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 @GenerateWrapper
 public abstract class LLVMConditionalBranchNode extends LLVMControlFlowNode {
 
-    public static LLVMConditionalBranchNode create(int trueSuccessor, int falseSuccessor, LLVMStatementNode truePhi, LLVMStatementNode falsePhi, LLVMExpressionNode condition,
-                    LLVMSourceLocation sourceSection) {
-        return new LLVMConditionalBranchNodeImpl(trueSuccessor, falseSuccessor, truePhi, falsePhi, condition, sourceSection);
+    public static LLVMConditionalBranchNode create(int trueSuccessor, int falseSuccessor, LLVMStatementNode truePhi, LLVMStatementNode falsePhi, LLVMExpressionNode condition) {
+        return new LLVMConditionalBranchNodeImpl(trueSuccessor, falseSuccessor, truePhi, falsePhi, condition);
     }
 
     public static final int TRUE_SUCCESSOR = 0;
     public static final int FALSE_SUCCESSOR = 1;
 
-    public LLVMConditionalBranchNode(LLVMSourceLocation sourceSection) {
-        super(sourceSection);
-    }
-
-    protected LLVMConditionalBranchNode(LLVMConditionalBranchNode delegate) {
-        super(delegate.getSourceLocation());
-    }
-
     @Override
     public WrapperNode createWrapper(ProbeNode probe) {
-        return new LLVMConditionalBranchNodeWrapper(this, this, probe);
+        return new LLVMConditionalBranchNodeWrapper(this, probe);
     }
 
     public abstract boolean executeCondition(VirtualFrame frame);
@@ -78,9 +68,7 @@ public abstract class LLVMConditionalBranchNode extends LLVMControlFlowNode {
         private final int trueSuccessor;
         private final int falseSuccessor;
 
-        private LLVMConditionalBranchNodeImpl(int trueSuccessor, int falseSuccessor, LLVMStatementNode truePhi, LLVMStatementNode falsePhi, LLVMExpressionNode condition,
-                        LLVMSourceLocation sourceSection) {
-            super(sourceSection);
+        private LLVMConditionalBranchNodeImpl(int trueSuccessor, int falseSuccessor, LLVMStatementNode truePhi, LLVMStatementNode falsePhi, LLVMExpressionNode condition) {
             this.trueSuccessor = trueSuccessor;
             this.falseSuccessor = falseSuccessor;
             this.truePhi = truePhi;

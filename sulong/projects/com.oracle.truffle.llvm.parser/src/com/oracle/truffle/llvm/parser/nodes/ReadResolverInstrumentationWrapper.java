@@ -40,7 +40,6 @@ import com.oracle.truffle.llvm.parser.model.symbols.constants.CastConstant;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.CompareConstant;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.GetElementPointerConstant;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.SelectConstant;
-import com.oracle.truffle.llvm.parser.model.symbols.constants.integer.IntegerConstant;
 import com.oracle.truffle.llvm.parser.model.symbols.globals.GlobalAlias;
 import com.oracle.truffle.llvm.parser.model.symbols.globals.GlobalVariable;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.ValueInstruction;
@@ -76,6 +75,9 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
     @Override
     public LLVMExpressionNode resolve(SymbolImpl symbol) {
         final LLVMExpressionNode resolvedNode = impl.resolve(symbol);
+        if (resolvedNode == null) {
+            return null;
+        }
 
         // determine instrumentation tags for the symbol
         tags = null;
@@ -85,10 +87,11 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
             throw new LLVMParserException("Failed to instrument expression for symbol: " + symbol);
         }
 
-        final LLVMExpressionNode instrumentableNode = nodeFactory.createInstrumentableExpression(resolvedNode, tags, nodeObject);
+        InstrumentationUtil.addTags(resolvedNode, tags, nodeObject);
         tags = null;
         nodeObject = null;
-        return instrumentableNode;
+
+        return resolvedNode;
     }
 
     @Override
@@ -172,24 +175,15 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
     @Override
     public void visit(GetElementPointerConstant constant) {
         tags = LLVMTags.GetElementPtr.CONSTANT_EXPRESSION_TAGS;
-        nodeObject = createTypedNodeObject(constant).option(LLVMTags.GetElementPtr.EXTRA_DATA_SOURCE_TYPE, constant.getBasePointer().getType()).option(LLVMTags.GetElementPtr.EXTRA_DATA_IS_INBOUND,
-                        constant.isInbounds()).build();
+        final LLVMNodeObject.Builder builder = createTypedNodeObject(constant).option(LLVMTags.GetElementPtr.EXTRA_DATA_SOURCE_TYPE, constant.getBasePointer().getType()).option(
+                        LLVMTags.GetElementPtr.EXTRA_DATA_IS_INBOUND, constant.isInbounds());
+        InstrumentationUtil.addElementPointerIndices(constant.getIndices(), builder);
+        nodeObject = builder.build();
     }
 
     @Override
     public void visit(SelectConstant constant) {
         tags = LLVMTags.Select.CONSTANT_EXPRESSION_TAGS;
         nodeObject = createTypedNodeObject(constant).build();
-    }
-
-    @Override
-    LLVMExpressionNode createConstantElementPointerIndex(long actualIndex, Type indexType, LLVMExpressionNode currentAddress, long indexedAddressOffset, Type newType, boolean isLastIndex) {
-        // for regular execution, Sulong usually does not create a node to increment a pointer when
-        // the index is 0. when the index as given in the bitcode is a non-zero integer constant,
-        // then Sulong computes the total offset, including the index, statically and uses a
-        // constant "1" as multiplier for the run-time node. However, for instrumentation, the right
-        // index needs to be reported.
-        final LLVMExpressionNode indexForInstrumentation = resolve(new IntegerConstant(indexType, actualIndex));
-        return nodeFactory.createInstrumentableConstantPointerIncrement(currentAddress, indexForInstrumentation, indexedAddressOffset);
     }
 }

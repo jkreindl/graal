@@ -30,13 +30,19 @@
 package com.oracle.truffle.llvm.parser.nodes;
 
 import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 import com.oracle.truffle.llvm.parser.model.ValueSymbol;
 import com.oracle.truffle.llvm.parser.model.enums.BinaryOperator;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMGenericInteropArray;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
-import com.oracle.truffle.llvm.runtime.types.symbols.LLVMIdentifier;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMInstrumentableNode;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNodeSourceDescriptor;
+import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.runtime.types.symbols.Symbol;
+
+import java.util.List;
 
 final class InstrumentationUtil {
 
@@ -82,13 +88,39 @@ final class InstrumentationUtil {
     }
 
     static LLVMNodeObject createSSAAccessDescriptor(ValueSymbol ssaValue, String ssaNameKey) {
-        final String ssaName = LLVMIdentifier.toLocalIdentifier(ssaValue.getName());
+        final String ssaName = ssaValue.getName();
         return createTypedNodeObject(ssaValue).option(ssaNameKey, ssaName).build();
     }
 
     static LLVMNodeObject createGlobalAccessDescriptor(ValueSymbol global) {
-        final String llvmName = LLVMIdentifier.toGlobalIdentifier(global.getName());
+        final String llvmName = global.getName();
         return createTypedNodeObject(global).option(LLVMTags.GlobalRead.EXTRA_DATA_GLOBAL_NAME_LLVM, llvmName).build();
+    }
+
+    static void addTags(LLVMInstrumentableNode node, Class<? extends Tag>[] tags, Object nodeObject) {
+        final LLVMNodeSourceDescriptor sourceDescriptor = node.getOrCreateSourceDescriptor();
+        sourceDescriptor.setNodeObject(nodeObject);
+        if (sourceDescriptor.getTags() == null) {
+            sourceDescriptor.setTags(tags);
+        } else {
+            throw new LLVMParserException("Unexpected tags");
+        }
+    }
+
+    static void addElementPointerIndices(List<SymbolImpl> indices, LLVMNodeObject.Builder nodeObjectBuilder) {
+        final Object[] indexTypes = new Type[indices.size()];
+        final Object[] indexValues = new Object[indices.size()];
+        for (int i = 0; i < indices.size(); i++) {
+            final SymbolImpl index = indices.get(i);
+            indexTypes[i] = index.getType();
+            Object indexValue = LLVMSymbolReadResolver.evaluateLongIntegerConstant(index);
+            if (indexValue == null) {
+                indexValue = LLVMTags.GetElementPtr.INDEX_DYNAMIC_VALUE;
+            }
+            indexValues[i] = indexValue;
+        }
+        nodeObjectBuilder.option(LLVMTags.GetElementPtr.EXTRA_DATA_INDEX_TYPES, new LLVMGenericInteropArray(indexTypes));
+        nodeObjectBuilder.option(LLVMTags.GetElementPtr.EXTRA_DATA_INDEX_VALUES, new LLVMGenericInteropArray(indexValues));
     }
 
     private InstrumentationUtil() {

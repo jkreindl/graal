@@ -91,6 +91,8 @@ import com.oracle.truffle.llvm.runtime.except.LLVMUserException;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMInstrumentableNode;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNodeSourceDescriptor;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMVoidStatementNodeGen;
 import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
@@ -213,13 +215,16 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
     @Override
     public void visit(BranchInstruction branch) {
         LLVMControlFlowNode unconditionalBranchNode = nodeFactory.createUnconditionalBranch(branch.getSuccessor().getBlockIndex(),
-                        getPhiWriteNodes(branch)[0], getSourceLocation(branch));
+                        getPhiWriteNodes(branch)[0]);
+        addStatementTag(unconditionalBranchNode, getSourceLocation(branch));
         setControlFlowNode(unconditionalBranchNode);
     }
 
     @Override
     LLVMExpressionNode tryGenerateBuiltinNode(SymbolImpl target, LLVMExpressionNode[] argNodes, LLVMSourceLocation source) {
-        return nodeFactory.createLLVMBuiltin(target, argNodes, argCount, source);
+        final LLVMExpressionNode llvmBuiltin = nodeFactory.createLLVMBuiltin(target, argNodes, argCount);
+        addStatementTag(llvmBuiltin, source);
+        return llvmBuiltin;
     }
 
     @Override
@@ -256,10 +261,12 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
             if (target instanceof InlineAsmConstant) {
                 final InlineAsmConstant inlineAsmConstant = (InlineAsmConstant) target;
                 result = createInlineAssemblerNode(inlineAsmConstant, argNodes, argTypes, targetType, source);
+                addStatementTag(result, source);
 
             } else {
                 LLVMExpressionNode function = symbols.resolve(target);
-                result = nodeFactory.createFunctionCall(function, argNodes, new FunctionType(targetType, argTypes, false), source);
+                result = nodeFactory.createFunctionCall(function, argNodes, new FunctionType(targetType, argTypes, false));
+                addStatementTag(result, source);
             }
         }
 
@@ -283,7 +290,8 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
 
     @Override
     public void visit(ResumeInstruction resumeInstruction) {
-        LLVMControlFlowNode resume = nodeFactory.createResumeInstruction(getExceptionSlot(), getSourceLocation(resumeInstruction));
+        LLVMControlFlowNode resume = nodeFactory.createResumeInstruction(getExceptionSlot());
+        addStatementTag(resume, getSourceLocation(resumeInstruction));
         setControlFlowNode(resume);
     }
 
@@ -318,7 +326,9 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
 
     @Override
     public void visit(DebugTrapInstruction inst) {
-        addInstruction(nodeFactory.createDebugTrap(inst.getSourceLocation()));
+        final LLVMStatementNode debugTrap = nodeFactory.createDebugTrap();
+        addStatementTag(debugTrap, inst.getSourceLocation());
+        addInstruction(debugTrap);
     }
 
     @Override
@@ -352,8 +362,9 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
             } else {
                 final LLVMExpressionNode function = symbols.resolve(target);
                 final FunctionType functionType = new FunctionType(call.getType(), argsType, false);
-                node = nodeFactory.createFunctionCall(function, args, functionType, source);
+                node = nodeFactory.createFunctionCall(function, args, functionType);
             }
+            addStatementTag(node, source);
         }
         addInstruction(LLVMVoidStatementNodeGen.create(node));
     }
@@ -414,13 +425,14 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
                         unwindType.toArray(Type.EMPTY_ARRAY));
 
         final LLVMSourceLocation source = getSourceLocation(call, false);
-        LLVMExpressionNode function = tryGenerateBuiltinNode(target, argNodes, source);
+        LLVMExpressionNode function = tryGenerateBuiltinNode(target, argNodes, null);
         if (function == null) {
             function = symbols.resolve(target);
         }
         LLVMControlFlowNode result = nodeFactory.createFunctionInvoke(getSlot(call), function, argNodes, new FunctionType(targetType, argTypes, false),
                         regularIndex, unwindIndex, normalPhi,
-                        unwindPhi, source);
+                        unwindPhi);
+        addStatementTag(result, source);
 
         setControlFlowNode(result);
     }
@@ -479,12 +491,13 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
                         unwindType.toArray(Type.EMPTY_ARRAY));
 
         final LLVMSourceLocation source = getSourceLocation(call, false);
-        LLVMExpressionNode function = tryGenerateBuiltinNode(target, args, source);
+        LLVMExpressionNode function = tryGenerateBuiltinNode(target, args, null);
         if (function == null) {
             function = symbols.resolve(target);
         }
         LLVMControlFlowNode result = nodeFactory.createFunctionInvoke(null, function, args, new FunctionType(call.getType(), argsType, false),
-                        regularIndex, unwindIndex, normalPhi, unwindPhi, source);
+                        regularIndex, unwindIndex, normalPhi, unwindPhi);
+        addStatementTag(result, source);
 
         setControlFlowNode(result);
 
@@ -526,7 +539,8 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
         int falseIndex = branch.getFalseSuccessor().getBlockIndex();
 
         LLVMStatementNode[] phiWriteNodes = getPhiWriteNodes(branch);
-        LLVMControlFlowNode node = nodeFactory.createConditionalBranch(trueIndex, falseIndex, conditionNode, phiWriteNodes[0], phiWriteNodes[1], getSourceLocation(branch));
+        LLVMControlFlowNode node = nodeFactory.createConditionalBranch(trueIndex, falseIndex, conditionNode, phiWriteNodes[0], phiWriteNodes[1]);
+        addStatementTag(node, getSourceLocation(branch));
 
         setControlFlowNode(node);
     }
@@ -587,12 +601,13 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
             }
             LLVMExpressionNode value = symbols.resolve(branch.getAddress());
 
-            LLVMControlFlowNode node = nodeFactory.createIndirectBranch(value, labelTargets, getPhiWriteNodes(branch), getSourceLocation(branch));
+            LLVMControlFlowNode node = nodeFactory.createIndirectBranch(value, labelTargets, getPhiWriteNodes(branch));
+            addStatementTag(node, getSourceLocation(branch));
             setControlFlowNode(node);
         } else {
             assert branch.getSuccessorCount() == 1;
-            LLVMControlFlowNode node = nodeFactory.createUnconditionalBranch(branch.getSuccessor(0).getBlockIndex(), getPhiWriteNodes(branch)[0],
-                            getSourceLocation(branch));
+            LLVMControlFlowNode node = nodeFactory.createUnconditionalBranch(branch.getSuccessor(0).getBlockIndex(), getPhiWriteNodes(branch)[0]);
+            addStatementTag(node, getSourceLocation(branch));
             setControlFlowNode(node);
         }
     }
@@ -647,12 +662,13 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
         LLVMControlFlowNode node;
         final LLVMSourceLocation location = getSourceLocation(ret, false);
         if (ret.getValue() == null) {
-            node = nodeFactory.createRetVoid(location);
+            node = nodeFactory.createRetVoid();
         } else {
             final Type type = ret.getValue().getType();
             final LLVMExpressionNode value = symbols.resolve(ret.getValue());
-            node = nodeFactory.createNonVoidRet(value, type, location);
+            node = nodeFactory.createNonVoidRet(value, type);
         }
+        addStatementTag(node, location);
         setControlFlowNode(node);
     }
 
@@ -693,7 +709,8 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
             source = getSourceLocation(store);
         }
 
-        final LLVMStatementNode node = nodeFactory.createStore(pointerNode, valueNode, type, source);
+        final LLVMStatementNode node = nodeFactory.createStore(pointerNode, valueNode, type);
+        addStatementTag(node, source);
         addInstruction(node);
     }
 
@@ -736,6 +753,7 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
     @Override
     public void visit(FenceInstruction fence) {
         final LLVMStatementNode node = nodeFactory.createFence();
+        addStatementTag(node, getSourceLocation(fence));
         addInstruction(node);
     }
 
@@ -754,7 +772,8 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
             cases[i] = symbols.resolve(zwitch.getCaseValue(i));
         }
 
-        LLVMControlFlowNode node = nodeFactory.createSwitch(cond, successors, cases, llvmType, getPhiWriteNodes(zwitch), getSourceLocation(zwitch));
+        LLVMControlFlowNode node = nodeFactory.createSwitch(cond, successors, cases, llvmType, getPhiWriteNodes(zwitch));
+        addStatementTag(node, getSourceLocation(zwitch));
         setControlFlowNode(node);
     }
 
@@ -822,13 +841,16 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
             }
         }
 
-        LLVMControlFlowNode node = nodeFactory.createSwitch(cond, successors, cases, llvmType, getPhiWriteNodes(zwitch), getSourceLocation(zwitch));
+        LLVMControlFlowNode node = nodeFactory.createSwitch(cond, successors, cases, llvmType, getPhiWriteNodes(zwitch));
+        addStatementTag(node, getSourceLocation(zwitch));
         setControlFlowNode(node);
     }
 
     @Override
     public void visit(UnreachableInstruction ui) {
-        setControlFlowNode(nodeFactory.createUnreachableNode());
+        final LLVMControlFlowNode node = nodeFactory.createUnreachableNode();
+        addStatementTag(node, getSourceLocation(ui));
+        setControlFlowNode(node);
     }
 
     private void createFrameWrite(LLVMExpressionNode result, ValueInstruction source) {
@@ -847,7 +869,10 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
         if (inlineAsmConstant.getDialect() != AsmDialect.AT_T) {
             throw new LLVMParserException("Unsupported Assembly Dialect: " + inlineAsmConstant.getDialect());
         }
-        return nodeFactory.createInlineAssemblerExpression(library, inlineAsmConstant.getAsmExpression(), inlineAsmConstant.getAsmFlags(), argNodes, argsType, retType, sourceLocation);
+        final LLVMExpressionNode inlineAssemblerExpression = nodeFactory.createInlineAssemblerExpression(library, inlineAsmConstant.getAsmExpression(), inlineAsmConstant.getAsmFlags(), argNodes,
+                        argsType, retType);
+        addStatementTag(inlineAssemblerExpression, sourceLocation);
+        return inlineAssemblerExpression;
     }
 
     private FrameSlot getSlot(ValueInstruction instruction) {
@@ -938,5 +963,14 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
         }
 
         return false;
+    }
+
+    private static void addStatementTag(LLVMInstrumentableNode node, LLVMSourceLocation sourceLocation) {
+        // the statement tag is added implicitly by assigning the node a source location
+        if (node == null || sourceLocation == null) {
+            return;
+        }
+        final LLVMNodeSourceDescriptor sourceDescriptor = node.getOrCreateSourceDescriptor();
+        sourceDescriptor.setSourceLocation(sourceLocation);
     }
 }

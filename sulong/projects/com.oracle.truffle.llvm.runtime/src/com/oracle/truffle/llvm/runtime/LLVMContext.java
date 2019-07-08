@@ -197,10 +197,6 @@ public final class LLVMContext {
 
         final String traceOption = env.getOptions().get(SulongEngineOption.TRACE_IR);
         if (!"".equalsIgnoreCase(traceOption)) {
-            if (!env.getOptions().get(SulongEngineOption.INSTRUMENT_IR)) {
-                throw new IllegalStateException("\'--llvm.traceIR\' requires \'--llvm.instrumentIR=true\'");
-            }
-
             tracer = new LLVMExecutionTracer();
             tracer.initialize(env);
         } else {

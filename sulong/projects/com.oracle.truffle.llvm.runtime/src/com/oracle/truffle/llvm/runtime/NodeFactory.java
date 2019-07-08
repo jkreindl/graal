@@ -33,7 +33,6 @@ import java.util.List;
 
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameSlot;
-import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.nodes.RootNode;
 import com.oracle.truffle.api.source.Source;
@@ -84,7 +83,7 @@ public interface NodeFactory extends InteropNodeFactory {
 
     LLVMLoadNode createLoad(Type resolvedResultType, LLVMExpressionNode loadTarget);
 
-    LLVMStatementNode createStore(LLVMExpressionNode pointerNode, LLVMExpressionNode valueNode, Type type, LLVMSourceLocation source);
+    LLVMStatementNode createStore(LLVMExpressionNode pointerNode, LLVMExpressionNode valueNode, Type type);
 
     LLVMExpressionNode createRMWXchg(LLVMExpressionNode pointerNode, LLVMExpressionNode valueNode, Type type);
 
@@ -112,21 +111,21 @@ public interface NodeFactory extends InteropNodeFactory {
 
     LLVMStatementNode createFrameNuller(FrameSlot slot);
 
-    LLVMControlFlowNode createRetVoid(LLVMSourceLocation source);
+    LLVMControlFlowNode createRetVoid();
 
-    LLVMControlFlowNode createNonVoidRet(LLVMExpressionNode retValue, Type resolvedType, LLVMSourceLocation source);
+    LLVMControlFlowNode createNonVoidRet(LLVMExpressionNode retValue, Type resolvedType);
 
     LLVMExpressionNode createFunctionArgNode(int argIndex, Type paramType);
 
-    LLVMExpressionNode createFunctionCall(LLVMExpressionNode functionNode, LLVMExpressionNode[] argNodes, FunctionType type, LLVMSourceLocation sourceSection);
+    LLVMExpressionNode createFunctionCall(LLVMExpressionNode functionNode, LLVMExpressionNode[] argNodes, FunctionType type);
 
     LLVMControlFlowNode createFunctionInvoke(FrameSlot resultLocation, LLVMExpressionNode functionNode, LLVMExpressionNode[] argNodes, FunctionType type, int normalIndex,
                     int unwindIndex, LLVMStatementNode normalPhiWriteNodes,
-                    LLVMStatementNode unwindPhiWriteNodes, LLVMSourceLocation sourceSection);
+                    LLVMStatementNode unwindPhiWriteNodes);
 
     LLVMExpressionNode createFrameRead(Type llvmType, FrameSlot frameSlot);
 
-    LLVMStatementNode createFrameWrite(Type llvmType, LLVMExpressionNode result, FrameSlot slot, LLVMSourceLocation sourceSection);
+    LLVMStatementNode createFrameWrite(Type llvmType, LLVMExpressionNode result, FrameSlot slot);
 
     LLVMExpressionNode createComparison(CompareOperator operator, Type type, LLVMExpressionNode lhs, LLVMExpressionNode rhs);
 
@@ -153,15 +152,15 @@ public interface NodeFactory extends InteropNodeFactory {
 
     LLVMControlFlowNode createUnreachableNode();
 
-    LLVMControlFlowNode createIndirectBranch(LLVMExpressionNode value, int[] labelTargets, LLVMStatementNode[] phiWrites, LLVMSourceLocation source);
+    LLVMControlFlowNode createIndirectBranch(LLVMExpressionNode value, int[] labelTargets, LLVMStatementNode[] phiWrites);
 
     LLVMControlFlowNode createSwitch(LLVMExpressionNode cond, int[] labels, LLVMExpressionNode[] cases,
-                    Type llvmType, LLVMStatementNode[] phiWriteNodes, LLVMSourceLocation source);
+                    Type llvmType, LLVMStatementNode[] phiWriteNodes);
 
     LLVMControlFlowNode createConditionalBranch(int trueIndex, int falseIndex, LLVMExpressionNode conditionNode, LLVMStatementNode truePhiWriteNodes,
-                    LLVMStatementNode falsePhiWriteNodes, LLVMSourceLocation sourceSection);
+                    LLVMStatementNode falsePhiWriteNodes);
 
-    LLVMControlFlowNode createUnconditionalBranch(int unconditionalIndex, LLVMStatementNode phi, LLVMSourceLocation source);
+    LLVMControlFlowNode createUnconditionalBranch(int unconditionalIndex, LLVMStatementNode phi);
 
     LLVMExpressionNode createArrayLiteral(LLVMExpressionNode[] arrayValues, ArrayType arrayType, GetStackSpaceFactory arrayGetStackSpaceFactory);
 
@@ -191,23 +190,22 @@ public interface NodeFactory extends InteropNodeFactory {
     LLVMStatementNode createBasicBlockNode(LLVMStatementNode[] statementNodes, LLVMControlFlowNode terminatorNode, int blockId, String blockName);
 
     LLVMExpressionNode createFunctionBlockNode(FrameSlot exceptionValueSlot, List<? extends LLVMStatementNode> basicBlockNodes, UniquesRegionAllocator uniquesRegionAllocator,
-                    FrameSlot[][] beforeBlockNuller, FrameSlot[][] afterBlockNuller, LLVMSourceLocation sourceSection, LLVMStatementNode[] copyArgumentsToFrame);
+                    FrameSlot[][] beforeBlockNuller, FrameSlot[][] afterBlockNuller, LLVMStatementNode[] copyArgumentsToFrame);
 
     RootNode createFunctionStartNode(LLVMExpressionNode functionBodyNode, FrameDescriptor frameDescriptor, String name, String originalName,
                     int argumentCount, Source bcSource, LLVMSourceLocation location);
 
-    LLVMExpressionNode createInlineAssemblerExpression(ExternalLibrary library, String asmExpression, String asmFlags, LLVMExpressionNode[] args, Type[] argTypes, Type retType,
-                    LLVMSourceLocation sourceSection);
+    LLVMExpressionNode createInlineAssemblerExpression(ExternalLibrary library, String asmExpression, String asmFlags, LLVMExpressionNode[] args, Type[] argTypes, Type retType);
 
     LLVMExpressionNode createLandingPad(LLVMExpressionNode allocateLandingPadValue, FrameSlot exceptionSlot, boolean cleanup, long[] clauseKinds,
                     LLVMExpressionNode[] entries, LLVMExpressionNode getStack);
 
-    LLVMControlFlowNode createResumeInstruction(FrameSlot exceptionSlot, LLVMSourceLocation sourceSection);
+    LLVMControlFlowNode createResumeInstruction(FrameSlot exceptionSlot);
 
     LLVMExpressionNode createCompareExchangeInstruction(AggregateType returnType, Type elementType, LLVMExpressionNode ptrNode, LLVMExpressionNode cmpNode,
                     LLVMExpressionNode newNode);
 
-    LLVMExpressionNode createLLVMBuiltin(Symbol target, LLVMExpressionNode[] args, int callerArgumentCount, LLVMSourceLocation sourceSection);
+    LLVMExpressionNode createLLVMBuiltin(Symbol target, LLVMExpressionNode[] args, int callerArgumentCount);
 
     LLVMStatementNode createPhi(LLVMExpressionNode[] from, FrameSlot[] to, Type[] types);
 
@@ -227,7 +225,7 @@ public interface NodeFactory extends InteropNodeFactory {
 
     LLVMFrameValueAccess createDebugFrameValue(FrameSlot slot, boolean isDeclaration);
 
-    LLVMStatementNode createDebugTrap(LLVMSourceLocation location);
+    LLVMStatementNode createDebugTrap();
 
     TruffleObject toGenericDebuggerValue(Object llvmType, Object value);
 
@@ -241,9 +239,9 @@ public interface NodeFactory extends InteropNodeFactory {
 
     LLVMMemoryOpNode createFreeGlobalsBlock(boolean readOnly);
 
-    LLVMExpressionNode createStackSave(LLVMSourceLocation sourceSection);
+    LLVMExpressionNode createStackSave();
 
-    LLVMExpressionNode createStackRestore(LLVMExpressionNode stackPointer, LLVMSourceLocation sourceSection);
+    LLVMExpressionNode createStackRestore(LLVMExpressionNode stackPointer);
 
     ForeignToLLVM createForeignToLLVM(LLVMInteropType.Value type);
 
@@ -252,24 +250,4 @@ public interface NodeFactory extends InteropNodeFactory {
     LLVMObjectReadNode createGlobalContainerReadNode();
 
     LLVMObjectWriteNode createGlobalContainerWriteNode();
-
-    LLVMExpressionNode createInstrumentableExpression(LLVMExpressionNode expr, Class<? extends Tag>[] tags, Object nodeObject);
-
-    LLVMStatementNode createInstrumentableStatement(LLVMStatementNode stmt, Class<? extends Tag>[] tags, Object nodeObject);
-
-    void instrumentControlFlow(LLVMControlFlowNode cfNode, Class<? extends Tag>[] tags, Object nodeObject);
-
-    /**
-     * Produces an {@link LLVMExpressionNode} that increments a pointer by a constant offset. The
-     * produced node also receives an index as input. This enables the index to be propagated for
-     * instrumentation, it is not used for execution. Especially it is not used as a multiplier for
-     * the increment.
-     *
-     * @param baseAddress node producing the address to increment
-     * @param index type index represented by the address increment
-     * @param indexedPointerOffset increment to add to the input address
-     *
-     * @return the incoming address incremented by the given offset
-     */
-    LLVMExpressionNode createInstrumentableConstantPointerIncrement(LLVMExpressionNode baseAddress, LLVMExpressionNode index, long indexedPointerOffset);
 }

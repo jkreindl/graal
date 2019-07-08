@@ -44,6 +44,7 @@ import com.oracle.truffle.llvm.parser.model.symbols.instructions.CastInstruction
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.CompareExchangeInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.CompareInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.ConditionalBranchInstruction;
+import com.oracle.truffle.llvm.parser.model.symbols.instructions.DebugTrapInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.ExtractElementInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.ExtractValueInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.FenceInstruction;
@@ -78,6 +79,8 @@ import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMInstrumentableNode;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNodeSourceDescriptor;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 import com.oracle.truffle.llvm.runtime.types.FunctionType;
 import com.oracle.truffle.llvm.runtime.types.Type;
@@ -150,7 +153,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
 
         // only function declarations are resolved against the list of available builtins
         final FunctionDeclaration declare = (FunctionDeclaration) target;
-        final String builtinName = LLVMIdentifier.toGlobalIdentifier(declare.getName());
+        final String builtinName = declare.getName();
         final FunctionType builtinType = declare.getType();
 
         // clear the call or invoke tags already set by resolving the IR-parent of this node
@@ -256,8 +259,10 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(GetElementPointerInstruction gep) {
         tags = LLVMTags.GetElementPtr.EXPRESSION_TAGS;
-        nodeObject = createTypedNodeObject(gep).option(LLVMTags.GetElementPtr.EXTRA_DATA_SOURCE_TYPE, gep.getBasePointer().getType()).option(LLVMTags.GetElementPtr.EXTRA_DATA_IS_INBOUND,
-                        gep.isInbounds()).build();
+        final LLVMNodeObject.Builder builder = createTypedNodeObject(gep).option(LLVMTags.GetElementPtr.EXTRA_DATA_SOURCE_TYPE, gep.getBasePointer().getType()).option(
+                        LLVMTags.GetElementPtr.EXTRA_DATA_IS_INBOUND, gep.isInbounds());
+        InstrumentationUtil.addElementPointerIndices(gep.getIndices(), builder);
+        nodeObject = builder.build();
         super.visit(gep);
     }
 
@@ -292,6 +297,11 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
 
     @Override
     LLVMStatementNode createAggregatePhi(LLVMExpressionNode[] from, FrameSlot[] to, Type[] types, ArrayList<LLVMPhiManager.Phi> phis) {
+        // phis are resolved as part of resolving a control flow node, we must reset the tag and
+        // nodeobject after the phis have been resolved
+        final Class<? extends Tag>[] oldTags = tags;
+        final LLVMNodeObject oldNodeObject = nodeObject;
+
         final LLVMStatementNode phiWrites = super.createAggregatePhi(from, to, types, phis);
         if (phiWrites == null) {
             return null;
@@ -305,12 +315,11 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         }
         nodeObject = LLVMNodeObject.newBuilder().option(LLVMTags.Phi.EXTRA_DATA_TARGETS, new LLVMNodeObjectKeys(targets)).build();
 
-        final LLVMStatementNode instrumentablePhiWrites = nodeFactory.createInstrumentableStatement(phiWrites, tags, nodeObject);
+        instrument(phiWrites);
+        tags = oldTags;
+        nodeObject = oldNodeObject;
 
-        tags = null;
-        nodeObject = null;
-
-        return instrumentablePhiWrites;
+        return phiWrites;
     }
 
     @Override
@@ -385,23 +394,30 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         super.visit(ui);
     }
 
+    @SuppressWarnings("unchecked") //
+    private static final Class<? extends Tag>[] EMPTY_TAGS = new Class[0];
+
+    @Override
+    public void visit(DebugTrapInstruction inst) {
+        tags = EMPTY_TAGS;
+        super.visit(inst);
+    }
+
     @Override
     void createFrameWrite(LLVMExpressionNode result, ValueInstruction source, LLVMSourceLocation sourceLocation) {
-        ensureTagsValid();
         // instrument the source of the write
-        final LLVMExpressionNode node = nodeFactory.createInstrumentableExpression(result, tags, nodeObject);
+        instrument(result);
 
         // super.createFrameWrite will call addInstruction, prepare the tags for then
         tags = LLVMTags.SSAWrite.EXPRESSION_TAGS;
         nodeObject = InstrumentationUtil.createSSAAccessDescriptor(source, LLVMTags.SSAWrite.EXTRA_DATA_SSA_TARGET);
-        super.createFrameWrite(node, source, sourceLocation);
+        super.createFrameWrite(result, source, sourceLocation);
     }
 
     @Override
     void addInstruction(LLVMStatementNode node) {
-        ensureTagsValid();
-        final LLVMStatementNode instrumentedNode = nodeFactory.createInstrumentableStatement(node, tags, nodeObject);
-        super.addInstruction(instrumentedNode);
+        instrument(node);
+        super.addInstruction(node);
         tags = null;
         nodeObject = null;
     }
@@ -416,15 +432,23 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
 
     @Override
     void setControlFlowNode(LLVMControlFlowNode controlFlowNode) {
-        nodeFactory.instrumentControlFlow(controlFlowNode, tags, nodeObject);
+        InstrumentationUtil.addTags(controlFlowNode, tags, nodeObject);
         super.setControlFlowNode(controlFlowNode);
         tags = null;
         nodeObject = null;
     }
 
-    private void ensureTagsValid() {
+    private void instrument(LLVMInstrumentableNode node) {
         if (tags == null) {
             throw new LLVMParserException("Failed to instrument node");
         }
+
+        final LLVMNodeSourceDescriptor sourceDescriptor = node.getOrCreateSourceDescriptor();
+
+        assert sourceDescriptor.getNodeObject() == null : "Unexpected nodeObject";
+        sourceDescriptor.setNodeObject(nodeObject);
+
+        assert sourceDescriptor.getTags() == null : "Unexpected tags";
+        sourceDescriptor.setTags(tags);
     }
 }

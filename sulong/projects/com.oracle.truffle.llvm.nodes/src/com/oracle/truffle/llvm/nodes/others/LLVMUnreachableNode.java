@@ -45,10 +45,6 @@ public class LLVMUnreachableNode extends LLVMControlFlowNode {
         private static final long serialVersionUID = 1L;
     }
 
-    public LLVMUnreachableNode() {
-        super(null);
-    }
-
     @Override
     public int getSuccessorCount() {
         return 0;

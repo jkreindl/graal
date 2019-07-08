@@ -105,9 +105,6 @@ public final class SulongEngineOption {
                    "Files with a relative path will be looked up relative to llvm.libraryPath. Libraries are delimited by " + OPTION_ARRAY_SEPARATOR + " .") //
     public static final OptionKey<String> LIBRARIES = new OptionKey<>("");
 
-    @Option(name = "llvm.instrumentIR", category = OptionCategory.EXPERT, help = "Enable IR-level instrumentation of executing LLVM bitcode.") //
-    public static final OptionKey<Boolean> INSTRUMENT_IR = new OptionKey<>(false);
-
     @Option(name = "llvm.traceIR", category = OptionCategory.EXPERT, help = "Prints a trace of the executed bitcode. Requires \'--llvm.instrumentIR=true\'. Set value to \'stdout\', \'stderr\' or \'file://<path to writable file>\' to enable.") //
     public static final OptionKey<String> TRACE_IR = new OptionKey<>("");
 

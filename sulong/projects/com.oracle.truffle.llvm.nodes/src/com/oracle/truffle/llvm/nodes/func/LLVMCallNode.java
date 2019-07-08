@@ -32,12 +32,9 @@ package com.oracle.truffle.llvm.nodes.func;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.frame.VirtualFrame;
-import com.oracle.truffle.api.instrumentation.StandardTags;
-import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.llvm.runtime.LLVMFunctionDescriptor;
-import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.except.LLVMPolyglotException;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.types.FunctionType;
@@ -79,14 +76,10 @@ public final class LLVMCallNode extends LLVMExpressionNode {
 
     @CompilationFinal private boolean mayBeBuiltin = true;
 
-    private final LLVMSourceLocation source;
-
-    public LLVMCallNode(FunctionType functionType, LLVMExpressionNode functionNode, LLVMExpressionNode[] argumentNodes, LLVMSourceLocation source) {
-        this.functionType = functionType;
+    public LLVMCallNode(FunctionType functionType, LLVMExpressionNode functionNode, LLVMExpressionNode[] argumentNodes) {
         this.argumentNodes = argumentNodes;
         this.dispatchTargetNode = LLVMLookupDispatchTargetNodeGen.create(functionNode);
         this.dispatchNode = LLVMDispatchNodeGen.create(functionType);
-        this.source = source;
     }
 
     @ExplodeLoop
@@ -137,12 +130,7 @@ public final class LLVMCallNode extends LLVMExpressionNode {
     }
 
     @Override
-    public LLVMSourceLocation getSourceLocation() {
-        return source;
-    }
-
-    @Override
-    public boolean hasTag(Class<? extends Tag> tag) {
-        return tag == StandardTags.StatementTag.class || tag == StandardTags.CallTag.class || super.hasTag(tag);
+    public boolean hasCallTag() {
+        return true;
     }
 }
