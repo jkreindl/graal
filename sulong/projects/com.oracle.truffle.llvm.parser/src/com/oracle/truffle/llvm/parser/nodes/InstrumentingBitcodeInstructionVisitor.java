@@ -84,7 +84,6 @@ import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 import com.oracle.truffle.llvm.runtime.types.FunctionType;
 import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.runtime.types.VoidType;
-import com.oracle.truffle.llvm.runtime.types.symbols.LLVMIdentifier;
 import org.graalvm.collections.EconomicMap;
 
 import java.util.ArrayList;
@@ -315,7 +314,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
 
         final String[] targets = new String[phis.size()];
         for (int i = 0; i < targets.length; i++) {
-            targets[i] = LLVMIdentifier.toLocalIdentifier(phis.get(i).getPhiValue().getName());
+            targets[i] = phis.get(i).getPhiValue().getName();
         }
         nodeObjectEntries = EconomicMap.create(1);
         nodeObjectEntries.put(LLVMTags.Phi.EXTRA_DATA_TARGETS, new LLVMNodeObjectKeys(targets));
