@@ -39,6 +39,7 @@ import java.util.function.Supplier;
 import org.graalvm.compiler.serviceprovider.SpeculationReasonGroup.SpeculationContextObject;
 
 import jdk.vm.ci.code.BytecodePosition;
+import jdk.vm.ci.code.VirtualObject;
 import jdk.vm.ci.meta.ResolvedJavaField;
 import jdk.vm.ci.meta.ResolvedJavaMethod;
 import jdk.vm.ci.meta.ResolvedJavaType;
@@ -462,5 +463,10 @@ public final class GraalServices {
                 }
             }
         }
+    }
+
+    @SuppressWarnings("unused")
+    public static VirtualObject createVirtualObject(ResolvedJavaType type, int id, boolean isAutoBox) {
+        return VirtualObject.get(type, id, isAutoBox);
     }
 }

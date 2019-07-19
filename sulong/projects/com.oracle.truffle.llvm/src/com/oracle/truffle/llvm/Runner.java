@@ -40,10 +40,13 @@ import java.util.BitSet;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.oracle.truffle.llvm.parser.binary.BinaryParser;
+import com.oracle.truffle.llvm.parser.binary.BinaryParserResult;
 import org.graalvm.collections.EconomicMap;
 import org.graalvm.collections.EconomicSet;
 import org.graalvm.collections.Equivalence;
@@ -487,7 +490,7 @@ final class Runner {
         List<String> externals = SulongEngineOption.getPolyglotOptionExternalLibraries(context.getEnv());
         for (String external : externals) {
             // assume that the library is a native one until we parsed it and can say for sure
-            ExternalLibrary lib = context.addExternalLibrary(external, true);
+            ExternalLibrary lib = context.addExternalLibrary(external, true, "<command line>");
             if (lib != null) {
                 parse(parserResults, dependencyQueue, lib);
             }
@@ -505,7 +508,8 @@ final class Runner {
             parse(parserResults, dependencyQueue, lib);
         }
 
-        combineSulongLibraries(sulongLibraryResults);
+        updateOverriddenSymbols(sulongLibraryResults);
+        resolveRenamedSymbols(sulongLibraryResults);
         return sulongLibraries;
     }
 
@@ -531,7 +535,44 @@ final class Runner {
         return sulongLibraries;
     }
 
-    private void combineSulongLibraries(LLVMParserResult[] sulongLibraryResults) {
+    private static void resolveRenamedSymbols(LLVMParserResult[] sulongLibraryResults) {
+        EconomicMap<String, LLVMScope> scopes = EconomicMap.create();
+
+        for (LLVMParserResult parserResult : sulongLibraryResults) {
+            scopes.put(parserResult.getRuntime().getLibrary().getName(), parserResult.getRuntime().getFileScope());
+        }
+
+        for (LLVMParserResult parserResult : sulongLibraryResults) {
+            ListIterator<FunctionSymbol> it = parserResult.getExternalFunctions().listIterator();
+            while (it.hasNext()) {
+                FunctionSymbol external = it.next();
+                String name = external.getName();
+                /*
+                 * An unresolved name has the form "__libName_symbolName". Check whether we have a
+                 * symbol named "symbolName" in the library "libName". If it exists, introduce an
+                 * alias. This can be used to explicitly call symbols from a certain standard
+                 * library, in case the symbol is hidden (either using the "hidden" attribute, or
+                 * because it is overridden).
+                 */
+                if (name.startsWith("__")) {
+                    int idx = name.indexOf('_', 2);
+                    if (idx > 0) {
+                        String lib = name.substring(2, idx);
+                        LLVMScope scope = scopes.get(lib);
+                        if (scope != null) {
+                            String originalName = name.substring(idx + 1);
+                            LLVMFunctionDescriptor originalSymbol = scope.getFunction(originalName);
+                            LLVMAlias alias = new LLVMAlias(parserResult.getRuntime().getLibrary(), name, originalSymbol);
+                            parserResult.getRuntime().getFileScope().register(alias);
+                            it.remove();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void updateOverriddenSymbols(LLVMParserResult[] sulongLibraryResults) {
         if (sulongLibraryResults.length > 1) {
             EconomicMap<LLVMSymbol, List<LLVMAlias>> usagesInAliases = computeUsagesInAliases(sulongLibraryResults);
 
@@ -539,7 +580,7 @@ final class Runner {
             LLVMParserResult strongerLib = sulongLibraryResults[0];
             for (int i = 1; i < sulongLibraryResults.length; i++) {
                 LLVMParserResult weakerLib = sulongLibraryResults[i];
-                renameConflictingSymbols(weakerLib, strongerLib, usagesInAliases);
+                overrideConflictingSymbols(weakerLib, strongerLib, usagesInAliases);
                 weakerLib.getRuntime().getFileScope().addMissingEntries(strongerLib.getRuntime().getFileScope());
                 strongerLib = weakerLib;
             }
@@ -566,41 +607,29 @@ final class Runner {
         return usages;
     }
 
-    private void renameConflictingSymbols(LLVMParserResult currentLib, LLVMParserResult strongerLib, EconomicMap<LLVMSymbol, List<LLVMAlias>> usagesInAliases) {
+    private void overrideConflictingSymbols(LLVMParserResult currentLib, LLVMParserResult strongerLib, EconomicMap<LLVMSymbol, List<LLVMAlias>> usagesInAliases) {
         LLVMScope globalScope = context.getGlobalScope();
         LLVMScope weakerScope = currentLib.getRuntime().getFileScope();
         LLVMScope strongerScope = strongerLib.getRuntime().getFileScope();
-        String weakerLibName = currentLib.getRuntime().getLibrary().getName();
 
         for (LLVMSymbol strongerSymbol : strongerScope.values()) {
             String name = strongerSymbol.getName();
             LLVMSymbol weakerSymbol = weakerScope.get(name);
             if (weakerSymbol != null) {
-                boolean shouldRename = strongerSymbol.isFunction() || strongerSymbol.isGlobalVariable() && !strongerSymbol.asGlobalVariable().isReadOnly();
-                if (shouldRename) {
+                boolean shouldOverride = strongerSymbol.isFunction() || strongerSymbol.isGlobalVariable() && !strongerSymbol.asGlobalVariable().isReadOnly();
+                if (shouldOverride) {
                     /*
                      * We already have a function with the same name in another (more important)
-                     * library. We rename the already existing symbol by prefixing it with
-                     * "__libName_", e.g., "__clock_gettime" would be renamed to
-                     * "__libc___clock_gettime".
+                     * library. We update the global scope and all aliases pointing to the weaker
+                     * symbol to point to the stronger symbol instead.
                      */
-                    String renamedName = getRenamedSymbol(name, weakerLibName);
-                    if (globalScope.contains(renamedName) || weakerScope.contains(renamedName)) {
-                        throw new IllegalStateException("There is a conflict between a user defined function and an automatically renamed function: " + renamedName);
-                    } else if (!(weakerSymbol.isFunction() && strongerSymbol.isFunction() || weakerSymbol.isGlobalVariable() && strongerSymbol.isGlobalVariable())) {
-                        throw new IllegalStateException("Can't replace a function with a global variable or vice versa: " + name);
-                    }
 
-                    // rename and export the renamed symbol
-                    weakerSymbol.setName(renamedName);
-                    weakerScope.rename(name, weakerSymbol);
+                    // if the weaker symbol is exported, export the stronger symbol instead
                     if (globalScope.get(name) == weakerSymbol) {
-                        globalScope.rename(name, weakerSymbol);
-                    } else {
-                        globalScope.register(weakerSymbol);
+                        globalScope.rename(name, strongerSymbol);
                     }
 
-                    // modify all aliases that use this symbol
+                    // modify all aliases that point to the weaker symbol
                     List<LLVMAlias> affectedAliases = usagesInAliases.get(weakerSymbol);
                     if (affectedAliases != null) {
                         for (LLVMAlias alias : affectedAliases) {
@@ -610,10 +639,6 @@ final class Runner {
                 }
             }
         }
-    }
-
-    private static String getRenamedSymbol(String functionName, String libraryName) {
-        return "__" + libraryName + "_" + functionName;
     }
 
     private LLVMParserResult parse(List<LLVMParserResult> parserResults, ArrayDeque<ExternalLibrary> dependencyQueue, ExternalLibrary lib) {
@@ -639,13 +664,15 @@ final class Runner {
 
     private LLVMParserResult parse(List<LLVMParserResult> parserResults, ArrayDeque<ExternalLibrary> dependencyQueue, Source source,
                     ExternalLibrary library, ByteSequence bytes) {
-        ModelModule module = LLVMScanner.parse(bytes, source, context);
-        if (module != null) {
+        BinaryParserResult binaryParserResult = BinaryParser.parse(bytes, source, context);
+        if (binaryParserResult != null) {
+            ModelModule module = new ModelModule();
+            LLVMScanner.parseBitcode(binaryParserResult.getBitcode(), module, source, context);
             library.setIsNative(false);
-            context.addLibraryPaths(module.getLibraryPaths());
-            List<String> libraries = module.getLibraries();
+            context.addLibraryPaths(binaryParserResult.getLibraryPaths());
+            List<String> libraries = binaryParserResult.getLibraries();
             for (String lib : libraries) {
-                ExternalLibrary dependency = context.addExternalLibrary(lib, true);
+                ExternalLibrary dependency = context.addExternalLibrary(lib, true, library, binaryParserResult.getLocator());
                 if (dependency != null) {
                     dependencyQueue.addLast(dependency);
                 }

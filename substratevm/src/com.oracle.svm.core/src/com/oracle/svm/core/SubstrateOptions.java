@@ -30,6 +30,7 @@ import java.util.function.Predicate;
 
 import org.graalvm.collections.EconomicMap;
 import org.graalvm.compiler.api.replacements.Fold;
+import org.graalvm.compiler.core.common.GraalOptions;
 import org.graalvm.compiler.options.Option;
 import org.graalvm.compiler.options.OptionKey;
 import org.graalvm.compiler.options.OptionType;
@@ -40,6 +41,7 @@ import org.graalvm.nativeimage.Platforms;
 import com.oracle.svm.core.jdk.JavaNetSubstitutions;
 import com.oracle.svm.core.option.APIOption;
 import com.oracle.svm.core.option.HostedOptionKey;
+import com.oracle.svm.core.option.HostedOptionValues;
 import com.oracle.svm.core.option.OptionUtils;
 import com.oracle.svm.core.option.RuntimeOptionKey;
 
@@ -78,7 +80,6 @@ public class SubstrateOptions {
 
     public static final String IMAGE_CLASSPATH_PREFIX = "-imagecp";
     public static final String WATCHPID_PREFIX = "-watchpid";
-
     private static ValueUpdateHandler optimizeValueUpdateHandler;
 
     @Option(help = "Show available options based on comma-separated option-types (allowed categories: User, Expert, Debug).")//
@@ -274,7 +275,7 @@ public class SubstrateOptions {
     public static final HostedOptionKey<Integer> MaxNodesInTrivialLeafMethod = new HostedOptionKey<>(40);
 
     @Option(help = "Saves stack base pointer on the stack on method entry.")//
-    public static final HostedOptionKey<Boolean> UseStackBasePointer = new HostedOptionKey<>(false);
+    public static final HostedOptionKey<Boolean> PreserveFramePointer = new HostedOptionKey<>(false);
 
     @Option(help = "Report error if <typename>[:<UsageKind>{,<UsageKind>}] is discovered during analysis (valid values for UsageKind: InHeap, Allocated, InTypeCheck).", type = OptionType.Debug)//
     public static final HostedOptionKey<String[]> ReportAnalysisForbiddenType = new HostedOptionKey<>(new String[0]);
@@ -283,8 +284,15 @@ public class SubstrateOptions {
     public static final HostedOptionKey<String> CompilerBackend = new HostedOptionKey<String>("lir") {
         @Override
         protected void onValueUpdate(EconomicMap<OptionKey<?>, Object> values, String oldValue, String newValue) {
-            if ("llvm".equals(newValue) && JavaVersionUtil.JAVA_SPEC > 8) {
-                EmitStringEncodingSubstitutions.update(values, false);
+            if ("llvm".equals(newValue)) {
+                if (JavaVersionUtil.JAVA_SPEC > 8) {
+                    EmitStringEncodingSubstitutions.update(values, false);
+                }
+                /*
+                 * The code information is filled before linking, which means that stripping dead
+                 * functions makes it incoherent with the executable.
+                 */
+                RemoveUnusedSymbols.update(values, false);
             }
         }
     };
@@ -306,5 +314,20 @@ public class SubstrateOptions {
             };
         }
         return javaName -> true;
+    }
+
+    @Option(help = "Use linker option to prevent unreferenced symbols in image.")//
+    public static final HostedOptionKey<Boolean> RemoveUnusedSymbols = new HostedOptionKey<>(false);
+    @Option(help = "Use linker option to remove all local symbols from image.")//
+    public static final HostedOptionKey<Boolean> DeleteLocalSymbols = new HostedOptionKey<>(true);
+
+    /**
+     * The alignment for AOT and JIT compiled methods. The value is constant folded during image
+     * generation, i.e., cannot be changed at run time, so that it can be used in uninterruptible
+     * code.
+     */
+    @Fold
+    public static int codeAlignment() {
+        return GraalOptions.LoopHeaderAlignment.getValue(HostedOptionValues.singleton());
     }
 }

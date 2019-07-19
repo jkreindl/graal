@@ -28,6 +28,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
+import jdk.vm.ci.code.VirtualObject;
+import jdk.vm.ci.meta.ResolvedJavaType;
 import jdk.vm.ci.meta.SpeculationLog.SpeculationReason;
 import jdk.vm.ci.services.JVMCIPermission;
 
@@ -220,6 +222,26 @@ public final class GraalServices {
      */
     @SuppressWarnings("unused")
     public static double fma(double a, double b, double c) {
+        throw shouldNotReachHere();
+    }
+
+    /**
+     * Creates a new {@link VirtualObject} based on a given existing object, with the given
+     * contents. If {@code type} is an instance class then {@link VirtualObject#getValues} provides
+     * the values for the fields returned by {@link ResolvedJavaType#getInstanceFields(boolean)
+     * getInstanceFields(true)}. If {@code type} is an array then the length of
+     * {@link VirtualObject#getValues} determines the array length.
+     *
+     * @param type the type of the object whose allocation was removed during compilation. This can
+     *            be either an instance or an array type.
+     * @param id a unique id that identifies the object within the debug information for one
+     *            position in the compiled code.
+     * @param isAutoBox a flag that tells the runtime that the object may be a boxed primitive that
+     *            needs to be obtained from the box cache instead of creating a new instance.
+     * @return a new {@link VirtualObject} instance.
+     */
+    @SuppressWarnings("unused")
+    public static VirtualObject createVirtualObject(ResolvedJavaType type, int id, boolean isAutoBox) {
         throw shouldNotReachHere();
     }
 }

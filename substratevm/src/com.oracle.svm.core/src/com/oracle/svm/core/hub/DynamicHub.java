@@ -83,8 +83,13 @@ import com.oracle.svm.core.util.LazyFinalReference;
 import com.oracle.svm.core.util.VMError;
 import com.oracle.svm.util.ReflectionUtil;
 import com.oracle.svm.util.ReflectionUtil.ReflectionUtilError;
+import java.io.File;
+import java.net.MalformedURLException;
+import java.security.CodeSource;
+import java.security.cert.Certificate;
 
 import jdk.vm.ci.meta.JavaKind;
+import org.graalvm.nativeimage.ProcessProperties;
 import sun.security.util.SecurityConstants;
 
 @Hybrid
@@ -272,7 +277,18 @@ public final class DynamicHub implements JavaKind.FormatWithToString, AnnotatedE
     private static final LazyFinalReference<java.security.ProtectionDomain> allPermDomainReference = new LazyFinalReference<>(() -> {
         java.security.Permissions perms = new java.security.Permissions();
         perms.add(SecurityConstants.ALL_PERMISSION);
-        return new java.security.ProtectionDomain(null, perms);
+        CodeSource cs;
+        try {
+            // Try to use executable image's name as code source for the class.
+            // The file location can be used by Java code to determine its location on disk, similar
+            // to argv[0].
+            cs = new CodeSource(new File(ProcessProperties.getExecutableName()).toURI().toURL(), (Certificate[]) null);
+        } catch (MalformedURLException ex) {
+            // This should not really happen; the file is cannonicalized, absolute, so it should
+            // always have file:// URL.
+            cs = null;
+        }
+        return new java.security.ProtectionDomain(cs, perms);
     });
 
     public static final LazyFinalReference<Target_java_lang_Module> singleModuleReference = new LazyFinalReference<>(Target_java_lang_Module::new);
@@ -1148,8 +1164,9 @@ public final class DynamicHub implements JavaKind.FormatWithToString, AnnotatedE
     @Substitute //
     @TargetElement(onlyWith = JDK11OrLater.class) //
     @SuppressWarnings({"unused"})
-    public static Class<?> forName(Target_java_lang_Module module, String name) {
-        throw VMError.unsupportedFeature("JDK11OrLater: DynamicHub.forName(Target_java_lang_Module module, String name)");
+    public static Class<?> forName(Target_java_lang_Module module, String className) {
+        /* The module system is not supported for now, therefore the module parameter is ignored. */
+        return ClassForNameSupport.forNameOrNull(className, false);
     }
 
     @Substitute
@@ -1158,12 +1175,7 @@ public final class DynamicHub implements JavaKind.FormatWithToString, AnnotatedE
     }
 
     @KeepOriginal
-    @TargetElement(name = "getPackage", onlyWith = JDK8OrEarlier.class)
-    public native Package getPackageJDK8OrEarlier();
-
-    @KeepOriginal
-    @TargetElement(name = "getPackage", onlyWith = JDK11OrLater.class)
-    public native Package getPackageJDK11OrLater();
+    private native Package getPackage();
 
     @Substitute //
     @TargetElement(onlyWith = JDK11OrLater.class)

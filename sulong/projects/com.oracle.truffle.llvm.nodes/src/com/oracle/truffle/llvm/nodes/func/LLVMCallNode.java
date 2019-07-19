@@ -48,9 +48,11 @@ public final class LLVMCallNode extends LLVMExpressionNode {
         @CompilationFinal private LLVMFunctionDescriptor descriptor;
         @Child private LLVMExpressionNode intrinsic;
 
-        IntrinsicDispatch(LLVMFunctionDescriptor descriptor, LLVMExpressionNode[] argumentNodes) {
+        IntrinsicDispatch(LLVMFunctionDescriptor descriptor, LLVMExpressionNode[] argumentNodes, FunctionType functionType) {
             this.descriptor = descriptor;
-            this.intrinsic = descriptor.getIntrinsic().generateNode(argumentNodes);
+            // Note that functionType is not the same as descriptor.getType() in case of varargs!
+            // functionType contains the types of the actual arguments of this particular call site.
+            this.intrinsic = descriptor.getIntrinsic().generateNode(functionType, argumentNodes);
         }
 
         public boolean matches(Object function) {
@@ -64,6 +66,8 @@ public final class LLVMCallNode extends LLVMExpressionNode {
 
     public static final int USER_ARGUMENT_OFFSET = 1;
 
+    private final FunctionType functionType;
+
     @Children private final LLVMExpressionNode[] argumentNodes;
     @Children private LLVMPrepareArgumentNode[] prepareArgumentNodes;
     @Child private LLVMLookupDispatchTargetNode dispatchTargetNode;
@@ -73,6 +77,7 @@ public final class LLVMCallNode extends LLVMExpressionNode {
     @CompilationFinal private boolean mayBeBuiltin = true;
 
     public LLVMCallNode(FunctionType functionType, LLVMExpressionNode functionNode, LLVMExpressionNode[] argumentNodes) {
+        this.functionType = functionType;
         this.argumentNodes = argumentNodes;
         this.dispatchTargetNode = LLVMLookupDispatchTargetNodeGen.create(functionNode);
         this.dispatchNode = LLVMDispatchNodeGen.create(functionType);
@@ -89,7 +94,7 @@ public final class LLVMCallNode extends LLVMExpressionNode {
                 LLVMFunctionDescriptor descriptor = (LLVMFunctionDescriptor) function;
                 if (descriptor.isIntrinsicFunction()) {
                     try {
-                        intrinsicDispatch = insert(new IntrinsicDispatch(descriptor, argumentNodes));
+                        intrinsicDispatch = insert(new IntrinsicDispatch(descriptor, argumentNodes, functionType));
                     } catch (LLVMPolyglotException e) {
                         // re-throw with this node to generate correct stack trace
                         throw new LLVMPolyglotException(this, e.getMessage(), e);

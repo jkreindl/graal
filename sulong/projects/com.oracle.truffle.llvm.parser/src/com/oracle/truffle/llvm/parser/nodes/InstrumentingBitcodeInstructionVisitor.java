@@ -125,14 +125,14 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     public void visit(BinaryOperationInstruction operation) {
         tags = InstrumentationUtil.getBinaryOperationTags(operation.getOperator(), false);
 
+        final LLVMNodeObject.Builder builder = LLVMNodeObject.newBuilder();
         final ArithmeticFlag[] allFlags = ArithmeticFlag.ALL_VALUES;
-        final String[] keys = new String[allFlags.length];
-        final Object[] values = new Object[allFlags.length];
-        for (int i = 0; i < allFlags.length; i++) {
-            keys[i] = allFlags[i].toString();
-            values[i] = LLVMBitcodeTypeHelper.testArithmeticFlag(allFlags[i], operation.getFlags(), operation.getOperator());
+        for (ArithmeticFlag flag : allFlags) {
+            final String key = flag.toString();
+            final Object value = LLVMBitcodeTypeHelper.testArithmeticFlag(flag, operation.getFlags(), operation.getOperator());
+            builder.option(key, value);
         }
-        nodeObject = new LLVMNodeObject(keys, values);
+        nodeObject = builder.build();
 
         super.visit(operation);
     }

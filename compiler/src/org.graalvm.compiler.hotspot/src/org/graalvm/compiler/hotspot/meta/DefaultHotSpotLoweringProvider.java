@@ -182,7 +182,7 @@ import jdk.vm.ci.meta.ResolvedJavaType;
 /**
  * HotSpot implementation of {@link LoweringProvider}.
  */
-public class DefaultHotSpotLoweringProvider extends DefaultJavaLoweringProvider implements HotSpotLoweringProvider {
+public abstract class DefaultHotSpotLoweringProvider extends DefaultJavaLoweringProvider implements HotSpotLoweringProvider {
 
     protected final HotSpotGraalRuntimeProvider runtime;
     protected final HotSpotRegistersProvider registers;
@@ -797,7 +797,7 @@ public class DefaultHotSpotLoweringProvider extends DefaultJavaLoweringProvider 
 
     @Override
     protected final JavaKind getStorageKind(ResolvedJavaField field) {
-        return wordTypes.asKind(field.getType());
+        return field.getJavaKind();
     }
 
     @Override

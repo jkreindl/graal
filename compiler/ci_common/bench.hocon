@@ -8,8 +8,6 @@ bench-jvmci : {
   mx-scala-dacapo : ${bench-jvmci.mx-benchmark} ["scala-dacapo:*"]
   mx-dacapo-timing : ${bench-jvmci.mx-benchmark} ["dacapo-timing:*"]
   mx-scala-dacapo-timing : ${bench-jvmci.mx-benchmark} ["scala-dacapo-timing:*"]
-  mx-dacapo-move-profiling : ${bench-jvmci.mx-benchmark} ["dacapo-move-profiling:*"]
-  mx-scala-dacapo-move-profiling : ${bench-jvmci.mx-benchmark} ["scala-dacapo-move-profiling:*"]
   mx-specjvm2008-Single: ${bench-jvmci.mx-benchmark} ["specjvm2008:*"]
   mx-specjvm2008-OneVM: ${bench-jvmci.mx-benchmark} ["specjvm2008"]
   mx-specjbb2005: ${bench-jvmci.mx-benchmark} ["specjbb2005"]
@@ -41,6 +39,14 @@ large-heap: {
   }
 }
 
+specjbb-large-heap: {
+  environment : {
+    XMS: ${LARGE_HEAP_SIZE}
+    XMX: ${LARGE_HEAP_SIZE}
+    XMN: ${LARGE_YOUNG_GEN_SIZE}
+  }
+}
+
 default-heap: {
   environment : {
     XMS: ${DEFAULT_HEAP_SIZE}
@@ -62,13 +68,6 @@ bench-dacapo-timing: ${bench-common} ${default-heap} ${dacapo-bench-notification
   ]
 }
 
-bench-dacapo-move-profiling: ${bench-common} ${default-heap} ${dacapo-bench-notifications} {
-  targets: [bench, daily]
-  run: [
-    ${bench-jvmci.mx-dacapo-move-profiling} ${bench-arguments}
-  ]
-}
-
 # Scala DaCapo-related targets
 
 bench-scala-dacapo: ${bench-common} ${default-heap} ${scala-dacapo-bench-notifications} {
@@ -85,17 +84,10 @@ bench-scala-dacapo-timing: ${bench-common} ${default-heap} ${scala-dacapo-bench-
   ]
 }
 
-bench-scala-dacapo-move-profiling: ${bench-common} ${default-heap} ${scala-dacapo-bench-notifications} {
-  targets: [bench, daily]
-  run: [
-    ${bench-jvmci.mx-scala-dacapo-move-profiling} ${bench-arguments}
-  ]
-}
-
 # SPECjbb2005-related targets
 
-bench-specjbb2005: ${bench-common} ${large-heap} ${specjbb-bench-notifications} {
-  targets: [bench, weekly]
+bench-specjbb2005: ${bench-common} ${specjbb-large-heap} ${specjbb-bench-notifications} {
+  targets: [bench, daily]
   downloads: {
     SPECJBB2005: { name: specjbb2005, version: "1.07" }
   }
@@ -136,8 +128,8 @@ bench-specjvm2008-OneVM: ${bench-specjvm2008} ${specjvm-bench-notifications} {
 
 # SPECjbb2015-related targets
 
-bench-specjbb2015: ${bench-common} ${large-heap} ${specjbb-bench-notifications} {
-  targets: [bench, weekly]
+bench-specjbb2015: ${bench-common} ${specjbb-large-heap} ${specjbb-bench-notifications} {
+  targets: [bench, daily]
   run: [
     ${bench-jvmci.mx-specjbb2015} ${bench-arguments}
   ]

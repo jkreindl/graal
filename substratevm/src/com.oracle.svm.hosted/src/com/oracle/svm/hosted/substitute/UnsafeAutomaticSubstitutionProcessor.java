@@ -47,6 +47,7 @@ import org.graalvm.compiler.debug.DebugContext;
 import org.graalvm.compiler.debug.DebugHandlersFactory;
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.graph.iterators.NodeIterable;
+import org.graalvm.compiler.java.BytecodeParser;
 import org.graalvm.compiler.java.GraphBuilderPhase;
 import org.graalvm.compiler.nodes.Invoke;
 import org.graalvm.compiler.nodes.InvokeWithExceptionNode;
@@ -59,10 +60,12 @@ import org.graalvm.compiler.nodes.graphbuilderconf.GraphBuilderConfiguration;
 import org.graalvm.compiler.nodes.graphbuilderconf.GraphBuilderConfiguration.Plugins;
 import org.graalvm.compiler.nodes.graphbuilderconf.GraphBuilderContext;
 import org.graalvm.compiler.nodes.graphbuilderconf.InlineInvokePlugin;
+import org.graalvm.compiler.nodes.graphbuilderconf.IntrinsicContext;
 import org.graalvm.compiler.nodes.graphbuilderconf.InvocationPlugins;
 import org.graalvm.compiler.nodes.java.LoadFieldNode;
 import org.graalvm.compiler.nodes.java.MethodCallTargetNode;
 import org.graalvm.compiler.nodes.java.StoreFieldNode;
+import org.graalvm.compiler.nodes.spi.CoreProviders;
 import org.graalvm.compiler.options.Option;
 import org.graalvm.compiler.options.OptionValues;
 import org.graalvm.compiler.phases.OptimisticOptimizations;
@@ -83,6 +86,8 @@ import com.oracle.svm.hosted.ImageClassLoader;
 import com.oracle.svm.hosted.SVMHost;
 import com.oracle.svm.hosted.c.GraalAccess;
 import com.oracle.svm.hosted.phases.NoClassInitializationPlugin;
+import com.oracle.svm.hosted.phases.SharedGraphBuilderPhase;
+import com.oracle.svm.hosted.phases.SharedGraphBuilderPhase.SharedBytecodeParser;
 import com.oracle.svm.hosted.snippets.ReflectionPlugins;
 
 import jdk.vm.ci.meta.JavaKind;
@@ -123,7 +128,7 @@ public class UnsafeAutomaticSubstitutionProcessor extends SubstitutionProcessor 
     private final AnnotationSubstitutionProcessor annotationSubstitutions;
     private final Map<ResolvedJavaField, ComputedValueField> fieldSubstitutions;
 
-    private final List<ResolvedJavaType> supressWarnings;
+    private final List<ResolvedJavaType> suppressWarnings;
 
     private ResolvedJavaMethod unsafeObjectFieldOffsetFieldMethod;
     private ResolvedJavaMethod unsafeObjectFieldOffsetClassStringMethod;
@@ -134,7 +139,7 @@ public class UnsafeAutomaticSubstitutionProcessor extends SubstitutionProcessor 
     private HashSet<ResolvedJavaMethod> neverInlineSet = new HashSet<>();
     private HashSet<ResolvedJavaMethod> noCheckedExceptionsSet = new HashSet<>();
 
-    private GraphBuilderPhase builderPhase;
+    private Plugins plugins;
 
     private SnippetReflectionProvider snippetReflection;
 
@@ -142,7 +147,7 @@ public class UnsafeAutomaticSubstitutionProcessor extends SubstitutionProcessor 
         this.snippetReflection = snippetReflection;
         this.annotationSubstitutions = annotationSubstitutions;
         this.fieldSubstitutions = new ConcurrentHashMap<>();
-        this.supressWarnings = new ArrayList<>();
+        this.suppressWarnings = new ArrayList<>();
     }
 
     public void init(ImageClassLoader loader, MetaAccessProvider originalMetaAccess, SVMHost hostVM) {
@@ -233,20 +238,21 @@ public class UnsafeAutomaticSubstitutionProcessor extends SubstitutionProcessor 
          */
         StaticInitializerInlineInvokePlugin inlineInvokePlugin = new StaticInitializerInlineInvokePlugin(neverInlineSet);
 
-        Plugins plugins = new Plugins(new InvocationPlugins());
+        plugins = new Plugins(new InvocationPlugins());
         plugins.appendInlineInvokePlugin(inlineInvokePlugin);
         plugins.setClassInitializationPlugin(new NoClassInitializationPlugin());
 
         ReflectionPlugins.registerInvocationPlugins(loader, snippetReflection, annotationSubstitutions, plugins.getInvocationPlugins(), hostVM, false, false);
-
-        builderPhase = new GraphBuilderPhase(GraphBuilderConfiguration.getDefault(plugins).withEagerResolving(true));
 
         /*
          * Analyzing certain classes leads to false errors. We disable reporting for those classes
          * by default.
          */
         try {
-            supressWarnings.add(originalMetaAccess.lookupJavaType(Class.forName("sun.security.provider.ByteArrayAccess")));
+            suppressWarnings.add(originalMetaAccess.lookupJavaType(Class.forName("sun.security.provider.ByteArrayAccess")));
+            if (JavaVersionUtil.JAVA_SPEC >= 11) {
+                suppressWarnings.add(originalMetaAccess.lookupJavaType(Class.forName("jdk.internal.misc.InnocuousThread")));
+            }
         } catch (ClassNotFoundException e) {
             throw VMError.shouldNotReachHere(e);
         }
@@ -306,7 +312,7 @@ public class UnsafeAutomaticSubstitutionProcessor extends SubstitutionProcessor 
             /* The following directive links the class and makes clinit available. */
             try {
                 hostType.getDeclaredConstructors();
-            } catch (NoClassDefFoundError t) {
+            } catch (NoClassDefFoundError | VerifyError t) {
                 /* This code should be non-intrusive so we just ignore. */
                 return;
             }
@@ -875,7 +881,7 @@ public class UnsafeAutomaticSubstitutionProcessor extends SubstitutionProcessor 
     }
 
     private boolean warningsAreWhiteListed(ResolvedJavaType type) {
-        return supressWarnings.contains(type);
+        return suppressWarnings.contains(type);
     }
 
     private ResolvedJavaType findSubstitutionType(ResolvedJavaType type) {
@@ -893,6 +899,9 @@ public class UnsafeAutomaticSubstitutionProcessor extends SubstitutionProcessor 
         StructuredGraph graph = new StructuredGraph.Builder(options, debug).method(clinit).build();
         HighTierContext context = new HighTierContext(GraalAccess.getOriginalProviders(), null, OptimisticOptimizations.NONE);
         graph.setGuardsStage(GuardsStage.FIXED_DEOPTS);
+
+        GraphBuilderPhase.Instance builderPhase = new ClassInitializerGraphBuilderPhase(context, GraphBuilderConfiguration.getDefault(plugins).withEagerResolving(true),
+                        context.getOptimisticOptimizations());
         builderPhase.apply(graph, context);
 
         /*
@@ -940,6 +949,29 @@ public class UnsafeAutomaticSubstitutionProcessor extends SubstitutionProcessor 
             }
 
             return null;
+        }
+    }
+
+    static class ClassInitializerGraphBuilderPhase extends SharedGraphBuilderPhase {
+        ClassInitializerGraphBuilderPhase(CoreProviders providers, GraphBuilderConfiguration graphBuilderConfig, OptimisticOptimizations optimisticOpts) {
+            /*
+             * We do not want any word-type checking when parsing the class initializers, because we
+             * do not have the graph builder plugins for word types installed either. Passing null
+             * as the WordTypes disables the word type checks in the bytecode parser.
+             */
+            super(providers, graphBuilderConfig, optimisticOpts, null, null);
+        }
+
+        @Override
+        protected BytecodeParser createBytecodeParser(StructuredGraph graph, BytecodeParser parent, ResolvedJavaMethod method, int entryBCI, IntrinsicContext intrinsicContext) {
+            return new ClassInitializerBytecodeParser(this, graph, parent, method, entryBCI, intrinsicContext);
+        }
+    }
+
+    static class ClassInitializerBytecodeParser extends SharedBytecodeParser {
+        ClassInitializerBytecodeParser(GraphBuilderPhase.Instance graphBuilderInstance, StructuredGraph graph, BytecodeParser parent, ResolvedJavaMethod method, int entryBCI,
+                        IntrinsicContext intrinsicContext) {
+            super(graphBuilderInstance, graph, parent, method, entryBCI, intrinsicContext, true, true);
         }
     }
 }

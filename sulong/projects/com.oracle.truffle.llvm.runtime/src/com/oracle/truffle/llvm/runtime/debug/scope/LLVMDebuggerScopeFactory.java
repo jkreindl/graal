@@ -32,7 +32,6 @@ package com.oracle.truffle.llvm.runtime.debug.scope;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -85,7 +84,11 @@ public final class LLVMDebuggerScopeFactory {
         final LLVMDebuggerScopeEntries entries = new LLVMDebuggerScopeEntries();
         for (final FrameSlot slot : frame.getFrameDescriptor().getSlots()) {
             final String identifier = String.valueOf(slot.getIdentifier());
-            final TruffleObject value = wrapperFactory.toGenericDebuggerValue(slot.getInfo(), frame.getValue(slot));
+            Object slotValue = frame.getValue(slot);
+            if (slotValue == null) { // slots are null if they are cleared by LLVMFrameNuller
+                slotValue = "<unavailable>";
+            }
+            final TruffleObject value = wrapperFactory.toGenericDebuggerValue(slot.getInfo(), slotValue);
             entries.add(convertIdentifier(identifier, context), value);
         }
 
@@ -146,7 +149,7 @@ public final class LLVMDebuggerScopeFactory {
 
         final SourceSection sourceSection = scope.getSourceSection();
 
-        LLVMDebuggerScopeFactory baseScope = new LLVMDebuggerScopeFactory(context, sourceContext, new LinkedList<>(), rootNode);
+        LLVMDebuggerScopeFactory baseScope = new LLVMDebuggerScopeFactory(context, sourceContext, new ArrayList<>(), rootNode);
         LLVMDebuggerScopeFactory staticScope = null;
 
         for (boolean isLocalScope = true; isLocalScope && scope != null; scope = scope.getParent()) {
@@ -211,16 +214,15 @@ public final class LLVMDebuggerScopeFactory {
             return sourceScope;
         }
 
-        final List<LLVMSourceSymbol> symbols = new LinkedList<>();
-        final LLVMDebuggerScopeFactory sourceScope = new LLVMDebuggerScopeFactory(context, sourceContext, symbols, node);
-        sourceScope.setName(scope.getName());
-
+        final ArrayList<LLVMSourceSymbol> symbols = new ArrayList<>();
         for (LLVMSourceSymbol symbol : scope.getSymbols()) {
             if (symbol.isStatic() || isDeclaredBefore(symbol, sourceSection)) {
                 symbols.add(symbol);
             }
         }
 
+        final LLVMDebuggerScopeFactory sourceScope = new LLVMDebuggerScopeFactory(context, sourceContext, symbols, node);
+        sourceScope.setName(scope.getName());
         return sourceScope;
     }
 
@@ -252,16 +254,16 @@ public final class LLVMDebuggerScopeFactory {
 
     private final LLVMContext context;
     private final LLVMSourceContext sourceContext;
-    private final List<LLVMSourceSymbol> symbols;
+    private final ArrayList<LLVMSourceSymbol> symbols;
     private final Node node;
 
     private String name;
 
     private LLVMDebuggerScopeFactory(LLVMContext context, LLVMSourceContext sourceContext, Node node) {
-        this(context, sourceContext, Collections.emptyList(), node);
+        this(context, sourceContext, new ArrayList<>(), node);
     }
 
-    private LLVMDebuggerScopeFactory(LLVMContext context, LLVMSourceContext sourceContext, List<LLVMSourceSymbol> symbols, Node node) {
+    private LLVMDebuggerScopeFactory(LLVMContext context, LLVMSourceContext sourceContext, ArrayList<LLVMSourceSymbol> symbols, Node node) {
         this.context = context;
         this.sourceContext = sourceContext;
         this.symbols = symbols;

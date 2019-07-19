@@ -94,7 +94,6 @@ import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.graalvm.compiler.serviceprovider.JavaVersionUtil;
-import org.graalvm.nativeimage.ImageSingletons;
 import org.graalvm.nativeimage.Platform;
 import org.graalvm.nativeimage.Platforms;
 import org.graalvm.nativeimage.StackValue;
@@ -106,7 +105,6 @@ import org.graalvm.nativeimage.c.type.CTypeConversion;
 import org.graalvm.nativeimage.c.type.CTypeConversion.CCharPointerHolder;
 import org.graalvm.nativeimage.hosted.Feature;
 import org.graalvm.nativeimage.impl.InternalPlatform;
-import org.graalvm.nativeimage.impl.RuntimeClassInitializationSupport;
 import org.graalvm.word.SignedWord;
 import org.graalvm.word.WordFactory;
 
@@ -118,6 +116,7 @@ import com.oracle.svm.core.annotate.Substitute;
 import com.oracle.svm.core.annotate.TargetClass;
 import com.oracle.svm.core.annotate.TargetElement;
 import com.oracle.svm.core.jdk.JDK8OrEarlier;
+import com.oracle.svm.core.jni.JNIRuntimeAccess;
 import com.oracle.svm.core.log.Log;
 import com.oracle.svm.core.posix.headers.Dirent.DIR;
 import com.oracle.svm.core.posix.headers.Dirent.dirent;
@@ -131,7 +130,6 @@ import com.oracle.svm.core.posix.headers.Termios;
 import com.oracle.svm.core.posix.headers.Time.timeval;
 import com.oracle.svm.core.posix.headers.Unistd;
 import com.oracle.svm.core.util.VMError;
-import com.oracle.svm.hosted.jni.JNIRuntimeAccess;
 
 @Platforms({InternalPlatform.LINUX_JNI.class, InternalPlatform.DARWIN_JNI.class})
 @AutomaticFeature
@@ -139,52 +137,8 @@ import com.oracle.svm.hosted.jni.JNIRuntimeAccess;
 class PosixJavaIOSubstituteFeature implements Feature {
 
     @Override
-    public void duringSetup(DuringSetupAccess access) {
-        // Can't re-initialize the classes list below:
-        // Error: com.oracle.graal.pointsto.constraints.UnsupportedFeatureException: No instances
-        // are allowed in the image heap for a class
-        // that is initialized or reinitialized at image runtime: java.io.XXX.
-        //
-        // RuntimeClassInitialization.rerun(access.findClassByName("java.io.FileDescriptor"));
-        // RuntimeClassInitialization.rerun(access.findClassByName("java.io.FileInputStream"));
-        // RuntimeClassInitialization.rerun(access.findClassByName("java.io.FileOutputStream"));
-        // RuntimeClassInitialization.rerun(access.findClassByName("java.io.UnixFileSystem"));
-
-        ImageSingletons.lookup(RuntimeClassInitializationSupport.class).rerunInitialization(access.findClassByName("java.io.RandomAccessFile"), "required for substitutions");
-        ImageSingletons.lookup(RuntimeClassInitializationSupport.class).rerunInitialization(access.findClassByName("java.util.zip.ZipFile"), "required for substitutions");
-        ImageSingletons.lookup(RuntimeClassInitializationSupport.class).rerunInitialization(access.findClassByName("java.util.zip.Inflater"), "required for substitutions");
-        ImageSingletons.lookup(RuntimeClassInitializationSupport.class).rerunInitialization(access.findClassByName("java.util.zip.Deflater"), "required for substitutions");
-    }
-
-    @Override
     public void beforeAnalysis(BeforeAnalysisAccess access) {
-        try {
-            JNIRuntimeAccess.register(java.lang.String.class);
-            JNIRuntimeAccess.register(access.findClassByName("java.lang.String").getDeclaredConstructor(byte[].class, String.class));
-            JNIRuntimeAccess.register(access.findClassByName("java.lang.String").getDeclaredMethod("getBytes", String.class));
-            JNIRuntimeAccess.register(java.io.File.class);
-            JNIRuntimeAccess.register(java.io.File.class.getDeclaredField("path"));
-            JNIRuntimeAccess.register(java.io.FileOutputStream.class);
-            JNIRuntimeAccess.register(java.io.FileOutputStream.class.getDeclaredField("fd"));
-            JNIRuntimeAccess.register(java.io.FileInputStream.class);
-            JNIRuntimeAccess.register(java.io.FileInputStream.class.getDeclaredField("fd"));
-            JNIRuntimeAccess.register(java.io.FileDescriptor.class);
-            JNIRuntimeAccess.register(java.io.FileDescriptor.class.getDeclaredField("fd"));
-            if (JavaVersionUtil.JAVA_SPEC > 8) {
-                JNIRuntimeAccess.register(java.io.FileDescriptor.class.getDeclaredField("append"));
-            }
-            JNIRuntimeAccess.register(java.io.RandomAccessFile.class);
-            JNIRuntimeAccess.register(java.io.RandomAccessFile.class.getDeclaredField("fd"));
-            JNIRuntimeAccess.register(java.io.IOException.class);
-            JNIRuntimeAccess.register(java.io.IOException.class.getDeclaredConstructor(String.class));
-            JNIRuntimeAccess.register(access.findClassByName("java.io.UnixFileSystem"));
-            if (JavaVersionUtil.JAVA_SPEC >= 11) {
-                JNIRuntimeAccess.register(java.util.zip.Inflater.class.getDeclaredField("inputConsumed"));
-                JNIRuntimeAccess.register(java.util.zip.Inflater.class.getDeclaredField("outputConsumed"));
-            }
-        } catch (NoSuchFieldException | NoSuchMethodException e) {
-            VMError.shouldNotReachHere("PosixJavaIOSubstitutionFeature: Error registering class or method: ", e);
-        }
+        JNIRuntimeAccess.register(access.findClassByName("java.io.UnixFileSystem"));
     }
 }
 

@@ -25,11 +25,11 @@
 #
 # ----------------------------------------------------------------------------------------------------
 suite = {
-  "mxversion" : "5.210.2",
+  "mxversion" : "5.223.0",
 
   "name" : "regex",
 
-  "version" : "20.0.0-beta.01",
+  "version" : "19.2.0",
   "release" : False,
   "groupId" : "org.graalvm.regex",
   "url" : "http://www.graalvm.org/",

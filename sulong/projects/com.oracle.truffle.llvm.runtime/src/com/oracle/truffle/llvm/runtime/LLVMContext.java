@@ -29,20 +29,22 @@
  */
 package com.oracle.truffle.llvm.runtime;
 
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.llvm.runtime.instruments.LLVMExecutionTracer;
 import org.graalvm.collections.EconomicMap;
 
@@ -59,7 +61,6 @@ import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameUtil;
 import com.oracle.truffle.api.frame.VirtualFrame;
-import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.nodes.ControlFlowException;
 import com.oracle.truffle.api.nodes.DirectCallNode;
 import com.oracle.truffle.api.nodes.RootNode;
@@ -90,6 +91,7 @@ public final class LLVMContext {
     private final List<Path> libraryPaths = new ArrayList<>();
     @CompilationFinal private Path internalLibraryPath;
     private final List<ExternalLibrary> externalLibraries = new ArrayList<>();
+    private final List<String> internalLibraryNames = new ArrayList<>();
 
     // map that contains all non-native globals, needed for pointer->global lookups
     private final HashMap<LLVMPointer, LLVMGlobal> globalsReverseMap = new HashMap<>();
@@ -104,16 +106,16 @@ public final class LLVMContext {
     @CompilationFinal private LLVMThreadingStack threadingStack;
     private final Object[] mainArguments;
     private final Map<String, String> environment;
-    private final LinkedList<LLVMNativePointer> caughtExceptionStack = new LinkedList<>();
+    private final ArrayList<LLVMNativePointer> caughtExceptionStack = new ArrayList<>();
     private final HashMap<String, Integer> nativeCallStatistics;
 
     private static final class Handle {
 
         private int refcnt;
         private final LLVMNativePointer pointer;
-        private final TruffleObject managed;
+        private final Object managed;
 
-        private Handle(LLVMNativePointer pointer, TruffleObject managed) {
+        private Handle(LLVMNativePointer pointer, Object managed) {
             this.refcnt = 0;
             this.pointer = pointer;
             this.managed = managed;
@@ -121,7 +123,7 @@ public final class LLVMContext {
     }
 
     private final Object handlesLock;
-    private final EconomicMap<TruffleObject, Handle> handleFromManaged;
+    private final EconomicMap<Object, Handle> handleFromManaged;
     private final EconomicMap<LLVMNativePointer, Handle> handleFromPointer;
 
     private final LLVMSourceContext sourceContext;
@@ -248,16 +250,25 @@ public final class LLVMContext {
     }
 
     private static long parseStackSize(String v) {
-        String valueString = v.trim().toLowerCase();
+        String valueString = v.trim();
         long scale = 1;
-        if (valueString.endsWith("k")) {
-            scale = 1024L;
-        } else if (valueString.endsWith("m")) {
-            scale = 1024L * 1024L;
-        } else if (valueString.endsWith("g")) {
-            scale = 1024L * 1024L * 1024L;
-        } else if (valueString.endsWith("t")) {
-            scale = 1024L * 1024L * 1024L * 1024L;
+        switch (valueString.charAt(valueString.length() - 1)) {
+            case 'k':
+            case 'K':
+                scale = 1024L;
+                break;
+            case 'm':
+            case 'M':
+                scale = 1024L * 1024L;
+                break;
+            case 'g':
+            case 'G':
+                scale = 1024L * 1024L * 1024L;
+                break;
+            case 't':
+            case 'T':
+                scale = 1024L * 1024L * 1024L * 1024L;
+                break;
         }
 
         if (scale != 1) {
@@ -321,7 +332,7 @@ public final class LLVMContext {
         return toManagedPointer(new LLVMArgumentArray(result));
     }
 
-    private static LLVMManagedPointer toManagedPointer(TruffleObject value) {
+    private static LLVMManagedPointer toManagedPointer(Object value) {
         return LLVMManagedPointer.create(LLVMTypedForeignObject.createUnknown(value));
     }
 
@@ -385,7 +396,7 @@ public final class LLVMContext {
         // free the space which might have been when putting pointer-type globals into native memory
         for (LLVMPointer pointer : globalsReverseMap.keySet()) {
             if (LLVMManagedPointer.isInstance(pointer)) {
-                TruffleObject object = LLVMManagedPointer.cast(pointer).getObject();
+                Object object = LLVMManagedPointer.cast(pointer).getObject();
                 if (object instanceof LLVMGlobalContainer) {
                     ((LLVMGlobalContainer) object).dispose();
                 }
@@ -435,15 +446,40 @@ public final class LLVMContext {
         return Paths.get(lib);
     }
 
+    public ExternalLibrary addExternalLibrary(String lib, boolean isNative, Object reason) {
+        return addExternalLibrary(lib, isNative, reason, DefaultLibraryLocator.INSTANCE);
+    }
+
     /**
      * @return null if already loaded
      */
-    public ExternalLibrary addExternalLibrary(String lib, boolean isNative) {
+    public ExternalLibrary addExternalLibrary(String lib, boolean isNative, Object reason, LibraryLocator locator) {
         CompilerAsserts.neverPartOfCompilation();
-        Path path = locateExternalLibrary(lib);
+        if (isInternalLibrary(lib)) {
+            // Disallow loading internal libraries explicitly.
+            return null;
+        }
+        Path path = locator.locate(this, lib, reason);
         ExternalLibrary newLib = ExternalLibrary.external(path, isNative);
         ExternalLibrary existingLib = addExternalLibrary(newLib);
-        return existingLib == newLib ? newLib : null;
+        if (existingLib == newLib) {
+            return newLib;
+        }
+        LibraryLocator.traceAlreadyLoaded(this, existingLib.path);
+        return null;
+    }
+
+    private boolean isInternalLibrary(String lib) {
+        if (internalLibraryNames.isEmpty()) {
+            internalLibraryNames.addAll(Arrays.asList(language.getContextExtension(SystemContextExtension.class).getSulongDefaultLibraries()));
+            assert !internalLibraryNames.isEmpty() : "No internal libraries?";
+        }
+        for (String interalLibs : internalLibraryNames) {
+            if (interalLibs.equals(lib)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private ExternalLibrary addExternalLibrary(ExternalLibrary externalLib) {
@@ -481,25 +517,9 @@ public final class LLVMContext {
         // failures at the moment, because the library path is not always set correctly
     }
 
-    @TruffleBoundary
-    private Path locateExternalLibrary(String lib) {
-        Path libPath = Paths.get(lib);
-        if (libPath.isAbsolute()) {
-            if (libPath.toFile().exists()) {
-                return libPath;
-            } else {
-                throw new LLVMLinkerException(String.format("Library \"%s\" does not exist.", lib));
-            }
-        }
-
-        for (Path p : libraryPaths) {
-            Path absPath = Paths.get(p.toString(), lib);
-            if (absPath.toFile().exists()) {
-                return absPath;
-            }
-        }
-
-        return libPath;
+    List<Path> getLibraryPaths() {
+        // TODO (je) should this be unmodifiable?
+        return libraryPaths;
     }
 
     public LLVMLanguage getLanguage() {
@@ -577,7 +597,7 @@ public final class LLVMContext {
     }
 
     @TruffleBoundary
-    public TruffleObject getManagedObjectForHandle(LLVMNativePointer address) {
+    public Object getManagedObjectForHandle(LLVMNativePointer address) {
         synchronized (handlesLock) {
             final Handle handle = handleFromPointer.get(address);
 
@@ -605,16 +625,16 @@ public final class LLVMContext {
         }
     }
 
-    public LLVMNativePointer getHandleForManagedObject(LLVMMemory memory, TruffleObject object) {
+    public LLVMNativePointer getHandleForManagedObject(LLVMMemory memory, Object object) {
         return getHandle(memory, object, false).copy();
     }
 
-    public LLVMNativePointer getDerefHandleForManagedObject(LLVMMemory memory, TruffleObject object) {
+    public LLVMNativePointer getDerefHandleForManagedObject(LLVMMemory memory, Object object) {
         return getHandle(memory, object, true).copy();
     }
 
     @TruffleBoundary
-    private LLVMNativePointer getHandle(LLVMMemory memory, TruffleObject object, boolean autoDeref) {
+    private LLVMNativePointer getHandle(LLVMMemory memory, Object object, boolean autoDeref) {
         synchronized (handlesLock) {
             Handle handle = handleFromManaged.get(object);
             if (handle == null) {
@@ -642,7 +662,7 @@ public final class LLVMContext {
         }
     }
 
-    public LinkedList<LLVMNativePointer> getCaughtExceptionStack() {
+    public List<LLVMNativePointer> getCaughtExceptionStack() {
         return caughtExceptionStack;
     }
 
@@ -846,13 +866,7 @@ public final class LLVMContext {
 
         @Override
         public String toString() {
-            StringBuilder result = new StringBuilder(name);
-            if (path != null) {
-                result.append(" (");
-                result.append(path);
-                result.append(")");
-            }
-            return result.toString();
+            return path == null ? name : name + " (" + path + ")";
         }
     }
 
@@ -872,4 +886,27 @@ public final class LLVMContext {
             return scopes.contains(scope);
         }
     }
+
+    @CompilationFinal private boolean traceLoaderEnabled;
+    @CompilationFinal private PrintStream traceLoaderStream;
+
+    private void cacheTrace() {
+        if (traceLoaderStream == null) {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            traceLoaderStream = SulongEngineOption.getStream(getEnv().getOptions().get(SulongEngineOption.LD_DEBUG));
+            traceLoaderEnabled = SulongEngineOption.isTrue(getEnv().getOptions().get(SulongEngineOption.LD_DEBUG));
+            assert traceLoaderStream != null;
+        }
+    }
+
+    boolean ldDebugEnabled() {
+        cacheTrace();
+        return traceLoaderEnabled;
+    }
+
+    PrintStream ldDebugStream() {
+        cacheTrace();
+        return traceLoaderStream;
+    }
+
 }

@@ -52,18 +52,6 @@ public final class LLVMNodeObject implements TruffleObject {
     private final EconomicMap<String, Object> entries;
     @CompilationFinal(dimensions = 1) private final String[] keys;
 
-    @TruffleBoundary
-    public LLVMNodeObject(String[] keys, Object[] values) {
-        assert keys != null;
-        assert values != null;
-        assert keys.length == values.length;
-        this.keys = keys;
-        this.entries = EconomicMap.create(keys.length);
-        for (int i = 0; i < keys.length; i++) {
-            this.entries.put(keys[i], values[i]);
-        }
-    }
-
     private LLVMNodeObject(String[] keys, EconomicMap<String, Object> entries) {
         this.keys = keys;
         this.entries = entries;

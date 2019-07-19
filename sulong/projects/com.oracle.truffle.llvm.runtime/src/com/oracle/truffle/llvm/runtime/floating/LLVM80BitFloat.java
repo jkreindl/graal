@@ -163,6 +163,14 @@ public final class LLVM80BitFloat implements LLVMArithmetic, TruffleObject {
         return biasedExponent - EXPONENT_BIAS;
     }
 
+    public static LLVM80BitFloat createPositiveZero() {
+        if (CompilerDirectives.inCompiledCode()) {
+            return new LLVM80BitFloat(false, 0, 0);
+        } else {
+            return POSITIVE_ZERO;
+        }
+    }
+
     private static long bit(int i) {
         return 1 << i;
     }
@@ -173,7 +181,7 @@ public final class LLVM80BitFloat implements LLVMArithmetic, TruffleObject {
 
     public static LLVM80BitFloat fromLong(long val) {
         if (val == 0) {
-            return new LLVM80BitFloat(POSITIVE_ZERO);
+            return createPositiveZero();
         }
         boolean sign = val < 0;
         return fromLong(Math.abs(val), sign);

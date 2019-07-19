@@ -29,10 +29,8 @@
  */
 package com.oracle.truffle.llvm.nodes.memory.store;
 
-import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
-import com.oracle.truffle.llvm.runtime.LLVMBoxedPrimitive;
 import com.oracle.truffle.llvm.runtime.LLVMVirtualAllocationAddress;
 import com.oracle.truffle.llvm.runtime.interop.convert.ForeignToLLVM.ForeignToLLVMType;
 import com.oracle.truffle.llvm.runtime.memory.UnsafeArrayAccess;
@@ -60,15 +58,5 @@ public abstract class LLVMI32StoreNode extends LLVMStoreNodeCommon {
     @Specialization
     protected void doOpManaged(LLVMManagedPointer address, int value) {
         getForeignWriteNode().executeWrite(address.getObject(), address.getOffset(), value, ForeignToLLVMType.I32);
-    }
-
-    @Specialization
-    protected void doOp(LLVMBoxedPrimitive address, int value) {
-        if (address.getValue() instanceof Long) {
-            getLLVMMemoryCached().putI32((long) address.getValue(), value);
-        } else {
-            CompilerDirectives.transferToInterpreter();
-            throw new IllegalAccessError("Cannot access address: " + address.getValue());
-        }
     }
 }

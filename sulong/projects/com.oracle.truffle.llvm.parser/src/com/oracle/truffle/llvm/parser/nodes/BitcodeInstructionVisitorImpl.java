@@ -302,7 +302,7 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
         final LLVMExpressionNode newNode = symbols.resolve(cmpxchg.getReplace());
         final Type elementType = cmpxchg.getCmp().getType();
 
-        createFrameWrite(nodeFactory.createCompareExchangeInstruction(cmpxchg.getType(), elementType, ptrNode, cmpNode, newNode), cmpxchg);
+        createFrameWrite(nodeFactory.createCompareExchangeInstruction(cmpxchg.getAggregateType(), elementType, ptrNode, cmpNode, newNode), cmpxchg);
     }
 
     private void visitDebugIntrinsic(SymbolImpl value, SourceVariable variable, MDExpression expression, long index, boolean isDeclaration) {
@@ -405,7 +405,7 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
         List<LLVMExpressionNode> unwindValue = new ArrayList<>();
         if (blockPhis != null) {
             for (LLVMPhiManager.Phi phi : blockPhis) {
-                FrameSlot slot = getSlot(phi.getPhiValue().getName());
+                FrameSlot slot = getSlot(phi.getPhiValue());
                 LLVMExpressionNode value = symbols.resolve(phi.getValue());
                 if (call.normalSuccessor() == phi.getBlock()) {
                     normalTo.add(slot);
@@ -429,7 +429,7 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
         if (function == null) {
             function = symbols.resolve(target);
         }
-        LLVMControlFlowNode result = nodeFactory.createFunctionInvoke(getSlot(call.getName()), function, argNodes, new FunctionType(targetType, argTypes, false),
+        LLVMControlFlowNode result = nodeFactory.createFunctionInvoke(getSlot(call), function, argNodes, new FunctionType(targetType, argTypes, false),
                         regularIndex, unwindIndex, normalPhi,
                         unwindPhi);
         addStatementTag(result, source);
@@ -471,7 +471,7 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
         List<LLVMExpressionNode> unwindValue = new ArrayList<>();
         if (blockPhis != null) {
             for (LLVMPhiManager.Phi phi : blockPhis) {
-                FrameSlot slot = getSlot(phi.getPhiValue().getName());
+                FrameSlot slot = getSlot(phi.getPhiValue());
                 LLVMExpressionNode value = symbols.resolve(phi.getValue());
                 if (call.normalSuccessor() == phi.getBlock()) {
                     normalTo.add(slot);
@@ -797,13 +797,12 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
 
         LLVMStatementNode[] result = new LLVMStatementNode[phisPerSuccessor.length];
         for (int i = 0; i < result.length; i++) {
-            final int successorCount = phisPerSuccessor[i].size();
-            LLVMExpressionNode[] from = new LLVMExpressionNode[successorCount];
-            FrameSlot[] to = new FrameSlot[successorCount];
-            Type[] types = new Type[successorCount];
-            for (int j = 0; j < successorCount; j++) {
+            LLVMExpressionNode[] from = new LLVMExpressionNode[phisPerSuccessor[i].size()];
+            FrameSlot[] to = new FrameSlot[phisPerSuccessor[i].size()];
+            Type[] types = new Type[phisPerSuccessor[i].size()];
+            for (int j = 0; j < phisPerSuccessor[i].size(); j++) {
                 LLVMPhiManager.Phi phi = phisPerSuccessor[i].get(j);
-                to[j] = getSlot(phi.getPhiValue().getName());
+                to[j] = getSlot(phi.getPhiValue());
                 from[j] = symbols.resolve(phi.getValue());
                 types[j] = phi.getValue().getType();
             }
@@ -859,7 +858,7 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
     }
 
     void createFrameWrite(LLVMExpressionNode result, ValueInstruction source, LLVMSourceLocation sourceLocation) {
-        final LLVMStatementNode node = nodeFactory.createFrameWrite(source.getType(), result, getSlot(source.getName()));
+        final LLVMStatementNode node = nodeFactory.createFrameWrite(source.getType(), result, getSlot(source));
         addStatementTag(node, sourceLocation);
         addInstruction(node);
     }
@@ -877,16 +876,16 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
         return inlineAssemblerExpression;
     }
 
-    private FrameSlot getSlot(String name) {
-        return frame.findFrameSlot(name);
+    private FrameSlot getSlot(ValueInstruction instruction) {
+        return frame.findFrameSlot(instruction.getName());
     }
 
     private FrameSlot getExceptionSlot() {
-        return getSlot(LLVMUserException.FRAME_SLOT_ID);
+        return frame.findFrameSlot(LLVMUserException.FRAME_SLOT_ID);
     }
 
     private FrameSlot getStackSlot() {
-        return getSlot(LLVMStack.FRAME_ID);
+        return frame.findFrameSlot(LLVMStack.FRAME_ID);
     }
 
     void addInstruction(LLVMStatementNode node) {

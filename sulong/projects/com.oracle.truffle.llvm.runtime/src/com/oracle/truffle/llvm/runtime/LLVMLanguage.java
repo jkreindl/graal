@@ -47,6 +47,7 @@ import com.oracle.truffle.api.instrumentation.StandardTags;
 import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.source.SourceSection;
+import com.oracle.truffle.llvm.api.Toolchain;
 import com.oracle.truffle.llvm.runtime.debug.LLDBSupport;
 import com.oracle.truffle.llvm.runtime.debug.LLVMDebuggerValue;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMDebuggerScopeFactory;
@@ -61,7 +62,7 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 
 @TruffleLanguage.Registration(id = LLVMLanguage.ID, name = LLVMLanguage.NAME, internal = false, interactive = false, defaultMimeType = LLVMLanguage.LLVM_BITCODE_MIME_TYPE, //
                 byteMimeTypes = {LLVMLanguage.LLVM_BITCODE_MIME_TYPE, LLVMLanguage.LLVM_ELF_SHARED_MIME_TYPE, LLVMLanguage.LLVM_ELF_EXEC_MIME_TYPE}, //
-                characterMimeTypes = {LLVMLanguage.LLVM_BITCODE_BASE64_MIME_TYPE}, fileTypeDetectors = LLVMFileDetector.class)
+                characterMimeTypes = {LLVMLanguage.LLVM_BITCODE_BASE64_MIME_TYPE}, fileTypeDetectors = LLVMFileDetector.class, services = {Toolchain.class})
 @ProvidedTags({StandardTags.StatementTag.class, StandardTags.CallTag.class, StandardTags.RootTag.class, DebuggerTags.AlwaysHalt.class, LLVMTags.SSARead.class, LLVMTags.SSAWrite.class,
                 LLVMTags.GlobalRead.class, LLVMTags.Constant.class, LLVMTags.Call.class, LLVMTags.Invoke.class, LLVMTags.Add.class, LLVMTags.Sub.class, LLVMTags.Mul.class, LLVMTags.Div.class,
                 LLVMTags.URem.class, LLVMTags.SRem.class, LLVMTags.FRem.class, LLVMTags.ShiftLeft.class, LLVMTags.ShiftRight.class, LLVMTags.And.class, LLVMTags.Or.class, LLVMTags.XOr.class,
@@ -146,12 +147,18 @@ public class LLVMLanguage extends TruffleLanguage<LLVMContext> {
         return activeConfiguration.getCapability(type);
     }
 
+    public final String getLLVMLanguageHome() {
+        return getLanguageHome();
+    }
+
     @Override
     protected LLVMContext createContext(Env env) {
         if (activeConfiguration == null) {
             activeConfiguration = Configurations.findActiveConfiguration(env);
             loader = activeConfiguration.createLoader();
         }
+
+        env.registerService(new ToolchainImpl(activeConfiguration.getCapability(ToolchainConfig.class), this));
         LLVMContext context = new LLVMContext(this, env, getLanguageHome());
         this.nodeFactory = activeConfiguration.createNodeFactory(context);
         this.contextExtensions = activeConfiguration.createContextExtensions(context);

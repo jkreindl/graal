@@ -60,8 +60,6 @@ public abstract class Type implements TruffleObject {
 
     public abstract int getSize(DataLayout targetDataLayout);
 
-    public abstract Type shallowCopy();
-
     @Override
     public abstract boolean equals(Object obj);
 
@@ -83,10 +81,6 @@ public abstract class Type implements TruffleObject {
             default:
                 return new VariableBitWidthType(size);
         }
-    }
-
-    public static boolean isFunctionOrFunctionPointer(Type type) {
-        return type instanceof FunctionType || (type instanceof PointerType && ((PointerType) type).getPointeeType() instanceof FunctionType);
     }
 
     public static Type createConstantForType(Type type, Object value) {

@@ -159,12 +159,6 @@ public final class PrimitiveType extends Type {
     }
 
     @Override
-    public Type shallowCopy() {
-        final PrimitiveType copy = new PrimitiveType(kind, constant);
-        return copy;
-    }
-
-    @Override
     @TruffleBoundary
     public String toString() {
         if (Type.isIntegerType(this)) {

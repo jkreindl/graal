@@ -43,6 +43,17 @@ public final class LLVMIdentifier {
     private LLVMIdentifier() {
     }
 
+    /*
+     * Object parameter to avoid warnings about string comparisons.
+     */
+    private static Object asObject(String value) {
+        return value;
+    }
+
+    public static boolean isUnknown(Object name) {
+        return name == asObject(UNKNOWN);
+    }
+
     @TruffleBoundary
     public static String toGlobalIdentifier(String name) {
         if (GLOBAL_VARNAME_PATTERN.matcher(name).matches()) {
@@ -64,18 +75,8 @@ public final class LLVMIdentifier {
     }
 
     @TruffleBoundary
-    public static String toExplicitBlockName(String name) {
-        return toLocalIdentifier(name);
-    }
-
-    @TruffleBoundary
     public static String toImplicitBlockName(int label) {
         return String.format("%d", label);
-    }
-
-    @TruffleBoundary
-    public static String toTypeIdentifier(String name) {
-        return toLocalIdentifier(name);
     }
 
     private static final Pattern UNESCAPED_VARNAME_PATTERN = Pattern.compile("[\\w\\d\\u0024_\\u002e]+");

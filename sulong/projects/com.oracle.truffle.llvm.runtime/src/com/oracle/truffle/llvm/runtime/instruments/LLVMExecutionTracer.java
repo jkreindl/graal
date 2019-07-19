@@ -48,6 +48,8 @@ import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.llvm.runtime.LLVMFunctionDescriptor;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
+import com.oracle.truffle.llvm.runtime.LLVMIVarBitLarge;
+import com.oracle.truffle.llvm.runtime.LLVMIVarBitSmall;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMTypes;
@@ -276,8 +278,12 @@ public final class LLVMExecutionTracer {
         abstract String executeWithTarget(Object value);
 
         @Specialization
-        @TruffleBoundary
-        protected String doLLVMIVarBit(LLVMIVarBit value) {
+        protected String doSmallIVarBit(LLVMIVarBitSmall value) {
+            return String.valueOf(value.getLongValue());
+        }
+
+        @Specialization
+        protected String doLargeIVarBit(LLVMIVarBitLarge value) {
             return value.asBigInteger().toString();
         }
 

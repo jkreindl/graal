@@ -58,10 +58,14 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Queue;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.jar.Attributes;
+import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 
 import org.graalvm.compiler.options.OptionKey;
@@ -70,6 +74,7 @@ import org.graalvm.nativeimage.ProcessProperties;
 
 import com.oracle.graal.pointsto.api.PointstoOptions;
 import com.oracle.svm.core.FallbackExecutor;
+import com.oracle.svm.core.FallbackExecutor.Options;
 import com.oracle.svm.core.OS;
 import com.oracle.svm.core.SubstrateOptions;
 import com.oracle.svm.core.SubstrateUtil;
@@ -148,6 +153,10 @@ public class NativeImage {
         return oH + option.getName() + "=";
     }
 
+    private static <T> String oR(OptionKey<T> option) {
+        return oR + option.getName() + "=";
+    }
+
     final String oHClass = oH(SubstrateOptions.Class);
     final String oHName = oH(SubstrateOptions.Name);
     final String oHPath = oH(SubstrateOptions.Path);
@@ -156,6 +165,7 @@ public class NativeImage {
     final String oHOptimize = oH(SubstrateOptions.Optimize);
     final String oHFallbackThreshold = oH(SubstrateOptions.FallbackThreshold);
     final String oHFallbackExecutorJavaArg = oH(FallbackExecutor.Options.FallbackExecutorJavaArg);
+    final String oRRuntimeJavaArg = oR(Options.FallbackExecutorRuntimeJavaArg);
 
     /* List arguments */
     final String oHSubstitutionFiles = oH(ConfigurationFiles.Options.SubstitutionFiles);
@@ -508,6 +518,13 @@ public class NativeImage {
             buildArgs.add(oH(FallbackExecutor.Options.FallbackExecutorSystemProperty) + property);
         }
 
+        List<String> runtimeJavaArgs = imageBuilderArgs.stream()
+                        .filter(s -> s.startsWith(oRRuntimeJavaArg))
+                        .collect(Collectors.toList());
+        for (String runtimeJavaArg : runtimeJavaArgs) {
+            buildArgs.add(runtimeJavaArg);
+        }
+
         List<String> fallbackExecutorJavaArgs = imageBuilderArgs.stream()
                         .filter(s -> s.startsWith(oHFallbackExecutorJavaArg))
                         .collect(Collectors.toList());
@@ -688,7 +705,8 @@ public class NativeImage {
             addImageBuilderJavaArgs(oXmx + memRequirements);
         }
 
-        consolidateListArgs(imageBuilderJavaArgs, "-Dpolyglot.engine.PreinitializeContexts=", ",", Function.identity());
+        consolidateListArgs(imageBuilderJavaArgs, "-Dpolyglot.engine.PreinitializeContexts=", ",", Function.identity()); // legacy
+        consolidateListArgs(imageBuilderJavaArgs, "-Dpolyglot.image-build-time.PreinitializeContexts=", ",", Function.identity());
     }
 
     protected static String consolidateSingleValueArg(Collection<String> args, String argPrefix) {
@@ -777,7 +795,7 @@ public class NativeImage {
                 if (classpathEntry.endsWith(ClasspathUtils.cpWildcardSubstitute)) {
                     try {
                         jarFileMatches = Files.list(classpathEntry.getParent())
-                                        .filter(p -> p.getFileName().toString().toLowerCase().endsWith(".jar"))
+                                        .filter(ClasspathUtils::isJar)
                                         .collect(Collectors.toList());
                     } catch (NoSuchFileException e) {
                         /* Fallthrough */
@@ -788,9 +806,20 @@ public class NativeImage {
 
                 for (Path jarFile : jarFileMatches) {
                     URI jarFileURI = URI.create("jar:" + jarFile.toUri());
-                    try (FileSystem jarFS = FileSystems.newFileSystem(jarFileURI, Collections.emptyMap())) {
-                        Path nativeImageMetaInfBase = jarFS.getPath("/" + nativeImageMetaInf);
-                        processNativeImageMetaInf(jarFile, nativeImageMetaInfBase, metaInfProcessor);
+                    FileSystem probeJarFS;
+                    try {
+                        probeJarFS = FileSystems.newFileSystem(jarFileURI, Collections.emptyMap());
+                    } catch (UnsupportedOperationException e) {
+                        probeJarFS = null;
+                        if (isVerbose()) {
+                            showWarning(ClasspathUtils.classpathToString(classpathEntry) + " does not describe valid jarfile" + (jarFileMatches.size() > 1 ? "s" : ""));
+                        }
+                    }
+                    if (probeJarFS != null) {
+                        try (FileSystem jarFS = probeJarFS) {
+                            Path nativeImageMetaInfBase = jarFS.getPath("/" + nativeImageMetaInf);
+                            processNativeImageMetaInf(jarFile, nativeImageMetaInfBase, metaInfProcessor);
+                        }
                     }
                 }
             }
@@ -846,6 +875,71 @@ public class NativeImage {
         args.apply(true);
     }
 
+    static void processManifestMainAttributes(Path path, BiConsumer<Path, Attributes> manifestConsumer) {
+        if (path.endsWith(ClasspathUtils.cpWildcardSubstitute)) {
+            if (!Files.isDirectory(path.getParent())) {
+                throw NativeImage.showError("Cannot expand wildcard: '" + path + "' is not a directory");
+            }
+            try {
+                Files.list(path.getParent())
+                                .filter(ClasspathUtils::isJar)
+                                .forEach(p -> processJarManifestMainAttributes(p, manifestConsumer));
+            } catch (IOException e) {
+                throw NativeImage.showError("Error while expanding wildcard for '" + path + "'", e);
+            }
+        } else if (!Files.isDirectory(path)) {
+            processJarManifestMainAttributes(path, manifestConsumer);
+        }
+    }
+
+    static boolean processJarManifestMainAttributes(Path jarFilePath, BiConsumer<Path, Attributes> manifestConsumer) {
+        try (JarFile jarFile = new JarFile(jarFilePath.toFile())) {
+            Manifest manifest = jarFile.getManifest();
+            if (manifest == null) {
+                return false;
+            }
+            manifestConsumer.accept(jarFilePath, manifest.getMainAttributes());
+            return true;
+        } catch (IOException e) {
+            throw NativeImage.showError("Invalid or corrupt jarfile " + jarFilePath, e);
+        }
+    }
+
+    void handleMainClassAttribute(Path jarFilePath, Attributes mainAttributes) {
+        String mainClassValue = mainAttributes.getValue("Main-Class");
+        if (mainClassValue == null) {
+            NativeImage.showError("No main manifest attribute, in " + jarFilePath);
+        }
+        addPlainImageBuilderArg(oHClass + mainClassValue);
+        String jarFileName = jarFilePath.getFileName().toString();
+        String jarSuffix = ".jar";
+        String jarFileNameBase;
+        if (jarFileName.endsWith(jarSuffix)) {
+            jarFileNameBase = jarFileName.substring(0, jarFileName.length() - jarSuffix.length());
+        } else {
+            jarFileNameBase = jarFileName;
+        }
+        if (!jarFileNameBase.isEmpty()) {
+            addPlainImageBuilderArg(oHName + jarFileNameBase);
+        }
+    }
+
+    void handleClassPathAttribute(Path jarFilePath, Attributes mainAttributes) {
+        String classPathValue = mainAttributes.getValue("Class-Path");
+        /* Missing Class-Path Attribute is tolerable */
+        if (classPathValue != null) {
+            for (String cp : classPathValue.split(" +")) {
+                Path manifestClassPath = ClasspathUtils.stringToClasspath(cp);
+                if (!manifestClassPath.isAbsolute()) {
+                    /* Resolve relative manifestClassPath against directory containing jar */
+                    manifestClassPath = jarFilePath.getParent().resolve(manifestClassPath);
+                }
+                /* Invalid entries in Class-Path are allowed (i.e. use strict false) */
+                addImageClasspathEntry(imageClasspath, manifestClassPath, false);
+            }
+        }
+    }
+
     private int completeImageBuild() {
         List<String> leftoverArgs = processNativeImageArgs();
 
@@ -858,7 +952,7 @@ public class NativeImage {
 
         /* If no customImageClasspath was specified put "." on classpath */
         if (!config.buildFallbackImage() && customImageClasspath.isEmpty() && queryOption == null) {
-            addImageProvidedClasspath(Paths.get("."));
+            addImageClasspath(Paths.get("."));
         } else {
             imageClasspath.addAll(customImageClasspath);
         }
@@ -1191,40 +1285,66 @@ public class NativeImage {
         imageBuilderArgs.add(plainArg);
     }
 
-    void addImageClasspath(Path classpath) {
+    /**
+     * For adding classpath elements that are only on the classpath in the context of native-image
+     * building. I.e. that are not on the classpath when the application would be run with the java
+     * command. (library-support.jar)
+     */
+    private void addImageProvidedClasspath(Path classpath) {
+        VMError.guarantee(imageClasspath.isEmpty() && customImageClasspath.isEmpty());
         Path classpathEntry = canonicalize(classpath);
-        processClasspathNativeImageMetaInf(classpathEntry);
-        imageClasspath.add(classpathEntry);
+        if (imageProvidedClasspath.add(classpathEntry)) {
+            processManifestMainAttributes(classpathEntry, this::handleClassPathAttribute);
+            processClasspathNativeImageMetaInf(classpathEntry);
+        }
     }
 
     /**
-     * For adding classpath elements that are not normally on the classpath in the Java version: svm
-     * jars, truffle jars etc.
+     * For adding classpath elements that are automatically put on the image-classpath.
      */
-    void addImageProvidedClasspath(Path classpath) {
-        Path classpathEntry = canonicalize(classpath);
-        processClasspathNativeImageMetaInf(classpathEntry);
-        imageProvidedClasspath.add(classpathEntry);
+    void addImageClasspath(Path classpath) {
+        addImageClasspathEntry(imageClasspath, classpath, true);
     }
 
+    /**
+     * For adding classpath elements that are put *explicitly* on the image-classpath (i.e. when
+     * specified as -cp/-classpath/--class-path entry). This method handles invalid classpath
+     * strings same as java -cp (is tolerant against invalid classpath entries).
+     */
     void addCustomImageClasspath(String classpath) {
-        addCustomImageClasspath(ClasspathUtils.stringToClasspath(classpath));
+        addImageClasspathEntry(customImageClasspath, ClasspathUtils.stringToClasspath(classpath), false);
     }
 
+    /**
+     * For adding classpath elements that are put *explicitly* on the image-classpath (e.g. when
+     * adding a jar-file via -jar).
+     */
     void addCustomImageClasspath(Path classpath) {
+        addImageClasspathEntry(customImageClasspath, classpath, true);
+    }
+
+    private void addImageClasspathEntry(LinkedHashSet<Path> destination, Path classpath, boolean strict) {
         Path classpathEntry;
         try {
             classpathEntry = canonicalize(classpath);
         } catch (NativeImageError e) {
+            if (strict) {
+                throw e;
+            }
+
             if (isVerbose()) {
                 showWarning("Invalid classpath entry: " + classpath);
             }
             /* Allow non-existent classpath entries to comply with `java` command behaviour. */
-            customImageClasspath.add(canonicalize(classpath, false));
+            destination.add(canonicalize(classpath, false));
             return;
         }
-        processClasspathNativeImageMetaInf(classpathEntry);
-        customImageClasspath.add(classpathEntry);
+
+        if (!imageClasspath.contains(classpathEntry) && !customImageClasspath.contains(classpathEntry)) {
+            destination.add(classpathEntry);
+            processManifestMainAttributes(classpathEntry, this::handleClassPathAttribute);
+            processClasspathNativeImageMetaInf(classpathEntry);
+        }
     }
 
     void addCustomJavaArgs(String javaArg) {

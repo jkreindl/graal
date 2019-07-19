@@ -91,16 +91,4 @@ final class LibGraalTruffleRuntime extends AbstractHotSpotTruffleRuntime {
             HotSpotToSVMCalls.log(getIsolateThread(), message);
         }
     }
-
-    /**
-     * Clears JNI GlobalReferences to HotSpot objects held by object on SVM heap. NOTE: This method
-     * is called reflectively by Truffle tests.
-     */
-    @SuppressWarnings({"unused", "try"})
-    private static void cleanNativeReferences() {
-        try (LibGraalScope scope = new LibGraalScope(HotSpotJVMCIRuntime.runtime())) {
-            SVMObject.cleanHandles();
-            HotSpotToSVMCalls.cleanReferences(getIsolateThread());
-        }
-    }
 }
