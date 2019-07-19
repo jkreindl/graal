@@ -75,7 +75,6 @@ import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack;
-import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
@@ -86,6 +85,7 @@ import com.oracle.truffle.llvm.runtime.types.FunctionType;
 import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.runtime.types.VoidType;
 import com.oracle.truffle.llvm.runtime.types.symbols.LLVMIdentifier;
+import org.graalvm.collections.EconomicMap;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -95,14 +95,14 @@ import static com.oracle.truffle.llvm.parser.nodes.InstrumentationUtil.createTyp
 final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVisitorImpl {
 
     private Class<? extends Tag>[] tags;
-    private LLVMNodeObject nodeObject;
+    private EconomicMap<String, Object> nodeObjectEntries;
 
     InstrumentingBitcodeInstructionVisitor(FrameDescriptor frame, LLVMStack.UniquesRegion uniquesRegion, List<LLVMPhiManager.Phi> blockPhis, int argCount, LLVMSymbolReadResolver symbols,
                     LLVMContext context, LLVMContext.ExternalLibrary library, ArrayList<LLVMLivenessAnalysis.NullerInformation> nullerInfos, List<FrameSlot> notNullable,
                     LLVMRuntimeDebugInformation dbgInfoHandler) {
         super(frame, uniquesRegion, blockPhis, argCount, symbols, context, library, nullerInfos, notNullable, dbgInfoHandler);
         tags = null;
-        nodeObject = null;
+        nodeObjectEntries = null;
     }
 
     @Override
@@ -113,8 +113,9 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         if (alignment > 0) {
             alignment = 1 << (allocate.getAlign() - 1);
         }
-        nodeObject = createTypedNodeObject(allocate).option(LLVMTags.Alloca.EXTRA_DATA_ALLOCATION_TYPE, allocate.getPointeeType()).option(LLVMTags.Alloca.EXTRA_DATA_ALLOCATION_ALIGNMENT,
-                        alignment).build();
+        nodeObjectEntries = createTypedNodeObject(allocate);
+        nodeObjectEntries.put(LLVMTags.Alloca.EXTRA_DATA_ALLOCATION_TYPE, allocate.getPointeeType());
+        nodeObjectEntries.put(LLVMTags.Alloca.EXTRA_DATA_ALLOCATION_ALIGNMENT, alignment);
 
         // create the alloca without inlining the count even if it is constant. a constant count
         // should be inlined anyways, but this way the count is properly reported to instrumentation
@@ -125,14 +126,13 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     public void visit(BinaryOperationInstruction operation) {
         tags = InstrumentationUtil.getBinaryOperationTags(operation.getOperator(), false);
 
+        nodeObjectEntries = EconomicMap.create(ArithmeticFlag.ALL_VALUES.length);
         final ArithmeticFlag[] allFlags = ArithmeticFlag.ALL_VALUES;
-        final String[] keys = new String[allFlags.length];
-        final Object[] values = new Object[allFlags.length];
-        for (int i = 0; i < allFlags.length; i++) {
-            keys[i] = allFlags[i].toString();
-            values[i] = LLVMBitcodeTypeHelper.testArithmeticFlag(allFlags[i], operation.getFlags(), operation.getOperator());
+        for (ArithmeticFlag flag : allFlags) {
+            final String key = flag.toString();
+            final Object value = LLVMBitcodeTypeHelper.testArithmeticFlag(flag, operation.getFlags(), operation.getOperator());
+            nodeObjectEntries.put(key, value);
         }
-        nodeObject = new LLVMNodeObject(keys, values);
 
         super.visit(operation);
     }
@@ -158,7 +158,9 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
 
         // clear the call or invoke tags already set by resolving the IR-parent of this node
         tags = VoidType.INSTANCE.equals(builtinType.getReturnType()) ? LLVMTags.Intrinsic.VOID_INTRINSIC_TAGS : LLVMTags.Intrinsic.VALUE_INTRINSIC_TAGS;
-        nodeObject = LLVMNodeObject.newBuilder().option(LLVMTags.Intrinsic.EXTRA_DATA_FUNCTION_NAME, builtinName).option(LLVMTags.Intrinsic.EXTRA_DATA_FUNCTION_TYPE, builtinType).build();
+        nodeObjectEntries = EconomicMap.create(2);
+        nodeObjectEntries.put(LLVMTags.Intrinsic.EXTRA_DATA_FUNCTION_NAME, builtinName);
+        nodeObjectEntries.put(LLVMTags.Intrinsic.EXTRA_DATA_FUNCTION_TYPE, builtinType);
 
         return builtin;
     }
@@ -166,14 +168,14 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(CallInstruction call) {
         tags = LLVMTags.Call.VALUE_CALL_TAGS;
-        nodeObject = createTypedNodeObject(call).build();
+        nodeObjectEntries = createTypedNodeObject(call);
         super.visit(call);
     }
 
     @Override
     public void visit(LandingpadInstruction landingpadInstruction) {
         tags = LLVMTags.LandingPad.STATEMENT_TAGS;
-        nodeObject = createTypedNodeObject(landingpadInstruction).build();
+        nodeObjectEntries = createTypedNodeObject(landingpadInstruction);
         super.visit(landingpadInstruction);
     }
 
@@ -186,7 +188,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(CompareExchangeInstruction cmpxchg) {
         tags = LLVMTags.CmpXchg.EXPRESSION_TAGS;
-        nodeObject = createTypedNodeObject(cmpxchg).build();
+        nodeObjectEntries = createTypedNodeObject(cmpxchg);
         super.visit(cmpxchg);
     }
 
@@ -199,7 +201,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(InvokeInstruction call) {
         tags = LLVMTags.Invoke.VALUE_INVOKE_TAGS;
-        nodeObject = createTypedNodeObject(call).build();
+        nodeObjectEntries = createTypedNodeObject(call);
         super.visit(call);
     }
 
@@ -214,25 +216,26 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         tags = LLVMTags.Cast.EXPRESSION_TAGS;
         final Type srcType = cast.getValue().getType();
         final String castKind = cast.getOperator().getIrString();
-        nodeObject = createTypedNodeObject(cast).option(LLVMTags.Cast.EXTRA_DATA_SOURCE_TYPE, srcType).option(LLVMTags.Cast.EXTRA_DATA_KIND, castKind).build();
+        nodeObjectEntries = createTypedNodeObject(cast);
+        nodeObjectEntries.put(LLVMTags.Cast.EXTRA_DATA_SOURCE_TYPE, srcType);
+        nodeObjectEntries.put(LLVMTags.Cast.EXTRA_DATA_KIND, castKind);
         super.visit(cast);
     }
 
     @Override
     public void visit(CompareInstruction compare) {
-        final LLVMNodeObject.Builder noBuilder = createTypedNodeObject(compare);
+        nodeObjectEntries = createTypedNodeObject(compare);
         final String cmpKind = compare.getOperator().name();
 
         if (Type.isFloatingpointType(compare.getLHS().getType())) {
             // TODO fcmp should have fast-math flags
             tags = LLVMTags.FCMP.EXPRESSION_TAGS;
-            noBuilder.option(LLVMTags.FCMP.EXTRA_DATA_KIND, cmpKind);
+            nodeObjectEntries.put(LLVMTags.FCMP.EXTRA_DATA_KIND, cmpKind);
         } else {
             tags = LLVMTags.ICMP.EXPRESSION_TAGS;
-            noBuilder.option(LLVMTags.ICMP.EXTRA_DATA_KIND, cmpKind);
+            nodeObjectEntries.put(LLVMTags.ICMP.EXTRA_DATA_KIND, cmpKind);
         }
 
-        nodeObject = noBuilder.build();
         super.visit(compare);
     }
 
@@ -245,24 +248,24 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(ExtractElementInstruction extract) {
         tags = LLVMTags.ExtractElement.EXPRESSION_TAGS;
-        nodeObject = createTypedNodeObject(extract).build();
+        nodeObjectEntries = createTypedNodeObject(extract);
         super.visit(extract);
     }
 
     @Override
     public void visit(ExtractValueInstruction extract) {
         tags = LLVMTags.ExtractValue.EXPRESSION_TAGS;
-        nodeObject = createTypedNodeObject(extract).build();
+        nodeObjectEntries = createTypedNodeObject(extract);
         super.visit(extract);
     }
 
     @Override
     public void visit(GetElementPointerInstruction gep) {
         tags = LLVMTags.GetElementPtr.EXPRESSION_TAGS;
-        final LLVMNodeObject.Builder builder = createTypedNodeObject(gep).option(LLVMTags.GetElementPtr.EXTRA_DATA_SOURCE_TYPE, gep.getBasePointer().getType()).option(
-                        LLVMTags.GetElementPtr.EXTRA_DATA_IS_INBOUND, gep.isInbounds());
-        InstrumentationUtil.addElementPointerIndices(gep.getIndices(), builder);
-        nodeObject = builder.build();
+        nodeObjectEntries = createTypedNodeObject(gep);
+        nodeObjectEntries.put(LLVMTags.GetElementPtr.EXTRA_DATA_SOURCE_TYPE, gep.getBasePointer().getType());
+        nodeObjectEntries.put(LLVMTags.GetElementPtr.EXTRA_DATA_IS_INBOUND, gep.isInbounds());
+        InstrumentationUtil.addElementPointerIndices(gep.getIndices(), nodeObjectEntries);
         super.visit(gep);
     }
 
@@ -275,14 +278,14 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(InsertElementInstruction insert) {
         tags = LLVMTags.InsertElement.EXPRESSION_TAGS;
-        nodeObject = createTypedNodeObject(insert).build();
+        nodeObjectEntries = createTypedNodeObject(insert);
         super.visit(insert);
     }
 
     @Override
     public void visit(InsertValueInstruction insert) {
         tags = LLVMTags.InsertValue.EXPRESSION_TAGS;
-        nodeObject = createTypedNodeObject(insert).build();
+        nodeObjectEntries = createTypedNodeObject(insert);
         super.visit(insert);
     }
 
@@ -291,7 +294,8 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         tags = LLVMTags.Load.EXPRESSION_TAGS;
         // TODO alignment
         final int loadByteSize = context.getByteSize(load.getSource().getType());
-        nodeObject = createTypedNodeObject(load).option(LLVMTags.Load.EXTRA_DATA_BYTE_SIZE, loadByteSize).build();
+        nodeObjectEntries = createTypedNodeObject(load);
+        nodeObjectEntries.put(LLVMTags.Load.EXTRA_DATA_BYTE_SIZE, loadByteSize);
         super.visit(load);
     }
 
@@ -300,7 +304,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         // phis are resolved as part of resolving a control flow node, we must reset the tag and
         // nodeobject after the phis have been resolved
         final Class<? extends Tag>[] oldTags = tags;
-        final LLVMNodeObject oldNodeObject = nodeObject;
+        final EconomicMap<String, Object> oldNodeObjectEntries = nodeObjectEntries;
 
         final LLVMStatementNode phiWrites = super.createAggregatePhi(from, to, types, phis);
         if (phiWrites == null) {
@@ -313,11 +317,12 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         for (int i = 0; i < targets.length; i++) {
             targets[i] = LLVMIdentifier.toLocalIdentifier(phis.get(i).getPhiValue().getName());
         }
-        nodeObject = LLVMNodeObject.newBuilder().option(LLVMTags.Phi.EXTRA_DATA_TARGETS, new LLVMNodeObjectKeys(targets)).build();
+        nodeObjectEntries = EconomicMap.create(1);
+        nodeObjectEntries.put(LLVMTags.Phi.EXTRA_DATA_TARGETS, new LLVMNodeObjectKeys(targets));
 
         instrument(phiWrites);
         tags = oldTags;
-        nodeObject = oldNodeObject;
+        nodeObjectEntries = oldNodeObjectEntries;
 
         return phiWrites;
     }
@@ -325,7 +330,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(PhiInstruction phi) {
         tags = LLVMTags.Phi.EXPRESSION_TAGS;
-        nodeObject = createTypedNodeObject(phi).build();
+        nodeObjectEntries = createTypedNodeObject(phi);
         super.visit(phi);
     }
 
@@ -336,21 +341,21 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         } else {
             tags = LLVMTags.Ret.EXPRESSION_TAGS;
         }
-        nodeObject = createTypedNodeObject(ret).build();
+        nodeObjectEntries = createTypedNodeObject(ret);
         super.visit(ret);
     }
 
     @Override
     public void visit(SelectInstruction select) {
         tags = LLVMTags.Select.EXPRESSION_TAGS;
-        nodeObject = createTypedNodeObject(select).build();
+        nodeObjectEntries = createTypedNodeObject(select);
         super.visit(select);
     }
 
     @Override
     public void visit(ShuffleVectorInstruction shuffle) {
         tags = LLVMTags.ShuffleVector.EXPRESSION_TAGS;
-        nodeObject = createTypedNodeObject(shuffle).build();
+        nodeObjectEntries = createTypedNodeObject(shuffle);
         super.visit(shuffle);
     }
 
@@ -359,14 +364,15 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         tags = LLVMTags.Store.STATEMENT_TAGS;
         // TODO alignment
         final int storeByteSize = context.getByteSize(store.getDestination().getType());
-        nodeObject = LLVMNodeObject.newBuilder().option(LLVMTags.Store.EXTRA_DATA_BYTE_SIZE, storeByteSize).build();
+        nodeObjectEntries = EconomicMap.create(1);
+        nodeObjectEntries.put(LLVMTags.Store.EXTRA_DATA_BYTE_SIZE, storeByteSize);
         super.visit(store);
     }
 
     @Override
     public void visit(ReadModifyWriteInstruction rmw) {
         tags = LLVMTags.AtomicRMW.EXPRESSION_TAGS;
-        nodeObject = createTypedNodeObject(rmw).build();
+        nodeObjectEntries = createTypedNodeObject(rmw);
         super.visit(rmw);
     }
 
@@ -410,7 +416,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
 
         // super.createFrameWrite will call addInstruction, prepare the tags for then
         tags = LLVMTags.SSAWrite.EXPRESSION_TAGS;
-        nodeObject = InstrumentationUtil.createSSAAccessDescriptor(source, LLVMTags.SSAWrite.EXTRA_DATA_SSA_TARGET);
+        nodeObjectEntries = InstrumentationUtil.createSSAAccessDescriptor(source, LLVMTags.SSAWrite.EXTRA_DATA_SSA_TARGET);
         super.createFrameWrite(result, source, sourceLocation);
     }
 
@@ -419,7 +425,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         instrument(node);
         super.addInstruction(node);
         tags = null;
-        nodeObject = null;
+        nodeObjectEntries = null;
     }
 
     @Override
@@ -427,15 +433,15 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         // this is only ever used for Sulong internal nodes
         super.addInstructionUnchecked(instruction);
         tags = null;
-        nodeObject = null;
+        nodeObjectEntries = null;
     }
 
     @Override
     void setControlFlowNode(LLVMControlFlowNode controlFlowNode) {
-        InstrumentationUtil.addTags(controlFlowNode, tags, nodeObject);
+        InstrumentationUtil.addTags(controlFlowNode, tags, nodeObjectEntries);
         super.setControlFlowNode(controlFlowNode);
         tags = null;
-        nodeObject = null;
+        nodeObjectEntries = null;
     }
 
     private void instrument(LLVMInstrumentableNode node) {
@@ -444,9 +450,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         }
 
         final LLVMNodeSourceDescriptor sourceDescriptor = node.getOrCreateSourceDescriptor();
-
-        assert sourceDescriptor.getNodeObject() == null : "Unexpected nodeObject";
-        sourceDescriptor.setNodeObject(nodeObject);
+        sourceDescriptor.setNodeObjectEntries(nodeObjectEntries);
 
         assert sourceDescriptor.getTags() == null : "Unexpected tags";
         sourceDescriptor.setTags(tags);
