@@ -46,11 +46,11 @@ import com.oracle.truffle.llvm.parser.model.symbols.instructions.ValueInstructio
 import com.oracle.truffle.llvm.parser.model.visitors.ConstantVisitor;
 import com.oracle.truffle.llvm.parser.model.visitors.ValueInstructionVisitor;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
-import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.runtime.types.symbols.Symbol;
+import org.graalvm.collections.EconomicMap;
 
 import static com.oracle.truffle.llvm.parser.nodes.InstrumentationUtil.createGlobalAccessDescriptor;
 import static com.oracle.truffle.llvm.parser.nodes.InstrumentationUtil.createSSAAccessDescriptor;
@@ -61,7 +61,7 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
     private final LLVMSymbolReadResolver impl;
 
     private Class<? extends Tag>[] tags;
-    private LLVMNodeObject nodeObject;
+    private EconomicMap<String, Object> nodeObjectEntries;
 
     ReadResolverInstrumentationWrapper(LLVMParserRuntime runtime, LLVMSymbolReadResolver impl) {
         super(runtime);
@@ -69,7 +69,7 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
         this.impl = impl;
 
         this.tags = null;
-        this.nodeObject = null;
+        this.nodeObjectEntries = null;
     }
 
     @Override
@@ -81,15 +81,15 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
 
         // determine instrumentation tags for the symbol
         tags = null;
-        nodeObject = null;
+        nodeObjectEntries = null;
         symbol.accept(this);
         if (tags == null) {
             throw new LLVMParserException("Failed to instrument expression for symbol: " + symbol);
         }
 
-        InstrumentationUtil.addTags(resolvedNode, tags, nodeObject);
+        InstrumentationUtil.addTags(resolvedNode, tags, nodeObjectEntries);
         tags = null;
-        nodeObject = null;
+        nodeObjectEntries = null;
 
         return resolvedNode;
     }
@@ -98,31 +98,31 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
     public void visitValueInstruction(ValueInstruction valueInstruction) {
         // a value instruction writes its result to an SSA slot
         tags = LLVMTags.SSARead.EXPRESSION_TAGS;
-        nodeObject = createSSAAccessDescriptor(valueInstruction, LLVMTags.SSARead.EXTRA_DATA_SSA_SOURCE);
+        nodeObjectEntries = createSSAAccessDescriptor(valueInstruction, LLVMTags.SSARead.EXTRA_DATA_SSA_SOURCE);
     }
 
     @Override
     public void visit(FunctionParameter param) {
         tags = LLVMTags.SSARead.EXPRESSION_TAGS;
-        nodeObject = createSSAAccessDescriptor(param, LLVMTags.SSARead.EXTRA_DATA_SSA_SOURCE);
+        nodeObjectEntries = createSSAAccessDescriptor(param, LLVMTags.SSARead.EXTRA_DATA_SSA_SOURCE);
     }
 
     @Override
     public void visit(FunctionDeclaration toResolve) {
         tags = LLVMTags.GlobalRead.EXPRESSION_TAGS;
-        nodeObject = createGlobalAccessDescriptor(toResolve);
+        nodeObjectEntries = createGlobalAccessDescriptor(toResolve);
     }
 
     @Override
     public void visit(FunctionDefinition toResolve) {
         tags = LLVMTags.GlobalRead.CONSTANT_EXPRESSION_TAGS;
-        nodeObject = createGlobalAccessDescriptor(toResolve);
+        nodeObjectEntries = createGlobalAccessDescriptor(toResolve);
     }
 
     @Override
     public void visit(GlobalAlias alias) {
         tags = LLVMTags.GlobalRead.EXPRESSION_TAGS;
-        nodeObject = createGlobalAccessDescriptor(alias);
+        nodeObjectEntries = createGlobalAccessDescriptor(alias);
     }
 
     @Override
@@ -132,19 +132,19 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
         } else {
             tags = LLVMTags.GlobalRead.EXPRESSION_TAGS;
         }
-        nodeObject = createGlobalAccessDescriptor(global);
+        nodeObjectEntries = createGlobalAccessDescriptor(global);
     }
 
     @Override
     public void visitConstant(Symbol constant) {
         tags = LLVMTags.Literal.EXPRESSION_TAGS;
-        nodeObject = createTypedNodeObject(constant).build();
+        nodeObjectEntries = createTypedNodeObject(constant);
     }
 
     @Override
     public void visit(BinaryOperationConstant constant) {
         tags = InstrumentationUtil.getBinaryOperationTags(constant.getOperator(), true);
-        nodeObject = createTypedNodeObject(constant).build();
+        nodeObjectEntries = createTypedNodeObject(constant);
     }
 
     @Override
@@ -152,38 +152,38 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
         tags = LLVMTags.Cast.CONSTANT_EXPRESSION_TAGS;
         final Type srcType = constant.getValue().getType();
         final String castKind = constant.getOperator().getIrString();
-        nodeObject = createTypedNodeObject(constant).option(LLVMTags.Cast.EXTRA_DATA_SOURCE_TYPE, srcType).option(LLVMTags.Cast.EXTRA_DATA_KIND, castKind).build();
+        nodeObjectEntries = createTypedNodeObject(constant);
+        nodeObjectEntries.put(LLVMTags.Cast.EXTRA_DATA_SOURCE_TYPE, srcType);
+        nodeObjectEntries.put(LLVMTags.Cast.EXTRA_DATA_KIND, castKind);
     }
 
     @Override
     public void visit(CompareConstant constant) {
-        final LLVMNodeObject.Builder noBuilder = createTypedNodeObject(constant);
+        nodeObjectEntries = createTypedNodeObject(constant);
         final String cmpKind = constant.getOperator().name();
 
         if (Type.isFloatingpointType(constant.getLHS().getType())) {
             // TODO fcmp should have fast-math flags
             tags = LLVMTags.FCMP.CONSTANT_EXPRESSION_TAGS;
-            noBuilder.option(LLVMTags.FCMP.EXTRA_DATA_KIND, cmpKind);
+            nodeObjectEntries.put(LLVMTags.FCMP.EXTRA_DATA_KIND, cmpKind);
         } else {
             tags = LLVMTags.ICMP.CONSTANT_EXPRESSION_TAGS;
-            noBuilder.option(LLVMTags.ICMP.EXTRA_DATA_KIND, cmpKind);
+            nodeObjectEntries.put(LLVMTags.ICMP.EXTRA_DATA_KIND, cmpKind);
         }
-
-        nodeObject = noBuilder.build();
     }
 
     @Override
     public void visit(GetElementPointerConstant constant) {
         tags = LLVMTags.GetElementPtr.CONSTANT_EXPRESSION_TAGS;
-        final LLVMNodeObject.Builder builder = createTypedNodeObject(constant).option(LLVMTags.GetElementPtr.EXTRA_DATA_SOURCE_TYPE, constant.getBasePointer().getType()).option(
-                        LLVMTags.GetElementPtr.EXTRA_DATA_IS_INBOUND, constant.isInbounds());
-        InstrumentationUtil.addElementPointerIndices(constant.getIndices(), builder);
-        nodeObject = builder.build();
+        nodeObjectEntries = createTypedNodeObject(constant);
+        nodeObjectEntries.put(LLVMTags.GetElementPtr.EXTRA_DATA_SOURCE_TYPE, constant.getBasePointer().getType());
+        nodeObjectEntries.put(LLVMTags.GetElementPtr.EXTRA_DATA_IS_INBOUND, constant.isInbounds());
+        InstrumentationUtil.addElementPointerIndices(constant.getIndices(), nodeObjectEntries);
     }
 
     @Override
     public void visit(SelectConstant constant) {
         tags = LLVMTags.Select.CONSTANT_EXPRESSION_TAGS;
-        nodeObject = createTypedNodeObject(constant).build();
+        nodeObjectEntries = createTypedNodeObject(constant);
     }
 }

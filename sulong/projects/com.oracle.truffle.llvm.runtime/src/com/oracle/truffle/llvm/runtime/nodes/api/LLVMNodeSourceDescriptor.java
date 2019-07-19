@@ -35,7 +35,9 @@ import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.source.SourceSection;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
+import org.graalvm.collections.EconomicMap;
 
 public final class LLVMNodeSourceDescriptor {
 
@@ -48,7 +50,7 @@ public final class LLVMNodeSourceDescriptor {
 
     @CompilationFinal private LLVMSourceLocation sourceLocation;
     @CompilationFinal(dimensions = 1) private Class<? extends Tag>[] tags;
-    @CompilationFinal private Object nodeObject;
+    @CompilationFinal private EconomicMap<String, Object> nodeObjectEntries;
 
     public LLVMSourceLocation getSourceLocation() {
         return sourceLocation;
@@ -70,7 +72,7 @@ public final class LLVMNodeSourceDescriptor {
     }
 
     public Object getNodeObject() {
-        return nodeObject;
+        return LLVMNodeObject.create(nodeObjectEntries);
     }
 
     public void setSourceLocation(LLVMSourceLocation sourceLocation) {
@@ -83,8 +85,8 @@ public final class LLVMNodeSourceDescriptor {
         this.tags = tags;
     }
 
-    public void setNodeObject(Object nodeObject) {
+    public void setNodeObjectEntries(EconomicMap<String, Object> nodeObject) {
         CompilerAsserts.neverPartOfCompilation();
-        this.nodeObject = nodeObject;
+        this.nodeObjectEntries = nodeObject;
     }
 }

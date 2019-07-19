@@ -35,19 +35,21 @@ import com.oracle.truffle.llvm.parser.model.ValueSymbol;
 import com.oracle.truffle.llvm.parser.model.enums.BinaryOperator;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMGenericInteropArray;
-import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMInstrumentableNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNodeSourceDescriptor;
 import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.runtime.types.symbols.Symbol;
+import org.graalvm.collections.EconomicMap;
 
 import java.util.List;
 
 final class InstrumentationUtil {
 
-    static LLVMNodeObject.Builder createTypedNodeObject(Symbol symbol) {
-        return LLVMNodeObject.newBuilder().option(LLVMTags.EXTRA_DATA_VALUE_TYPE, symbol.getType());
+    static EconomicMap<String, Object> createTypedNodeObject(Symbol symbol) {
+        final EconomicMap<String, Object> entries = EconomicMap.create(1);
+        entries.put(LLVMTags.EXTRA_DATA_VALUE_TYPE, symbol.getType());
+        return entries;
     }
 
     static Class<? extends Tag>[] getBinaryOperationTags(BinaryOperator operator, boolean isConstant) {
@@ -87,19 +89,23 @@ final class InstrumentationUtil {
         }
     }
 
-    static LLVMNodeObject createSSAAccessDescriptor(ValueSymbol ssaValue, String ssaNameKey) {
+    static EconomicMap<String, Object> createSSAAccessDescriptor(ValueSymbol ssaValue, String ssaNameKey) {
         final String ssaName = ssaValue.getName();
-        return createTypedNodeObject(ssaValue).option(ssaNameKey, ssaName).build();
+        final EconomicMap<String, Object> entries = createTypedNodeObject(ssaValue);
+        entries.put(ssaNameKey, ssaName);
+        return entries;
     }
 
-    static LLVMNodeObject createGlobalAccessDescriptor(ValueSymbol global) {
+    static EconomicMap<String, Object> createGlobalAccessDescriptor(ValueSymbol global) {
         final String llvmName = global.getName();
-        return createTypedNodeObject(global).option(LLVMTags.GlobalRead.EXTRA_DATA_GLOBAL_NAME_LLVM, llvmName).build();
+        final EconomicMap<String, Object> entries = createTypedNodeObject(global);
+        entries.put(LLVMTags.GlobalRead.EXTRA_DATA_GLOBAL_NAME_LLVM, llvmName);
+        return entries;
     }
 
-    static void addTags(LLVMInstrumentableNode node, Class<? extends Tag>[] tags, Object nodeObject) {
+    static void addTags(LLVMInstrumentableNode node, Class<? extends Tag>[] tags, EconomicMap<String, Object> nodeObject) {
         final LLVMNodeSourceDescriptor sourceDescriptor = node.getOrCreateSourceDescriptor();
-        sourceDescriptor.setNodeObject(nodeObject);
+        sourceDescriptor.setNodeObjectEntries(nodeObject);
         if (sourceDescriptor.getTags() == null) {
             sourceDescriptor.setTags(tags);
         } else {
@@ -107,7 +113,7 @@ final class InstrumentationUtil {
         }
     }
 
-    static void addElementPointerIndices(List<SymbolImpl> indices, LLVMNodeObject.Builder nodeObjectBuilder) {
+    static void addElementPointerIndices(List<SymbolImpl> indices, EconomicMap<String, Object> nodeObjectEntries) {
         final Object[] indexTypes = new Type[indices.size()];
         final Object[] indexValues = new Object[indices.size()];
         for (int i = 0; i < indices.size(); i++) {
@@ -119,8 +125,8 @@ final class InstrumentationUtil {
             }
             indexValues[i] = indexValue;
         }
-        nodeObjectBuilder.option(LLVMTags.GetElementPtr.EXTRA_DATA_INDEX_TYPES, new LLVMGenericInteropArray(indexTypes));
-        nodeObjectBuilder.option(LLVMTags.GetElementPtr.EXTRA_DATA_INDEX_VALUES, new LLVMGenericInteropArray(indexValues));
+        nodeObjectEntries.put(LLVMTags.GetElementPtr.EXTRA_DATA_INDEX_TYPES, new LLVMGenericInteropArray(indexTypes));
+        nodeObjectEntries.put(LLVMTags.GetElementPtr.EXTRA_DATA_INDEX_VALUES, new LLVMGenericInteropArray(indexValues));
     }
 
     private InstrumentationUtil() {

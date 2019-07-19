@@ -29,6 +29,7 @@
  */
 package com.oracle.truffle.llvm.nodes.func;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
@@ -42,6 +43,7 @@ import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
+import org.graalvm.collections.EconomicMap;
 
 @GenerateWrapper
 abstract class LLVMPrepareArgumentNode extends LLVMNode implements InstrumentableNode {
@@ -81,8 +83,11 @@ abstract class LLVMPrepareArgumentNode extends LLVMNode implements Instrumentabl
     }
 
     @Override
+    @TruffleBoundary
     public Object getNodeObject() {
-        return LLVMNodeObject.newBuilder().option(LLVMTags.StoreValueAsCallArgument.EXTRA_DATA_ARG_INDEX, argIndex).build();
+        final EconomicMap<String, Object> entries = EconomicMap.create(1);
+        entries.put(LLVMTags.StoreValueAsCallArgument.EXTRA_DATA_ARG_INDEX, argIndex);
+        return LLVMNodeObject.create(entries);
     }
 
     @Override

@@ -29,7 +29,6 @@
  */
 package com.oracle.truffle.llvm.runtime.instrumentation;
 
-import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.interop.InteropLibrary;
@@ -50,10 +49,8 @@ public final class LLVMNodeObject implements TruffleObject {
     }
 
     private final EconomicMap<String, Object> entries;
-    @CompilationFinal(dimensions = 1) private final String[] keys;
 
-    private LLVMNodeObject(String[] keys, EconomicMap<String, Object> entries) {
-        this.keys = keys;
+    private LLVMNodeObject(EconomicMap<String, Object> entries) {
         this.entries = entries;
     }
 
@@ -65,6 +62,11 @@ public final class LLVMNodeObject implements TruffleObject {
 
     @ExportMessage
     Object getMembers(@SuppressWarnings("unused") boolean includeInternal) {
+        final String[] keys = new String[entries.size()];
+        final Iterator<String> keysIterator = entries.getKeys().iterator();
+        for (int i = 0; i < keys.length && keysIterator.hasNext(); i++) {
+            keys[i] = keysIterator.next();
+        }
         return new LLVMNodeObjectKeys(keys);
     }
 
@@ -95,45 +97,19 @@ public final class LLVMNodeObject implements TruffleObject {
     @TruffleBoundary
     public String toString() {
         final StringBuilder builder = new StringBuilder("{");
-        for (int i = 0; i < keys.length; i++) {
+        final Iterator<String> keysIterator = entries.getKeys().iterator();
+        for (int i = 0; i < entries.size() && keysIterator.hasNext(); i++) {
             if (i != 0) {
                 builder.append(", ");
             }
-            final String key = keys[i];
+            final String key = keysIterator.next();
             builder.append(key).append(" = ").append(entries.get(key));
         }
         builder.append("}");
         return builder.toString();
     }
 
-    public static Builder newBuilder() {
-        return new Builder();
-    }
-
-    public static final class Builder {
-
-        private final EconomicMap<String, Object> entries;
-
-        private Builder() {
-            this.entries = EconomicMap.create();
-        }
-
-        @TruffleBoundary
-        public Builder option(String key, Object value) {
-            assert key != null;
-            assert value != null;
-            entries.put(key, value);
-            return this;
-        }
-
-        @TruffleBoundary
-        public LLVMNodeObject build() {
-            final String[] keys = new String[entries.size()];
-            final Iterator<String> keysIterator = entries.getKeys().iterator();
-            for (int i = 0; i < keys.length && keysIterator.hasNext(); i++) {
-                keys[i] = keysIterator.next();
-            }
-            return new LLVMNodeObject(keys, entries);
-        }
+    public static LLVMNodeObject create(EconomicMap<String, Object> entries) {
+        return new LLVMNodeObject(entries);
     }
 }
