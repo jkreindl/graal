@@ -60,8 +60,13 @@ public final class LLVMNodeObject implements TruffleObject {
         return true;
     }
 
+    private static final String[] NO_ENTRIES = new String[0];
+
     @ExportMessage
     Object getMembers(@SuppressWarnings("unused") boolean includeInternal) {
+        if (entries == null) {
+            return new LLVMNodeObjectKeys(NO_ENTRIES);
+        }
         final String[] keys = new String[entries.size()];
         final Iterator<String> keysIterator = entries.getKeys().iterator();
         for (int i = 0; i < keys.length && keysIterator.hasNext(); i++) {
@@ -72,7 +77,7 @@ public final class LLVMNodeObject implements TruffleObject {
 
     @TruffleBoundary
     private Object getValue(String key) {
-        return entries.get(key);
+        return entries != null ? entries.get(key) : null;
     }
 
     @ExportMessage
