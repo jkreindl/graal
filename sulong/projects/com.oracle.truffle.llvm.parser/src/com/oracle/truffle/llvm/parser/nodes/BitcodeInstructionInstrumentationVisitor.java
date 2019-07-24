@@ -29,12 +29,10 @@
  */
 package com.oracle.truffle.llvm.parser.nodes;
 
-import com.oracle.truffle.api.frame.FrameDescriptor;
-import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.instrumentation.Tag;
-import com.oracle.truffle.llvm.parser.LLVMLivenessAnalysis;
 import com.oracle.truffle.llvm.parser.LLVMPhiManager;
 import com.oracle.truffle.llvm.parser.model.SymbolImpl;
+import com.oracle.truffle.llvm.parser.model.ValueSymbol;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDeclaration;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.AllocateInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.BinaryOperationInstruction;
@@ -65,18 +63,14 @@ import com.oracle.truffle.llvm.parser.model.symbols.instructions.StoreInstructio
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.SwitchInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.SwitchOldInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.UnreachableInstruction;
-import com.oracle.truffle.llvm.parser.model.symbols.instructions.ValueInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.VoidCallInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.VoidInvokeInstruction;
+import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
 import com.oracle.truffle.llvm.parser.util.LLVMBitcodeTypeHelper;
 import com.oracle.truffle.llvm.runtime.ArithmeticFlag;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
-import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObjectKeys;
-import com.oracle.truffle.llvm.runtime.memory.LLVMStack;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
-import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
-import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMInstrumentableNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNodeSourceDescriptor;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
@@ -86,21 +80,21 @@ import com.oracle.truffle.llvm.runtime.types.VoidType;
 import org.graalvm.collections.EconomicMap;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import static com.oracle.truffle.llvm.parser.nodes.InstrumentationUtil.createTypedNodeObject;
 
-final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVisitorImpl {
+final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
+
+    // needed to compute size of type in loads and stores
+    private final LLVMContext context;
 
     private Class<? extends Tag>[] tags;
     private EconomicMap<String, Object> nodeObjectEntries;
 
-    InstrumentingBitcodeInstructionVisitor(FrameDescriptor frame, LLVMStack.UniquesRegion uniquesRegion, List<LLVMPhiManager.Phi> blockPhis, int argCount, LLVMSymbolReadResolver symbols,
-                    LLVMContext context, LLVMContext.ExternalLibrary library, ArrayList<LLVMLivenessAnalysis.NullerInformation> nullerInfos, List<FrameSlot> notNullable,
-                    LLVMRuntimeDebugInformation dbgInfoHandler) {
-        super(frame, uniquesRegion, blockPhis, argCount, symbols, context, library, nullerInfos, notNullable, dbgInfoHandler);
-        tags = null;
-        nodeObjectEntries = null;
+    BitcodeInstructionInstrumentationVisitor(LLVMContext context) {
+        this.context = context;
+        this.tags = null;
+        this.nodeObjectEntries = null;
     }
 
     @Override
@@ -114,10 +108,6 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         nodeObjectEntries = createTypedNodeObject(allocate);
         nodeObjectEntries.put(LLVMTags.Alloca.EXTRA_DATA_ALLOCATION_TYPE, allocate.getPointeeType());
         nodeObjectEntries.put(LLVMTags.Alloca.EXTRA_DATA_ALLOCATION_ALIGNMENT, alignment);
-
-        // create the alloca without inlining the count even if it is constant. a constant count
-        // should be inlined anyways, but this way the count is properly reported to instrumentation
-        createAlloca(allocate, false);
     }
 
     @Override
@@ -131,92 +121,50 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
             final Object value = LLVMBitcodeTypeHelper.testArithmeticFlag(flag, operation.getFlags(), operation.getOperator());
             nodeObjectEntries.put(key, value);
         }
-
-        super.visit(operation);
     }
 
     @Override
     public void visit(BranchInstruction branch) {
         tags = LLVMTags.Br.STATEMENT_TAGS;
-        super.visit(branch);
-    }
-
-    @Override
-    LLVMExpressionNode tryGenerateBuiltinNode(SymbolImpl target, LLVMExpressionNode[] argNodes, LLVMSourceLocation source) {
-        final LLVMExpressionNode builtin = super.tryGenerateBuiltinNode(target, argNodes, source);
-        if (builtin == null) {
-            // not a builtin
-            return builtin;
-        }
-
-        // only function declarations are resolved against the list of available builtins
-        final FunctionDeclaration declare = (FunctionDeclaration) target;
-        final String builtinName = declare.getName();
-        final FunctionType builtinType = declare.getType();
-
-        // clear the call or invoke tags already set by resolving the IR-parent of this node
-        tags = VoidType.INSTANCE.equals(builtinType.getReturnType()) ? LLVMTags.Intrinsic.VOID_INTRINSIC_TAGS : LLVMTags.Intrinsic.VALUE_INTRINSIC_TAGS;
-        nodeObjectEntries = EconomicMap.create(2);
-        nodeObjectEntries.put(LLVMTags.Intrinsic.EXTRA_DATA_FUNCTION_NAME, builtinName);
-        nodeObjectEntries.put(LLVMTags.Intrinsic.EXTRA_DATA_FUNCTION_TYPE, builtinType);
-
-        return builtin;
     }
 
     @Override
     public void visit(CallInstruction call) {
         tags = LLVMTags.Call.VALUE_CALL_TAGS;
         nodeObjectEntries = createTypedNodeObject(call);
-        super.visit(call);
     }
 
     @Override
     public void visit(LandingpadInstruction landingpadInstruction) {
         tags = LLVMTags.LandingPad.STATEMENT_TAGS;
         nodeObjectEntries = createTypedNodeObject(landingpadInstruction);
-        super.visit(landingpadInstruction);
     }
 
     @Override
     public void visit(ResumeInstruction resumeInstruction) {
         tags = LLVMTags.Resume.STATEMENT_TAGS;
-        super.visit(resumeInstruction);
     }
 
     @Override
     public void visit(CompareExchangeInstruction cmpxchg) {
         tags = LLVMTags.CmpXchg.EXPRESSION_TAGS;
         nodeObjectEntries = createTypedNodeObject(cmpxchg);
-        super.visit(cmpxchg);
-    }
-
-    @Override
-    LLVMStatementNode wrapExpressionAsStatement(LLVMExpressionNode node) {
-        // when an expression node is wrapped as a statement the tags should still apply to the
-        // expression node
-        instrument(node);
-        tags = null;
-        nodeObjectEntries = null;
-        return super.wrapExpressionAsStatement(node);
     }
 
     @Override
     public void visit(VoidCallInstruction call) {
         tags = LLVMTags.Call.VOID_CALL_TAGS;
-        super.visit(call);
     }
 
     @Override
     public void visit(InvokeInstruction call) {
         tags = LLVMTags.Invoke.VALUE_INVOKE_TAGS;
         nodeObjectEntries = createTypedNodeObject(call);
-        super.visit(call);
     }
 
     @Override
     public void visit(VoidInvokeInstruction call) {
         tags = LLVMTags.Invoke.VOID_INVOKE_TAGS;
-        super.visit(call);
     }
 
     @Override
@@ -227,7 +175,6 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         nodeObjectEntries = createTypedNodeObject(cast);
         nodeObjectEntries.put(LLVMTags.Cast.EXTRA_DATA_SOURCE_TYPE, srcType);
         nodeObjectEntries.put(LLVMTags.Cast.EXTRA_DATA_KIND, castKind);
-        super.visit(cast);
     }
 
     @Override
@@ -243,28 +190,23 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
             tags = LLVMTags.ICMP.EXPRESSION_TAGS;
             nodeObjectEntries.put(LLVMTags.ICMP.EXTRA_DATA_KIND, cmpKind);
         }
-
-        super.visit(compare);
     }
 
     @Override
     public void visit(ConditionalBranchInstruction branch) {
         tags = LLVMTags.Br.STATEMENT_TAGS;
-        super.visit(branch);
     }
 
     @Override
     public void visit(ExtractElementInstruction extract) {
         tags = LLVMTags.ExtractElement.EXPRESSION_TAGS;
         nodeObjectEntries = createTypedNodeObject(extract);
-        super.visit(extract);
     }
 
     @Override
     public void visit(ExtractValueInstruction extract) {
         tags = LLVMTags.ExtractValue.EXPRESSION_TAGS;
         nodeObjectEntries = createTypedNodeObject(extract);
-        super.visit(extract);
     }
 
     @Override
@@ -274,27 +216,23 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         nodeObjectEntries.put(LLVMTags.GetElementPtr.EXTRA_DATA_SOURCE_TYPE, gep.getBasePointer().getType());
         nodeObjectEntries.put(LLVMTags.GetElementPtr.EXTRA_DATA_IS_INBOUND, gep.isInbounds());
         InstrumentationUtil.addElementPointerIndices(gep.getIndices(), nodeObjectEntries);
-        super.visit(gep);
     }
 
     @Override
     public void visit(IndirectBranchInstruction branch) {
         tags = LLVMTags.IndirectBr.STATEMENT_TAGS;
-        super.visit(branch);
     }
 
     @Override
     public void visit(InsertElementInstruction insert) {
         tags = LLVMTags.InsertElement.EXPRESSION_TAGS;
         nodeObjectEntries = createTypedNodeObject(insert);
-        super.visit(insert);
     }
 
     @Override
     public void visit(InsertValueInstruction insert) {
         tags = LLVMTags.InsertValue.EXPRESSION_TAGS;
         nodeObjectEntries = createTypedNodeObject(insert);
-        super.visit(insert);
     }
 
     @Override
@@ -304,42 +242,12 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         final int loadByteSize = context.getByteSize(load.getSource().getType());
         nodeObjectEntries = createTypedNodeObject(load);
         nodeObjectEntries.put(LLVMTags.Load.EXTRA_DATA_BYTE_SIZE, loadByteSize);
-        super.visit(load);
-    }
-
-    @Override
-    LLVMStatementNode createAggregatePhi(LLVMExpressionNode[] from, FrameSlot[] to, Type[] types, ArrayList<LLVMPhiManager.Phi> phis) {
-        // phis are resolved as part of resolving a control flow node, we must reset the tag and
-        // nodeobject after the phis have been resolved
-        final Class<? extends Tag>[] oldTags = tags;
-        final EconomicMap<String, Object> oldNodeObjectEntries = nodeObjectEntries;
-
-        final LLVMStatementNode phiWrites = super.createAggregatePhi(from, to, types, phis);
-        if (phiWrites == null) {
-            return null;
-        }
-
-        tags = LLVMTags.Phi.EXPRESSION_TAGS;
-
-        final String[] targets = new String[phis.size()];
-        for (int i = 0; i < targets.length; i++) {
-            targets[i] = phis.get(i).getPhiValue().getName();
-        }
-        nodeObjectEntries = EconomicMap.create(1);
-        nodeObjectEntries.put(LLVMTags.Phi.EXTRA_DATA_TARGETS, new LLVMNodeObjectKeys(targets));
-
-        instrument(phiWrites);
-        tags = oldTags;
-        nodeObjectEntries = oldNodeObjectEntries;
-
-        return phiWrites;
     }
 
     @Override
     public void visit(PhiInstruction phi) {
         tags = LLVMTags.Phi.EXPRESSION_TAGS;
         nodeObjectEntries = createTypedNodeObject(phi);
-        super.visit(phi);
     }
 
     @Override
@@ -350,21 +258,18 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
             tags = LLVMTags.Ret.EXPRESSION_TAGS;
         }
         nodeObjectEntries = createTypedNodeObject(ret);
-        super.visit(ret);
     }
 
     @Override
     public void visit(SelectInstruction select) {
         tags = LLVMTags.Select.EXPRESSION_TAGS;
         nodeObjectEntries = createTypedNodeObject(select);
-        super.visit(select);
     }
 
     @Override
     public void visit(ShuffleVectorInstruction shuffle) {
         tags = LLVMTags.ShuffleVector.EXPRESSION_TAGS;
         nodeObjectEntries = createTypedNodeObject(shuffle);
-        super.visit(shuffle);
     }
 
     @Override
@@ -374,38 +279,32 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         final int storeByteSize = context.getByteSize(store.getDestination().getType());
         nodeObjectEntries = EconomicMap.create(1);
         nodeObjectEntries.put(LLVMTags.Store.EXTRA_DATA_BYTE_SIZE, storeByteSize);
-        super.visit(store);
     }
 
     @Override
     public void visit(ReadModifyWriteInstruction rmw) {
         tags = LLVMTags.AtomicRMW.EXPRESSION_TAGS;
         nodeObjectEntries = createTypedNodeObject(rmw);
-        super.visit(rmw);
     }
 
     @Override
     public void visit(FenceInstruction fence) {
         tags = LLVMTags.Fence.STATEMENT_TAGS;
-        super.visit(fence);
     }
 
     @Override
     public void visit(SwitchInstruction zwitch) {
         tags = LLVMTags.Switch.STATEMENT_TAGS;
-        super.visit(zwitch);
     }
 
     @Override
     public void visit(SwitchOldInstruction zwitch) {
         tags = LLVMTags.Switch.STATEMENT_TAGS;
-        super.visit(zwitch);
     }
 
     @Override
     public void visit(UnreachableInstruction ui) {
         tags = LLVMTags.Unreachable.STATEMENT_TAGS;
-        super.visit(ui);
     }
 
     @SuppressWarnings("unchecked") //
@@ -414,45 +313,52 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
     @Override
     public void visit(DebugTrapInstruction inst) {
         tags = EMPTY_TAGS;
-        super.visit(inst);
     }
 
-    @Override
-    void createFrameWrite(LLVMExpressionNode result, ValueInstruction source, LLVMSourceLocation sourceLocation) {
-        // instrument the source of the write
-        instrument(result);
+    void instrument(LLVMInstrumentableNode node, SymbolImpl source) {
+        tags = null;
+        nodeObjectEntries = null;
 
-        // super.createFrameWrite will call addInstruction, prepare the tags for then
+        source.accept(this);
+
+        applyNodeProperties(node);
+    }
+
+    void instrumentFrameWrite(LLVMInstrumentableNode node, ValueSymbol source) {
         tags = LLVMTags.SSAWrite.EXPRESSION_TAGS;
         nodeObjectEntries = InstrumentationUtil.createSSAAccessDescriptor(source, LLVMTags.SSAWrite.EXTRA_DATA_SSA_TARGET);
-        super.createFrameWrite(result, source, sourceLocation);
+        applyNodeProperties(node);
     }
 
-    @Override
-    void addInstruction(LLVMStatementNode node) {
-        instrument(node);
-        super.addInstruction(node);
-        tags = null;
-        nodeObjectEntries = null;
+    void instrumentLLVMBuiltin(LLVMInstrumentableNode builtin, SymbolImpl target) {
+        // only function declarations are resolved against the list of available builtins
+        assert target instanceof FunctionDeclaration : "defined function resolved as builtin";
+        final FunctionDeclaration declare = (FunctionDeclaration) target;
+        final String builtinName = declare.getName();
+        final FunctionType builtinType = declare.getType();
+
+        tags = VoidType.INSTANCE.equals(builtinType.getReturnType()) ? LLVMTags.Intrinsic.VOID_INTRINSIC_TAGS : LLVMTags.Intrinsic.VALUE_INTRINSIC_TAGS;
+        nodeObjectEntries = EconomicMap.create(2);
+        nodeObjectEntries.put(LLVMTags.Intrinsic.EXTRA_DATA_FUNCTION_NAME, builtinName);
+        nodeObjectEntries.put(LLVMTags.Intrinsic.EXTRA_DATA_FUNCTION_TYPE, builtinType);
+
+        applyNodeProperties(builtin);
     }
 
-    @Override
-    public void addInstructionUnchecked(LLVMStatementNode instruction) {
-        // this is only ever used for Sulong internal nodes
-        super.addInstructionUnchecked(instruction);
-        tags = null;
-        nodeObjectEntries = null;
+    void instrumentPhiWrites(LLVMStatementNode phiWrites, ArrayList<LLVMPhiManager.Phi> phis) {
+        tags = LLVMTags.Phi.EXPRESSION_TAGS;
+
+        final String[] targets = new String[phis.size()];
+        for (int i = 0; i < targets.length; i++) {
+            targets[i] = phis.get(i).getPhiValue().getName();
+        }
+        nodeObjectEntries = EconomicMap.create(1);
+        nodeObjectEntries.put(LLVMTags.Phi.EXTRA_DATA_TARGETS, new LLVMNodeObjectKeys(targets));
+
+        applyNodeProperties(phiWrites);
     }
 
-    @Override
-    void setControlFlowNode(LLVMControlFlowNode controlFlowNode) {
-        InstrumentationUtil.addTags(controlFlowNode, tags, nodeObjectEntries);
-        super.setControlFlowNode(controlFlowNode);
-        tags = null;
-        nodeObjectEntries = null;
-    }
-
-    private void instrument(LLVMInstrumentableNode node) {
+    private void applyNodeProperties(LLVMInstrumentableNode node) {
         if (tags == null) {
             return;
         }
@@ -463,4 +369,5 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         assert sourceDescriptor.getTags() == null : "Unexpected tags";
         sourceDescriptor.setTags(tags);
     }
+
 }
