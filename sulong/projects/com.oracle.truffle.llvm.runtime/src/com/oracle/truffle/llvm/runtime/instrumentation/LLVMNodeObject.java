@@ -101,6 +101,10 @@ public final class LLVMNodeObject implements TruffleObject {
     @Override
     @TruffleBoundary
     public String toString() {
+        if (entries == null) {
+            return "{}";
+        }
+
         final StringBuilder builder = new StringBuilder("{");
         final Iterator<String> keysIterator = entries.getKeys().iterator();
         for (int i = 0; i < entries.size() && keysIterator.hasNext(); i++) {
