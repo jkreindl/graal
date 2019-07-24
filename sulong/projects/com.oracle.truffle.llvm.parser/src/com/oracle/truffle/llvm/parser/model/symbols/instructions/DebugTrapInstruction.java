@@ -35,12 +35,19 @@ import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
 public final class DebugTrapInstruction extends VoidInstruction {
 
     public static DebugTrapInstruction create(VoidCallInstruction callToIntrinsic) {
-        final DebugTrapInstruction trap = new DebugTrapInstruction();
+        final DebugTrapInstruction trap = new DebugTrapInstruction(callToIntrinsic);
         trap.setDebugLocation(callToIntrinsic.getDebugLocation());
         return trap;
     }
 
-    private DebugTrapInstruction() {
+    private final VoidCallInstruction callToIntrinsic;
+
+    private DebugTrapInstruction(VoidCallInstruction callToIntrinsic) {
+        this.callToIntrinsic = callToIntrinsic;
+    }
+
+    public VoidCallInstruction getCallToIntrinsic() {
+        return callToIntrinsic;
     }
 
     @Override
