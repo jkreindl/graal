@@ -331,6 +331,10 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
         addInstruction(debugTrap);
     }
 
+    LLVMStatementNode wrapExpressionAsStatement(LLVMExpressionNode node) {
+        return LLVMVoidStatementNodeGen.create(node);
+    }
+
     @Override
     public void visit(VoidCallInstruction call) {
         final int argumentCount = call.getArgumentCount() + 1; // stackpointer
@@ -366,7 +370,7 @@ class BitcodeInstructionVisitorImpl extends LLVMBitcodeInstructionVisitor {
             }
             addStatementTag(node, source);
         }
-        addInstruction(LLVMVoidStatementNodeGen.create(node));
+        addInstruction(wrapExpressionAsStatement(node));
     }
 
     @Override
