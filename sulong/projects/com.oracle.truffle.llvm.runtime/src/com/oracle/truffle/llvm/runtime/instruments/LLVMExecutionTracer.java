@@ -282,9 +282,8 @@ public final class LLVMExecutionTracer {
         }
 
         @Specialization
-        @TruffleBoundary
         protected String doLLVMFunctionDescriptor(LLVMFunctionDescriptor value) {
-            return LLVMIdentifier.toGlobalIdentifier(value.getName());
+            return value.getName();
         }
 
         protected static PrintValueNode createRecursive() {
