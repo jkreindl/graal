@@ -72,7 +72,6 @@ import com.oracle.truffle.llvm.parser.util.LLVMBitcodeTypeHelper;
 import com.oracle.truffle.llvm.runtime.ArithmeticFlag;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
-import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
@@ -189,6 +188,16 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
         tags = LLVMTags.CmpXchg.EXPRESSION_TAGS;
         nodeObjectEntries = createTypedNodeObject(cmpxchg);
         super.visit(cmpxchg);
+    }
+
+    @Override
+    LLVMStatementNode wrapExpressionAsStatement(LLVMExpressionNode node) {
+        // when an expression node is wrapped as a statement the tags should still apply to the
+        // expression node
+        instrument(node);
+        tags = null;
+        nodeObjectEntries = null;
+        return super.wrapExpressionAsStatement(node);
     }
 
     @Override
@@ -445,7 +454,7 @@ final class InstrumentingBitcodeInstructionVisitor extends BitcodeInstructionVis
 
     private void instrument(LLVMInstrumentableNode node) {
         if (tags == null) {
-            throw new LLVMParserException("Failed to instrument node");
+            return;
         }
 
         final LLVMNodeSourceDescriptor sourceDescriptor = node.getOrCreateSourceDescriptor();
