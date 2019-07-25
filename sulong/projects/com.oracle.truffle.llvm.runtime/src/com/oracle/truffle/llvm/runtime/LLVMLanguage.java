@@ -78,12 +78,15 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
                 LLVMTags.Add.class, //
                 LLVMTags.Sub.class, //
                 LLVMTags.Mul.class, //
-                LLVMTags.Div.class, //
+                LLVMTags.UDiv.class, //
+                LLVMTags.SDiv.class, //
+                LLVMTags.FDiv.class, //
                 LLVMTags.URem.class, //
                 LLVMTags.SRem.class, //
                 LLVMTags.FRem.class, //
-                LLVMTags.ShiftLeft.class, //
-                LLVMTags.ShiftRight.class, //
+                LLVMTags.ShL.class, //
+                LLVMTags.LShR.class, //
+                LLVMTags.AShR.class, //
                 LLVMTags.And.class, //
                 LLVMTags.Or.class, //
                 LLVMTags.XOr.class, //
@@ -109,12 +112,12 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
                 LLVMTags.ShuffleVector.class, //
                 LLVMTags.ExtractValue.class, //
                 LLVMTags.InsertValue.class, //
+                LLVMTags.Block.class, //
                 LLVMTags.Function.class, //
                 LLVMTags.Select.class, //
                 LLVMTags.ReadCallArg.class, //
                 LLVMTags.Intrinsic.class, //
                 LLVMTags.LandingPad.class, //
-                LLVMTags.Block.class, //
                 LLVMTags.Function.class, //
                 LLVMTags.LLVMExpression.class, //
                 LLVMTags.LLVMStatement.class, //
