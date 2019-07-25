@@ -69,6 +69,7 @@ import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
 import com.oracle.truffle.llvm.parser.util.LLVMBitcodeTypeHelper;
 import com.oracle.truffle.llvm.runtime.ArithmeticFlag;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMGenericInteropArray;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMInstrumentableNode;
@@ -215,6 +216,8 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
     public void visit(ExtractValueInstruction extract) {
         tags = LLVMTags.ExtractValue.EXPRESSION_TAGS;
         nodeObjectEntries = createTypedNodeObject(extract);
+        // Sulong currently does not support nested indexing, but that may change in the future
+        nodeObjectEntries.put(LLVMTags.ExtractValue.EXTRA_DATA_INDICES, new LLVMGenericInteropArray(new Object[]{extract.getIndex()}));
     }
 
     @Override
@@ -241,6 +244,8 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
     public void visit(InsertValueInstruction insert) {
         tags = LLVMTags.InsertValue.EXPRESSION_TAGS;
         nodeObjectEntries = createTypedNodeObject(insert);
+        // Sulong currently does not support nested indexing, but that may change in the future
+        nodeObjectEntries.put(LLVMTags.InsertValue.EXTRA_DATA_INDICES, new LLVMGenericInteropArray(new Object[]{insert.getIndex()}));
     }
 
     @Override
@@ -293,6 +298,7 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
     public void visit(ReadModifyWriteInstruction rmw) {
         tags = LLVMTags.AtomicRMW.EXPRESSION_TAGS;
         nodeObjectEntries = createTypedNodeObject(rmw);
+        nodeObjectEntries.put(LLVMTags.AtomicRMW.EXTRA_DATA_OPERATION, rmw.getOperator().getIrString());
     }
 
     @Override

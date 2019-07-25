@@ -64,9 +64,11 @@ final class InstrumentationUtil {
             case INT_MULTIPLY:
                 return isConstant ? LLVMTags.Mul.CONSTANT_EXPRESSION_TAGS : LLVMTags.Mul.EXPRESSION_TAGS;
             case FP_DIVIDE:
+                return isConstant ? LLVMTags.FDiv.CONSTANT_EXPRESSION_TAGS : LLVMTags.FDiv.EXPRESSION_TAGS;
             case INT_UNSIGNED_DIVIDE:
+                return isConstant ? LLVMTags.UDiv.CONSTANT_EXPRESSION_TAGS : LLVMTags.UDiv.EXPRESSION_TAGS;
             case INT_SIGNED_DIVIDE:
-                return isConstant ? LLVMTags.Div.CONSTANT_EXPRESSION_TAGS : LLVMTags.Div.EXPRESSION_TAGS;
+                return isConstant ? LLVMTags.SDiv.CONSTANT_EXPRESSION_TAGS : LLVMTags.SDiv.EXPRESSION_TAGS;
             case FP_REMAINDER:
                 return isConstant ? LLVMTags.FRem.CONSTANT_EXPRESSION_TAGS : LLVMTags.FRem.EXPRESSION_TAGS;
             case INT_UNSIGNED_REMAINDER:
@@ -74,10 +76,11 @@ final class InstrumentationUtil {
             case INT_SIGNED_REMAINDER:
                 return isConstant ? LLVMTags.SRem.CONSTANT_EXPRESSION_TAGS : LLVMTags.SRem.EXPRESSION_TAGS;
             case INT_SHIFT_LEFT:
-                return isConstant ? LLVMTags.ShiftLeft.CONSTANT_EXPRESSION_TAGS : LLVMTags.ShiftLeft.EXPRESSION_TAGS;
+                return isConstant ? LLVMTags.ShL.CONSTANT_EXPRESSION_TAGS : LLVMTags.ShL.EXPRESSION_TAGS;
             case INT_LOGICAL_SHIFT_RIGHT:
+                return isConstant ? LLVMTags.LShR.CONSTANT_EXPRESSION_TAGS : LLVMTags.LShR.EXPRESSION_TAGS;
             case INT_ARITHMETIC_SHIFT_RIGHT:
-                return isConstant ? LLVMTags.ShiftRight.CONSTANT_EXPRESSION_TAGS : LLVMTags.ShiftRight.EXPRESSION_TAGS;
+                return isConstant ? LLVMTags.AShR.CONSTANT_EXPRESSION_TAGS : LLVMTags.AShR.EXPRESSION_TAGS;
             case INT_AND:
                 return isConstant ? LLVMTags.And.CONSTANT_EXPRESSION_TAGS : LLVMTags.And.EXPRESSION_TAGS;
             case INT_OR:

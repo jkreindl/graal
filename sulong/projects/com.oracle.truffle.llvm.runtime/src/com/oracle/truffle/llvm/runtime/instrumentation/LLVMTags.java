@@ -32,6 +32,20 @@ package com.oracle.truffle.llvm.runtime.instrumentation;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.instrumentation.Tag.Identifier;
 
+/**
+ * This class describes the LLVM IR-level {@link Tag instrumentation tags} provided by Sulong. Most
+ * tags directly correspond to one or a group of similar LLVM IR instructions. The remaining tags
+ * provide meta-information about executing instructions, e.g., whether a node returns
+ * {@link LLVMExpression a value} and whether this is {@link Constant a constant computation}, or
+ * when a {@link Function function} or {@link Block basic block} is entered. Many of these tags
+ * provide additional information, which is described for each tag in more detail.
+ *
+ * The semantics of tags representing LLVM IR opcodes mostly match what is described in the LLVM
+ * language reference manual. E.g., each instruction will receive input events corresponding to the
+ * dynamic input values expected for the corresponding instructions. In some cases, however, the
+ * semantics differ due to Sulong's execution model. Where such differences occur, they are
+ * documented with the corresponding tag.
+ */
 public final class LLVMTags {
 
     @SuppressWarnings("unchecked") //
@@ -45,12 +59,15 @@ public final class LLVMTags {
                     LLVMTags.Add.class, //
                     LLVMTags.Sub.class, //
                     LLVMTags.Mul.class, //
-                    LLVMTags.Div.class, //
+                    LLVMTags.UDiv.class, //
+                    LLVMTags.SDiv.class, //
+                    LLVMTags.FDiv.class, //
                     LLVMTags.URem.class, //
                     LLVMTags.SRem.class, //
                     LLVMTags.FRem.class, //
-                    LLVMTags.ShiftLeft.class, //
-                    LLVMTags.ShiftRight.class, //
+                    LLVMTags.ShL.class, //
+                    LLVMTags.LShR.class, //
+                    LLVMTags.AShR.class, //
                     LLVMTags.And.class, //
                     LLVMTags.Or.class, //
                     LLVMTags.XOr.class, //
@@ -85,6 +102,7 @@ public final class LLVMTags {
                     LLVMTags.Function.class, //
                     LLVMTags.LLVMExpression.class, //
                     LLVMTags.LLVMStatement.class, //
+                    LLVMTags.LLVMControlFlow.class, //
                     LLVMTags.Literal.class //
     };
 
@@ -98,7 +116,7 @@ public final class LLVMTags {
     public static final String EXTRA_DATA_VALUE_TYPE = "VALUE_TYPE";
 
     /**
-     * Represents a value-producing entity in LLVM IR.
+     * Represents an instruction in LLVM IR that produces a value.
      */
     @Identifier(value = "LLVM_EXPRESSION")
     public static final class LLVMExpression extends Tag {
@@ -107,11 +125,20 @@ public final class LLVMTags {
     }
 
     /**
-     * Represents a value-producing entity in LLVM IR.
+     * Represents an instruction in LLVM IR that does not produce a value.
      */
     @Identifier(value = "LLVM_STATEMENT")
     public static final class LLVMStatement extends Tag {
         private LLVMStatement() {
+        }
+    }
+
+    /**
+     * Represents an instruction in LLVM IR that directs control flow.
+     */
+    @Identifier(value = "LLVM_CONTROL_FLOW")
+    public static final class LLVMControlFlow extends Tag {
+        private LLVMControlFlow() {
         }
     }
 
@@ -197,7 +224,8 @@ public final class LLVMTags {
     }
 
     /**
-     * Represents the LLVM {@code add} and {@code fadd} instructions.
+     * Represents the LLVM {@code add} and {@code fadd} instructions. Distinction between both
+     * opcodes is apparent from the types of the respective input values.
      */
     @Identifier(value = "ADD")
     public static final class Add extends Tag {
@@ -213,7 +241,8 @@ public final class LLVMTags {
     }
 
     /**
-     * Represents the LLVM {@code sub} and {@code fsub} instructions.
+     * Represents the LLVM {@code sub} and {@code fsub} instructions. Distinction between both
+     * opcodes is apparent from the types of the respective input values.
      */
     @Identifier(value = "SUB")
     public static final class Sub extends Tag {
@@ -229,7 +258,8 @@ public final class LLVMTags {
     }
 
     /**
-     * Represents the LLVM {@code mul} and {@code fmul} instructions.
+     * Represents the LLVM {@code mul} and {@code fmul} instructions. Distinction between both
+     * opcodes is apparent from the types of the respective input values.
      */
     @Identifier(value = "MUL")
     public static final class Mul extends Tag {
@@ -245,18 +275,50 @@ public final class LLVMTags {
     }
 
     /**
-     * Represents the LLVM {@code udiv}, {@code sdiv} and {@code fdiv} instructions.
+     * Represents the LLVM {@code udiv} instruction.
      */
-    @Identifier(value = "DIV")
-    public static final class Div extends Tag {
+    @Identifier(value = "UDIV")
+    public static final class UDiv extends Tag {
 
         @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] EXPRESSION_TAGS = new Class[]{LLVMExpression.class, Div.class};
+        public static final Class<? extends Tag>[] EXPRESSION_TAGS = new Class[]{LLVMExpression.class, UDiv.class};
 
         @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAGS = new Class[]{LLVMExpression.class, Div.class, Constant.class};
+        public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAGS = new Class[]{LLVMExpression.class, UDiv.class, Constant.class};
 
-        private Div() {
+        private UDiv() {
+        }
+    }
+
+    /**
+     * Represents the LLVM {@code sdiv} instruction.
+     */
+    @Identifier(value = "SDIV")
+    public static final class SDiv extends Tag {
+
+        @SuppressWarnings("unchecked") //
+        public static final Class<? extends Tag>[] EXPRESSION_TAGS = new Class[]{LLVMExpression.class, SDiv.class};
+
+        @SuppressWarnings("unchecked") //
+        public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAGS = new Class[]{LLVMExpression.class, SDiv.class, Constant.class};
+
+        private SDiv() {
+        }
+    }
+
+    /**
+     * Represents the LLVM {@code fdiv} instruction.
+     */
+    @Identifier(value = "FDIV")
+    public static final class FDiv extends Tag {
+
+        @SuppressWarnings("unchecked") //
+        public static final Class<? extends Tag>[] EXPRESSION_TAGS = new Class[]{LLVMExpression.class, FDiv.class};
+
+        @SuppressWarnings("unchecked") //
+        public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAGS = new Class[]{LLVMExpression.class, FDiv.class, Constant.class};
+
+        private FDiv() {
         }
     }
 
@@ -312,31 +374,47 @@ public final class LLVMTags {
      * Represents the LLVM {@code shl} instruction.
      */
     @Identifier(value = "SHL")
-    public static final class ShiftLeft extends Tag {
+    public static final class ShL extends Tag {
 
         @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] EXPRESSION_TAGS = new Class[]{LLVMExpression.class, ShiftLeft.class};
+        public static final Class<? extends Tag>[] EXPRESSION_TAGS = new Class[]{LLVMExpression.class, ShL.class};
 
         @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAGS = new Class[]{LLVMExpression.class, ShiftLeft.class, Constant.class};
+        public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAGS = new Class[]{LLVMExpression.class, ShL.class, Constant.class};
 
-        private ShiftLeft() {
+        private ShL() {
         }
     }
 
     /**
-     * Represents the LLVM {@code lshr} and {@code ashr} instructions.
+     * Represents the LLVM {@code lshr} instruction.
      */
-    @Identifier(value = "SHR")
-    public static final class ShiftRight extends Tag {
+    @Identifier(value = "LSHR")
+    public static final class LShR extends Tag {
 
         @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] EXPRESSION_TAGS = new Class[]{LLVMExpression.class, ShiftRight.class};
+        public static final Class<? extends Tag>[] EXPRESSION_TAGS = new Class[]{LLVMExpression.class, LShR.class};
 
         @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAGS = new Class[]{LLVMExpression.class, ShiftRight.class, Constant.class};
+        public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAGS = new Class[]{LLVMExpression.class, LShR.class, Constant.class};
 
-        private ShiftRight() {
+        private LShR() {
+        }
+    }
+
+    /**
+     * Represents the LLVM {@code ashr} instruction.
+     */
+    @Identifier(value = "ASHR")
+    public static final class AShR extends Tag {
+
+        @SuppressWarnings("unchecked") //
+        public static final Class<? extends Tag>[] EXPRESSION_TAGS = new Class[]{LLVMExpression.class, AShR.class};
+
+        @SuppressWarnings("unchecked") //
+        public static final Class<? extends Tag>[] CONSTANT_EXPRESSION_TAGS = new Class[]{LLVMExpression.class, AShR.class, Constant.class};
+
+        private AShR() {
         }
     }
 
@@ -410,16 +488,18 @@ public final class LLVMTags {
     }
 
     /**
-     * Represents the LLVM {@code invoke} instruction.
+     * Represents the LLVM {@code invoke} instruction. Invocations that produce a value will not
+     * cause a separate {@link SSAWrite} event. Instead, the write event is implicit and its target
+     * is described by {@link LLVMTags.Invoke#EXTRA_DATA_SSA_TARGET EXTRA_DATA_SSA_TARGET}.
      */
     @Identifier(value = "INVOKE")
     public static final class Invoke extends Tag {
 
         @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] VOID_INVOKE_TAGS = new Class[]{LLVMStatement.class, Invoke.class};
+        public static final Class<? extends Tag>[] VOID_INVOKE_TAGS = new Class[]{LLVMStatement.class, LLVMControlFlow.class, Invoke.class};
 
         @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] VALUE_INVOKE_TAGS = new Class[]{LLVMExpression.class, Invoke.class};
+        public static final Class<? extends Tag>[] VALUE_INVOKE_TAGS = new Class[]{LLVMExpression.class, LLVMControlFlow.class, Invoke.class};
 
         /**
          * The number of argument values to this invoke.
@@ -444,7 +524,9 @@ public final class LLVMTags {
     }
 
     /**
-     * Represents a collection of LLVM {@code phi}-instructions.
+     * Represents a collection of LLVM {@code phi}-instructions. This receives input events in order
+     * of the ssa-names stored in {@link LLVMTags.Phi#EXTRA_DATA_TARGETS EXTRA_DATA_TARGETS}, with
+     * each input event denoting the assignment of the value to the corresponding ssa-value.
      */
     @Identifier(value = "PHI")
     public static final class Phi extends Tag {
@@ -486,23 +568,29 @@ public final class LLVMTags {
     public static final class Ret extends Tag {
 
         @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] EXPRESSION_TAGS = new Class[]{LLVMExpression.class, Ret.class};
+        public static final Class<? extends Tag>[] EXPRESSION_TAGS = new Class[]{LLVMExpression.class, LLVMControlFlow.class, Ret.class};
 
         @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] STATEMENT_TAGS = new Class[]{LLVMStatement.class, Ret.class};
+        public static final Class<? extends Tag>[] STATEMENT_TAGS = new Class[]{LLVMStatement.class, LLVMControlFlow.class, Ret.class};
 
         private Ret() {
         }
     }
 
     /**
-     * Represents the LLVM {@code br} instruction.
+     * Represents the LLVM {@code br} instruction. If the jump is conditional, the value of the
+     * condition is received as input event.
      */
     @Identifier(value = "BR")
     public static final class Br extends Tag {
 
         @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] STATEMENT_TAGS = new Class[]{LLVMStatement.class, Br.class};
+        public static final Class<? extends Tag>[] STATEMENT_TAGS = new Class[]{LLVMStatement.class, LLVMControlFlow.class, Br.class};
+
+        /**
+         * A boolean value indicating whether this jump is conditional or not.
+         */
+        public static final String EXTRA_DATA_IS_CONDITIONAL = "IS_CONDITIONAL";
 
         private Br() {
         }
@@ -515,7 +603,7 @@ public final class LLVMTags {
     public static final class Switch extends Tag {
 
         @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] STATEMENT_TAGS = new Class[]{LLVMStatement.class, Switch.class};
+        public static final Class<? extends Tag>[] STATEMENT_TAGS = new Class[]{LLVMStatement.class, LLVMControlFlow.class, Switch.class};
 
         private Switch() {
         }
@@ -528,7 +616,7 @@ public final class LLVMTags {
     public static final class IndirectBr extends Tag {
 
         @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] STATEMENT_TAGS = new Class[]{LLVMStatement.class, IndirectBr.class};
+        public static final Class<? extends Tag>[] STATEMENT_TAGS = new Class[]{LLVMStatement.class, LLVMControlFlow.class, IndirectBr.class};
 
         private IndirectBr() {
         }
@@ -541,7 +629,7 @@ public final class LLVMTags {
     public static final class Resume extends Tag {
 
         @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] STATEMENT_TAGS = new Class[]{LLVMStatement.class, Resume.class};
+        public static final Class<? extends Tag>[] STATEMENT_TAGS = new Class[]{LLVMStatement.class, LLVMControlFlow.class, Resume.class};
 
         private Resume() {
         }
@@ -567,7 +655,7 @@ public final class LLVMTags {
     public static final class Unreachable extends Tag {
 
         @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] STATEMENT_TAGS = new Class[]{LLVMStatement.class, Unreachable.class};
+        public static final Class<? extends Tag>[] STATEMENT_TAGS = new Class[]{LLVMStatement.class, LLVMControlFlow.class, Unreachable.class};
 
         private Unreachable() {
         }
@@ -735,6 +823,11 @@ public final class LLVMTags {
         @SuppressWarnings("unchecked") //
         public static final Class<? extends Tag>[] EXPRESSION_TAGS = new Class[]{LLVMExpression.class, AtomicRMW.class};
 
+        /**
+         * The operation to perform atomically.
+         */
+        public static final String EXTRA_DATA_OPERATION = "OP";
+
         private AtomicRMW() {
         }
     }
@@ -825,6 +918,12 @@ public final class LLVMTags {
     @Identifier(value = "EXTRACTVALUE")
     public static final class ExtractValue extends Tag {
 
+        /**
+         * An array of constant integer indices into the source type to determine the type of the
+         * value to extract as well as the offset to the base value from which to extract a value.
+         */
+        public static final String EXTRA_DATA_INDICES = "INDICES";
+
         @SuppressWarnings("unchecked") //
         public static final Class<? extends Tag>[] EXPRESSION_TAGS = new Class[]{LLVMExpression.class, ExtractValue.class};
 
@@ -837,6 +936,12 @@ public final class LLVMTags {
      */
     @Identifier(value = "INSERTVALUE")
     public static final class InsertValue extends Tag {
+
+        /**
+         * An array of constant integer indices into the source type to determine the type of the
+         * value to insert as well as the offset to the base value at which to insert the value.
+         */
+        public static final String EXTRA_DATA_INDICES = "INDICES";
 
         @SuppressWarnings("unchecked") //
         public static final Class<? extends Tag>[] EXPRESSION_TAGS = new Class[]{LLVMExpression.class, InsertValue.class};
