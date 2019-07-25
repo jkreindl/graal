@@ -381,9 +381,8 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
                 node = nodeFactory.createFunctionCall(function, args, functionType);
             }
             addStatementTag(node, source);
+            instrumentationVisitor.instrument(node, call);
         }
-
-        instrumentationVisitor.instrument(node, call);
 
         addInstruction(LLVMVoidStatementNodeGen.create(node));
     }
@@ -879,7 +878,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         createFrameWrite(result, source, getSourceLocation(source));
     }
 
-    void createFrameWrite(LLVMExpressionNode valueNode, ValueInstruction sourceInstruction, LLVMSourceLocation sourceLocation) {
+    private void createFrameWrite(LLVMExpressionNode valueNode, ValueInstruction sourceInstruction, LLVMSourceLocation sourceLocation) {
         // instrument the expression that creates the value
         instrumentationVisitor.instrument(valueNode, sourceInstruction);
 

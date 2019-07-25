@@ -164,6 +164,7 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
         tags = LLVMTags.Invoke.VALUE_INVOKE_TAGS;
         nodeObjectEntries = createTypedNodeObject(call);
         nodeObjectEntries.put(LLVMTags.Invoke.EXTRA_DATA_ARGS_COUNT, call.getArgumentCount());
+        nodeObjectEntries.put(LLVMTags.Invoke.EXTRA_DATA_SSA_TARGET, call.getName());
     }
 
     @Override
@@ -171,6 +172,7 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
         tags = LLVMTags.Invoke.VOID_INVOKE_TAGS;
         nodeObjectEntries = EconomicMap.create(1);
         nodeObjectEntries.put(LLVMTags.Invoke.EXTRA_DATA_ARGS_COUNT, call.getArgumentCount());
+        nodeObjectEntries.put(LLVMTags.Invoke.EXTRA_DATA_SSA_TARGET, LLVMTags.Invoke.NO_TARGET);
     }
 
     @Override
