@@ -35,14 +35,58 @@ import com.oracle.truffle.api.instrumentation.Tag.Identifier;
 public final class LLVMTags {
 
     @SuppressWarnings("unchecked") //
-    public static final Class<? extends Tag>[] ALL_TAGS = new Class[]{LLVMTags.SSARead.class, LLVMTags.SSAWrite.class, LLVMTags.GlobalRead.class, LLVMTags.Constant.class, LLVMTags.Call.class,
-                    LLVMTags.Invoke.class, LLVMTags.Add.class, LLVMTags.Sub.class, LLVMTags.Mul.class, LLVMTags.Div.class, LLVMTags.URem.class, LLVMTags.SRem.class, LLVMTags.FRem.class,
-                    LLVMTags.ShiftLeft.class, LLVMTags.ShiftRight.class, LLVMTags.And.class, LLVMTags.Or.class, LLVMTags.XOr.class, LLVMTags.Phi.class, LLVMTags.Ret.class, LLVMTags.Br.class,
-                    LLVMTags.Switch.class, LLVMTags.IndirectBr.class, LLVMTags.Resume.class, LLVMTags.Unreachable.class, LLVMTags.ICMP.class, LLVMTags.FCMP.class, LLVMTags.Cast.class,
-                    LLVMTags.Alloca.class, LLVMTags.Load.class, LLVMTags.Store.class, LLVMTags.Fence.class, LLVMTags.CmpXchg.class, LLVMTags.AtomicRMW.class, LLVMTags.GetElementPtr.class,
-                    LLVMTags.ExtractElement.class, LLVMTags.InsertElement.class, LLVMTags.ShuffleVector.class, LLVMTags.ExtractValue.class, LLVMTags.InsertValue.class, LLVMTags.Block.class,
-                    LLVMTags.Function.class, LLVMTags.Select.class, StoreValueAsCallArgument.class, LLVMTags.ReadCallArg.class, LLVMTags.Intrinsic.class, LLVMTags.LandingPad.class,
-                    LLVMTags.Block.class, LLVMTags.Function.class, LLVMTags.LLVMExpression.class, LLVMTags.LLVMStatement.class, LLVMTags.Literal.class};
+    public static final Class<? extends Tag>[] ALL_TAGS = new Class[]{//
+                    LLVMTags.SSARead.class, //
+                    LLVMTags.SSAWrite.class, //
+                    LLVMTags.GlobalRead.class, //
+                    LLVMTags.Constant.class, //
+                    LLVMTags.Call.class, //
+                    LLVMTags.Invoke.class, //
+                    LLVMTags.Add.class, //
+                    LLVMTags.Sub.class, //
+                    LLVMTags.Mul.class, //
+                    LLVMTags.Div.class, //
+                    LLVMTags.URem.class, //
+                    LLVMTags.SRem.class, //
+                    LLVMTags.FRem.class, //
+                    LLVMTags.ShiftLeft.class, //
+                    LLVMTags.ShiftRight.class, //
+                    LLVMTags.And.class, //
+                    LLVMTags.Or.class, //
+                    LLVMTags.XOr.class, //
+                    LLVMTags.Phi.class, //
+                    LLVMTags.Ret.class, //
+                    LLVMTags.Br.class, //
+                    LLVMTags.Switch.class, //
+                    LLVMTags.IndirectBr.class, //
+                    LLVMTags.Resume.class, //
+                    LLVMTags.Unreachable.class, //
+                    LLVMTags.ICMP.class, //
+                    LLVMTags.FCMP.class, //
+                    LLVMTags.Cast.class, //
+                    LLVMTags.Alloca.class, //
+                    LLVMTags.Load.class, //
+                    LLVMTags.Store.class, //
+                    LLVMTags.Fence.class, //
+                    LLVMTags.CmpXchg.class, //
+                    LLVMTags.AtomicRMW.class, //
+                    LLVMTags.GetElementPtr.class, //
+                    LLVMTags.ExtractElement.class, //
+                    LLVMTags.InsertElement.class, //
+                    LLVMTags.ShuffleVector.class, //
+                    LLVMTags.ExtractValue.class, //
+                    LLVMTags.InsertValue.class, //
+                    LLVMTags.Block.class, //
+                    LLVMTags.Function.class, //
+                    LLVMTags.Select.class, //
+                    LLVMTags.ReadCallArg.class, //
+                    LLVMTags.Intrinsic.class, //
+                    LLVMTags.LandingPad.class, //
+                    LLVMTags.Function.class, //
+                    LLVMTags.LLVMExpression.class, //
+                    LLVMTags.LLVMStatement.class, //
+                    LLVMTags.Literal.class //
+    };
 
     private LLVMTags() {
     }
@@ -381,6 +425,19 @@ public final class LLVMTags {
          * The number of argument values to this invoke.
          */
         public static final String EXTRA_DATA_ARGS_COUNT = "ARGS_COUNT";
+
+        /**
+         * The name of the SSA-value that is written by this invoke, or
+         * {@link LLVMTags.Invoke#NO_TARGET NO_TARGET} if the invoked function does not produce a
+         * value.
+         */
+        public static final String EXTRA_DATA_SSA_TARGET = "TARGET_SSA_NAME";
+
+        /**
+         * The value reported by {@link LLVMTags.Invoke#EXTRA_DATA_SSA_TARGET EXTRA_DATA_SSA_TARGET}
+         * if this invocation does not produce a value.
+         */
+        public static final String NO_TARGET = "<none>";
 
         private Invoke() {
         }
@@ -833,24 +890,6 @@ public final class LLVMTags {
         public static final String EXTRA_DATA_BLOCK_NAME = "BLOCK_NAME";
 
         private Block() {
-        }
-    }
-
-    /**
-     * Represents a value being used as an argument for a function call.
-     */
-    @Identifier(value = "STORE_CALL_ARG")
-    public static final class StoreValueAsCallArgument extends Tag {
-
-        @SuppressWarnings("unchecked") //
-        public static final Class<? extends Tag>[] EXPRESSION_TAGS = new Class[]{StoreValueAsCallArgument.class, LLVMExpression.class};
-
-        /**
-         * The index of the argument in the function parameter list.
-         */
-        public static final String EXTRA_DATA_ARG_INDEX = "ARGUMENT_INDEX";
-
-        private StoreValueAsCallArgument() {
         }
     }
 
