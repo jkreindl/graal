@@ -122,7 +122,7 @@ public final class LLVMCallNode extends LLVMExpressionNode {
         for (int i = 0; i < argumentNodes.length; i++) {
             if (prepareArgumentNodes[i] == null) {
                 CompilerDirectives.transferToInterpreterAndInvalidate();
-                prepareArgumentNodes[i] = insert(LLVMPrepareArgumentNodeGen.create(i));
+                prepareArgumentNodes[i] = insert(LLVMPrepareArgumentNodeGen.create());
                 notifyInserted(prepareArgumentNodes[i]);
             }
             argValues[i] = prepareArgumentNodes[i].executeWithTarget(frame, argumentNodes[i].executeGeneric(frame));

@@ -132,6 +132,7 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
     public void visit(CallInstruction call) {
         tags = LLVMTags.Call.VALUE_CALL_TAGS;
         nodeObjectEntries = createTypedNodeObject(call);
+        nodeObjectEntries.put(LLVMTags.Call.EXTRA_DATA_ARGS_COUNT, call.getArgumentCount());
     }
 
     @Override
@@ -154,17 +155,22 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
     @Override
     public void visit(VoidCallInstruction call) {
         tags = LLVMTags.Call.VOID_CALL_TAGS;
+        nodeObjectEntries = EconomicMap.create(1);
+        nodeObjectEntries.put(LLVMTags.Call.EXTRA_DATA_ARGS_COUNT, call.getArgumentCount());
     }
 
     @Override
     public void visit(InvokeInstruction call) {
         tags = LLVMTags.Invoke.VALUE_INVOKE_TAGS;
         nodeObjectEntries = createTypedNodeObject(call);
+        nodeObjectEntries.put(LLVMTags.Invoke.EXTRA_DATA_ARGS_COUNT, call.getArgumentCount());
     }
 
     @Override
     public void visit(VoidInvokeInstruction call) {
         tags = LLVMTags.Invoke.VOID_INVOKE_TAGS;
+        nodeObjectEntries = EconomicMap.create(1);
+        nodeObjectEntries.put(LLVMTags.Invoke.EXTRA_DATA_ARGS_COUNT, call.getArgumentCount());
     }
 
     @Override

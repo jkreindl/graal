@@ -356,6 +356,11 @@ public final class LLVMTags {
         @SuppressWarnings("unchecked") //
         public static final Class<? extends Tag>[] VALUE_CALL_TAGS = new Class[]{LLVMExpression.class, Call.class};
 
+        /**
+         * The number of argument values to this call.
+         */
+        public static final String EXTRA_DATA_ARGS_COUNT = "ARGS_COUNT";
+
         private Call() {
         }
     }
@@ -371,6 +376,11 @@ public final class LLVMTags {
 
         @SuppressWarnings("unchecked") //
         public static final Class<? extends Tag>[] VALUE_INVOKE_TAGS = new Class[]{LLVMExpression.class, Invoke.class};
+
+        /**
+         * The number of argument values to this invoke.
+         */
+        public static final String EXTRA_DATA_ARGS_COUNT = "ARGS_COUNT";
 
         private Invoke() {
         }

@@ -29,43 +29,15 @@
  */
 package com.oracle.truffle.llvm.nodes.func;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
-import com.oracle.truffle.api.instrumentation.GenerateWrapper;
-import com.oracle.truffle.api.instrumentation.InstrumentableNode;
-import com.oracle.truffle.api.instrumentation.ProbeNode;
-import com.oracle.truffle.api.instrumentation.Tag;
-import com.oracle.truffle.api.source.Source;
-import com.oracle.truffle.api.source.SourceSection;
-import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
-import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
-import org.graalvm.collections.EconomicMap;
 
-@GenerateWrapper
-abstract class LLVMPrepareArgumentNode extends LLVMNode implements InstrumentableNode {
-
-    private static final SourceSection SOURCE_SECTION;
-
-    static {
-        final Source source = Source.newBuilder("llvm", "LLVM IR function argument preparation", "<llvm function argument>").mimeType("text/plain").build();
-        SOURCE_SECTION = source.createUnavailableSection();
-    }
+abstract class LLVMPrepareArgumentNode extends LLVMNode {
 
     protected abstract Object executeWithTarget(VirtualFrame frame, Object value);
-
-    private final int argIndex;
-
-    protected LLVMPrepareArgumentNode(int argIndex) {
-        this.argIndex = argIndex;
-    }
-
-    protected LLVMPrepareArgumentNode(LLVMPrepareArgumentNode delegate) {
-        this.argIndex = delegate.argIndex;
-    }
 
     @Specialization
     protected LLVMPointer doPointer(LLVMPointer address) {
@@ -75,33 +47,5 @@ abstract class LLVMPrepareArgumentNode extends LLVMNode implements Instrumentabl
     @Fallback
     protected Object doOther(Object value) {
         return value;
-    }
-
-    @Override
-    public boolean hasTag(Class<? extends Tag> tag) {
-        return LLVMTags.isTagProvided(LLVMTags.StoreValueAsCallArgument.EXPRESSION_TAGS, tag);
-    }
-
-    @Override
-    @TruffleBoundary
-    public Object getNodeObject() {
-        final EconomicMap<String, Object> entries = EconomicMap.create(1);
-        entries.put(LLVMTags.StoreValueAsCallArgument.EXTRA_DATA_ARG_INDEX, argIndex);
-        return LLVMNodeObject.create(entries);
-    }
-
-    @Override
-    public SourceSection getSourceSection() {
-        return SOURCE_SECTION;
-    }
-
-    @Override
-    public boolean isInstrumentable() {
-        return true;
-    }
-
-    @Override
-    public WrapperNode createWrapper(ProbeNode probe) {
-        return new LLVMPrepareArgumentNodeWrapper(this, this, probe);
     }
 }
