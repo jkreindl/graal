@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,35 +27,55 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.model.symbols.instructions;
+package com.oracle.truffle.llvm.runtime.instrumentation;
 
-import com.oracle.truffle.llvm.parser.model.SymbolImpl;
-import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.InvalidArrayIndexException;
+import com.oracle.truffle.api.interop.TruffleObject;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
 
-public final class DebugTrapInstruction extends VoidInstruction {
+import java.util.Arrays;
 
-    public static DebugTrapInstruction create(VoidCallInstruction callToIntrinsic) {
-        final DebugTrapInstruction trap = new DebugTrapInstruction(callToIntrinsic);
-        trap.setDebugLocation(callToIntrinsic.getDebugLocation());
-        return trap;
+@ExportLibrary(InteropLibrary.class)
+public class LLVMGenericInteropArray implements TruffleObject {
+
+    @CompilationFinal(dimensions = 1) private final Object[] properties;
+
+    public LLVMGenericInteropArray(Object[] properties) {
+        this.properties = properties;
     }
 
-    private final VoidCallInstruction callToIntrinsic;
-
-    private DebugTrapInstruction(VoidCallInstruction callToIntrinsic) {
-        this.callToIntrinsic = callToIntrinsic;
+    @SuppressWarnings("static-method")
+    @ExportMessage
+    public boolean hasArrayElements() {
+        return true;
     }
 
-    public VoidCallInstruction getCallToIntrinsic() {
-        return callToIntrinsic;
+    @ExportMessage
+    public long getArraySize() {
+        return properties.length;
+    }
+
+    @ExportMessage
+    public boolean isArrayElementReadable(long index) {
+        return index >= 0 && index < properties.length;
+    }
+
+    @ExportMessage
+    public Object readArrayElement(long index) throws InvalidArrayIndexException {
+        if (index >= 0 && index < properties.length) {
+            return properties[(int) index];
+        } else {
+            throw InvalidArrayIndexException.create(index);
+        }
     }
 
     @Override
-    public void replace(SymbolImpl oldValue, SymbolImpl newValue) {
-    }
-
-    @Override
-    public void accept(SymbolVisitor visitor) {
-        visitor.visit(this);
+    @TruffleBoundary
+    public String toString() {
+        return Arrays.toString(properties);
     }
 }

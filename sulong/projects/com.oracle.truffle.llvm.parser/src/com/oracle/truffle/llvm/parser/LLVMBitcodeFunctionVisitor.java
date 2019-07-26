@@ -44,12 +44,17 @@ import com.oracle.truffle.llvm.parser.model.functions.FunctionDefinition;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.Instruction;
 import com.oracle.truffle.llvm.parser.model.visitors.FunctionVisitor;
 import com.oracle.truffle.llvm.parser.nodes.LLVMBitcodeInstructionVisitor;
+import com.oracle.truffle.llvm.parser.nodes.LLVMNodeObjectBuilder;
 import com.oracle.truffle.llvm.parser.nodes.LLVMRuntimeDebugInformation;
 import com.oracle.truffle.llvm.parser.nodes.LLVMSymbolReadResolver;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.LLVMContext.ExternalLibrary;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack.UniquesRegion;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNodeSourceDescriptor;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
+import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
+import org.graalvm.collections.EconomicMap;
 
 final class LLVMBitcodeFunctionVisitor implements FunctionVisitor {
 
@@ -97,8 +102,8 @@ final class LLVMBitcodeFunctionVisitor implements FunctionVisitor {
     public void visit(InstructionBlock block) {
         List<Phi> blockPhis = phis.get(block);
         ArrayList<LLVMLivenessAnalysis.NullerInformation> blockNullerInfos = liveness.getNullableWithinBlock()[block.getBlockIndex()];
-        LLVMBitcodeInstructionVisitor visitor = LLVMBitcodeInstructionVisitor.create(frame, uniquesRegion, blockPhis, argCount, symbols, context, library, blockNullerInfos, notNullable,
-                        dbgInfoHandler);
+        LLVMBitcodeInstructionVisitor visitor = LLVMBitcodeInstructionVisitor.create(frame, uniquesRegion, blockPhis, argCount, symbols, context, library, blockNullerInfos,
+                        notNullable, dbgInfoHandler);
 
         if (initDebugValues) {
             for (SourceVariable variable : function.getSourceFunction().getVariables()) {
@@ -115,6 +120,17 @@ final class LLVMBitcodeFunctionVisitor implements FunctionVisitor {
             visitor.setInstructionIndex(i);
             instruction.accept(visitor);
         }
-        blocks.add(context.getLanguage().getNodeFactory().createBasicBlockNode(visitor.getInstructions(), visitor.getControlFlowNode(), block.getBlockIndex(), block.getName()));
+
+        final LLVMStatementNode blockNode = context.getLanguage().getNodeFactory().createBasicBlockNode(visitor.getInstructions(), visitor.getControlFlowNode(), block.getBlockIndex(),
+                        block.getName());
+        final LLVMNodeSourceDescriptor sourceDescriptor = blockNode.getOrCreateSourceDescriptor();
+        if (context.getEnv().getOptions().get(SulongEngineOption.INSTRUMENT_IR)) {
+            sourceDescriptor.setTags(LLVMTags.Block.BLOCK_TAGS);
+            final EconomicMap<String, Object> nodeObjectEntries = EconomicMap.create(2);
+            nodeObjectEntries.put(LLVMTags.Block.EXTRA_DATA_BLOCK_ID, block.getBlockIndex());
+            nodeObjectEntries.put(LLVMTags.Block.EXTRA_DATA_BLOCK_NAME, block.getName());
+            sourceDescriptor.setNodeObjectProvider(new LLVMNodeObjectBuilder(nodeObjectEntries));
+        }
+        blocks.add(blockNode);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,35 +27,22 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.model.symbols.instructions;
+package com.oracle.truffle.llvm.parser.nodes;
 
-import com.oracle.truffle.llvm.parser.model.SymbolImpl;
-import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObjectProvider;
+import org.graalvm.collections.EconomicMap;
 
-public final class DebugTrapInstruction extends VoidInstruction {
+public final class LLVMNodeObjectBuilder implements LLVMNodeObjectProvider {
 
-    public static DebugTrapInstruction create(VoidCallInstruction callToIntrinsic) {
-        final DebugTrapInstruction trap = new DebugTrapInstruction(callToIntrinsic);
-        trap.setDebugLocation(callToIntrinsic.getDebugLocation());
-        return trap;
-    }
+    private final EconomicMap<String, Object> entries;
 
-    private final VoidCallInstruction callToIntrinsic;
-
-    private DebugTrapInstruction(VoidCallInstruction callToIntrinsic) {
-        this.callToIntrinsic = callToIntrinsic;
-    }
-
-    public VoidCallInstruction getCallToIntrinsic() {
-        return callToIntrinsic;
+    public LLVMNodeObjectBuilder(EconomicMap<String, Object> entries) {
+        this.entries = entries;
     }
 
     @Override
-    public void replace(SymbolImpl oldValue, SymbolImpl newValue) {
-    }
-
-    @Override
-    public void accept(SymbolVisitor visitor) {
-        visitor.visit(this);
+    public Object createNodeObject() {
+        return LLVMNodeObject.create(entries);
     }
 }
