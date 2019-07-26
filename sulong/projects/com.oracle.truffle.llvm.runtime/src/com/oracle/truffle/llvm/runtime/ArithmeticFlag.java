@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,35 +27,46 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.model.symbols.instructions;
+package com.oracle.truffle.llvm.runtime;
 
-import com.oracle.truffle.llvm.parser.model.SymbolImpl;
-import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
+public enum ArithmeticFlag {
 
-public final class DebugTrapInstruction extends VoidInstruction {
+    // flags for integer arithmetic and logical shifts
+    INT_NO_UNSIGNED_WRAP("nuw", 1),
+    INT_NO_SIGNED_WRAP("nsw", 2),
 
-    public static DebugTrapInstruction create(VoidCallInstruction callToIntrinsic) {
-        final DebugTrapInstruction trap = new DebugTrapInstruction(callToIntrinsic);
-        trap.setDebugLocation(callToIntrinsic.getDebugLocation());
-        return trap;
-    }
+    // flags for floating point arithmetic
+    FP_NO_NANS("nnan", 2),
+    FP_NO_INFINITIES("ninf", 4),
+    FP_NO_SIGNED_ZEROES("nsz", 8),
+    FP_ALLOW_RECIPROCAL("arcp", 16),
+    FP_FAST("fast", 31),
 
-    private final VoidCallInstruction callToIntrinsic;
+    // additional flag for integer div
+    INT_EXACT("exact", 1);
 
-    private DebugTrapInstruction(VoidCallInstruction callToIntrinsic) {
-        this.callToIntrinsic = callToIntrinsic;
-    }
+    public static final int NO_FLAGS = 0;
+    public static final ArithmeticFlag[] ALL_VALUES = values();
 
-    public VoidCallInstruction getCallToIntrinsic() {
-        return callToIntrinsic;
+    private final String stringValue;
+
+    private final int bitMask;
+
+    ArithmeticFlag(String stringValue, int bitMask) {
+        this.stringValue = stringValue;
+        this.bitMask = bitMask;
     }
 
     @Override
-    public void replace(SymbolImpl oldValue, SymbolImpl newValue) {
+    public String toString() {
+        return stringValue;
     }
 
-    @Override
-    public void accept(SymbolVisitor visitor) {
-        visitor.visit(this);
+    public int set(int otherFlags) {
+        return otherFlags | bitMask;
+    }
+
+    public boolean test(int flags) {
+        return (flags & bitMask) != 0;
     }
 }
