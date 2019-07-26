@@ -32,6 +32,7 @@ package com.oracle.truffle.llvm.runtime;
 import java.util.Collections;
 import java.util.List;
 
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import org.graalvm.options.OptionDescriptors;
 
 import com.oracle.truffle.api.CallTarget;
@@ -65,7 +66,67 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 @TruffleLanguage.Registration(id = LLVMLanguage.ID, name = LLVMLanguage.NAME, internal = false, interactive = false, defaultMimeType = LLVMLanguage.LLVM_BITCODE_MIME_TYPE, //
                 byteMimeTypes = {LLVMLanguage.LLVM_BITCODE_MIME_TYPE, LLVMLanguage.LLVM_ELF_SHARED_MIME_TYPE, LLVMLanguage.LLVM_ELF_EXEC_MIME_TYPE}, //
                 characterMimeTypes = {LLVMLanguage.LLVM_BITCODE_BASE64_MIME_TYPE}, fileTypeDetectors = LLVMFileDetector.class, services = {Toolchain.class})
-@ProvidedTags({StandardTags.StatementTag.class, StandardTags.CallTag.class, StandardTags.RootTag.class, StandardTags.RootBodyTag.class, DebuggerTags.AlwaysHalt.class})
+@ProvidedTags({ //
+                StandardTags.StatementTag.class, //
+                StandardTags.CallTag.class, //
+                StandardTags.RootTag.class, //
+                StandardTags.RootBodyTag.class, //
+                DebuggerTags.AlwaysHalt.class, //
+                LLVMTags.SSARead.class, //
+                LLVMTags.SSAWrite.class, //
+                LLVMTags.GlobalRead.class, //
+                LLVMTags.Call.class, //
+                LLVMTags.Invoke.class, //
+                LLVMTags.Add.class, //
+                LLVMTags.Sub.class, //
+                LLVMTags.Mul.class, //
+                LLVMTags.UDiv.class, //
+                LLVMTags.SDiv.class, //
+                LLVMTags.FDiv.class, //
+                LLVMTags.URem.class, //
+                LLVMTags.SRem.class, //
+                LLVMTags.FRem.class, //
+                LLVMTags.ShL.class, //
+                LLVMTags.LShR.class, //
+                LLVMTags.AShR.class, //
+                LLVMTags.And.class, //
+                LLVMTags.Or.class, //
+                LLVMTags.XOr.class, //
+                LLVMTags.Phi.class, //
+                LLVMTags.Ret.class, //
+                LLVMTags.Br.class, //
+                LLVMTags.Switch.class, //
+                LLVMTags.IndirectBr.class, //
+                LLVMTags.Resume.class, //
+                LLVMTags.Unreachable.class, //
+                LLVMTags.ICMP.class, //
+                LLVMTags.FCMP.class, //
+                LLVMTags.Cast.class, //
+                LLVMTags.Alloca.class, //
+                LLVMTags.Load.class, //
+                LLVMTags.Store.class, //
+                LLVMTags.Fence.class, //
+                LLVMTags.CmpXchg.class, //
+                LLVMTags.AtomicRMW.class, //
+                LLVMTags.GetElementPtr.class, //
+                LLVMTags.ExtractElement.class, //
+                LLVMTags.InsertElement.class, //
+                LLVMTags.ShuffleVector.class, //
+                LLVMTags.ExtractValue.class, //
+                LLVMTags.InsertValue.class, //
+                LLVMTags.Block.class, //
+                LLVMTags.Function.class, //
+                LLVMTags.Select.class, //
+                LLVMTags.ReadCallArg.class, //
+                LLVMTags.Intrinsic.class, //
+                LLVMTags.LandingPad.class, //
+                LLVMTags.Function.class, //
+                LLVMTags.LLVMExpression.class, //
+                LLVMTags.LLVMStatement.class, //
+                LLVMTags.LLVMControlFlow.class, //
+                LLVMTags.Literal.class, //
+                LLVMTags.SSALifetimeEnd.class //
+})
 public class LLVMLanguage extends TruffleLanguage<LLVMContext> {
 
     static final String LLVM_BITCODE_MIME_TYPE = "application/x-llvm-ir-bitcode";
