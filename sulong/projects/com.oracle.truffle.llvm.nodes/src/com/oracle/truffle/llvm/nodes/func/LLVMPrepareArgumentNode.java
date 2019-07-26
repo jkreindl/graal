@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,48 +27,25 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.nodes.control;
+package com.oracle.truffle.llvm.nodes.func;
 
+import com.oracle.truffle.api.dsl.Fallback;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
-import com.oracle.truffle.api.nodes.ExplodeLoop;
-import com.oracle.truffle.llvm.runtime.memory.LLVMUniquesRegionAllocNode;
-import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
-import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
+import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 
-public final class LLVMFunctionRootNode extends LLVMExpressionNode {
+abstract class LLVMPrepareArgumentNode extends LLVMNode {
 
-    @Children private final LLVMStatementNode[] copyArgumentsToFrame;
-    @Child private LLVMUniquesRegionAllocNode uniquesRegionAllocNode;
-    @Child private LLVMDispatchBasicBlockNode rootBody;
+    protected abstract Object executeWithTarget(VirtualFrame frame, Object value);
 
-    public LLVMFunctionRootNode(LLVMUniquesRegionAllocNode uniquesRegionAllocNode, LLVMStatementNode[] copyArgumentsToFrame, LLVMDispatchBasicBlockNode rootBody) {
-        this.uniquesRegionAllocNode = uniquesRegionAllocNode;
-        this.copyArgumentsToFrame = copyArgumentsToFrame;
-        this.rootBody = rootBody;
+    @Specialization
+    protected LLVMPointer doPointer(LLVMPointer address) {
+        return address.copy();
     }
 
-    @ExplodeLoop
-    private void copyArgumentsToFrame(VirtualFrame frame) {
-        for (LLVMStatementNode n : copyArgumentsToFrame) {
-            n.execute(frame);
-        }
-    }
-
-    @Override
-    public Object executeGeneric(VirtualFrame frame) {
-        copyArgumentsToFrame(frame);
-        uniquesRegionAllocNode.execute(frame);
-
-        return rootBody.executeGeneric(frame);
-    }
-
-    @Override
-    public boolean hasRootTag() {
-        return true;
-    }
-
-    @Override
-    public boolean hasStatementTag() {
-        return false;
+    @Fallback
+    protected Object doOther(Object value) {
+        return value;
     }
 }
