@@ -64,7 +64,6 @@ import com.oracle.truffle.api.nodes.ControlFlowException;
 import com.oracle.truffle.api.nodes.DirectCallNode;
 import com.oracle.truffle.api.nodes.RootNode;
 import com.oracle.truffle.llvm.api.Toolchain;
-import com.oracle.truffle.llvm.instruments.trace.LLVMTracerInstrument;
 import com.oracle.truffle.llvm.runtime.LLVMArgumentBuffer.LLVMArgumentArray;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.debug.LLVMSourceContext;
@@ -72,6 +71,7 @@ import com.oracle.truffle.llvm.runtime.debug.type.LLVMSourceType;
 import com.oracle.truffle.llvm.runtime.except.LLVMLinkerException;
 import com.oracle.truffle.llvm.runtime.global.LLVMGlobal;
 import com.oracle.truffle.llvm.runtime.global.LLVMGlobalContainer;
+import com.oracle.truffle.llvm.runtime.instruments.LLVMExecutionTracer;
 import com.oracle.truffle.llvm.runtime.interop.LLVMTypedForeignObject;
 import com.oracle.truffle.llvm.runtime.interop.access.LLVMInteropType;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory;
@@ -146,7 +146,7 @@ public final class LLVMContext {
     private Boolean datalayoutInitialised;
     private final LLVMLanguage language;
 
-    private LLVMTracerInstrument tracer;    // effectively final after initialization
+    private LLVMExecutionTracer tracer; // effectively final after initialization
 
     private final class LLVMFunctionPointerRegistry {
         private int currentFunctionIndex = 1;
@@ -252,16 +252,15 @@ public final class LLVMContext {
     void initialize() {
         this.initializeContextCalled = true;
         assert this.threadingStack == null;
+
         final String traceOption = env.getOptions().get(SulongEngineOption.TRACE_IR);
         if (!"".equalsIgnoreCase(traceOption)) {
-            if (!env.getOptions().get(SulongEngineOption.LL_DEBUG)) {
-                throw new IllegalStateException("\'--llvm.traceIR\' requires \'--llvm.llDebug=true\'");
-            }
-            tracer = new LLVMTracerInstrument();
-            tracer.initialize(env, traceOption);
+            tracer = new LLVMExecutionTracer();
+            tracer.initialize(env);
         } else {
             tracer = null;
         }
+
         this.threadingStack = new LLVMThreadingStack(Thread.currentThread(), parseStackSize(env.getOptions().get(SulongEngineOption.STACK_SIZE)));
         for (ContextExtension ext : language.getLanguageContextExtension()) {
             ext.initialize();

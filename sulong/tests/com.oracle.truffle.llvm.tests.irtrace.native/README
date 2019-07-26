@@ -1,0 +1,9 @@
+This testsuite exercises the LLVM IR execution tracing. To ensure the consistency of the tests' instruction sequences on user systems we provide the *.ll files for the tests directly. These need to be compiled with the Sulong toolchain to ensure that the produced bitcode is consistent with the expected traces. We also omit compiling the tests with debug information.
+
+To compile the tests in the src directory to *.ll files you can use the following command with the toolchain on your path:
+
+    for f in $(ls *.c) ; do \
+        clang -O0 -S -emit-llvm -o ../ir/${f::-2}-O0.ll $f ; \
+        clang -O1 -S -emit-llvm -o ../ir/${f::-2}-O1.ll $f ; \
+        clang -O2 -S -emit-llvm -o ../ir/${f::-2}-O2.ll $f ; \
+    done
