@@ -35,8 +35,9 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
 
-import com.oracle.truffle.llvm.parser.nodes.LLVMBitcodeInstructionVisitor;
-import com.oracle.truffle.llvm.parser.nodes.LLVMRuntimeDebugInformation;
+import com.oracle.truffle.llvm.parser.nodes.LLVMNodeObjectBuilder;
+import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
+import org.graalvm.collections.EconomicMap;
 import org.graalvm.options.OptionValues;
 
 import com.oracle.truffle.api.CompilerAsserts;
@@ -56,17 +57,21 @@ import com.oracle.truffle.llvm.parser.model.blocks.InstructionBlock;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDefinition;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionParameter;
 import com.oracle.truffle.llvm.parser.model.functions.LazyFunctionParser;
+import com.oracle.truffle.llvm.parser.nodes.LLVMBitcodeInstructionVisitor;
+import com.oracle.truffle.llvm.parser.nodes.LLVMRuntimeDebugInformation;
 import com.oracle.truffle.llvm.parser.nodes.LLVMSymbolReadResolver;
 import com.oracle.truffle.llvm.runtime.GetStackSpaceFactory;
 import com.oracle.truffle.llvm.runtime.LLVMFunctionDescriptor.LazyToTruffleConverter;
+import com.oracle.truffle.llvm.runtime.NodeFactory;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.debug.type.LLVMSourceFunctionType;
 import com.oracle.truffle.llvm.runtime.except.LLVMUserException;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack.UniquesRegion;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNodeSourceDescriptor;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
-import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
 import com.oracle.truffle.llvm.runtime.types.PointerType;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
 import com.oracle.truffle.llvm.runtime.types.StructureType;
@@ -122,7 +127,7 @@ public class LazyToTruffleConverterImpl implements LazyToTruffleConverter {
                         ? SulongEngineOption.getStream(options.get(SulongEngineOption.PRINT_LIFE_TIME_ANALYSIS_STATS))
                         : null;
         LLVMLivenessAnalysisResult liveness = LLVMLivenessAnalysis.computeLiveness(frame, phis, method, logLivenessStream);
-        LLVMSymbolReadResolver symbols = new LLVMSymbolReadResolver(runtime, frame, getStackSpaceFactory);
+        LLVMSymbolReadResolver symbols = LLVMSymbolReadResolver.create(runtime, frame, getStackSpaceFactory);
         List<FrameSlot> notNullable = new ArrayList<>();
 
         LLVMRuntimeDebugInformation dbgInfoHandler = new LLVMRuntimeDebugInformation(frame, runtime.getContext(), notNullable, symbols);
@@ -138,8 +143,17 @@ public class LazyToTruffleConverterImpl implements LazyToTruffleConverter {
         List<LLVMStatementNode> copyArgumentsToFrame = copyArgumentsToFrame(frame);
         LLVMStatementNode[] copyArgumentsToFrameArray = copyArgumentsToFrame.toArray(LLVMStatementNode.NO_STATEMENTS);
         LLVMExpressionNode body = runtime.getContext().getLanguage().getNodeFactory().createFunctionBlockNode(frame.findFrameSlot(LLVMUserException.FRAME_SLOT_ID), visitor.getBlocks(),
-                        uniquesRegion.build(),
-                        nullableBeforeBlock, nullableAfterBlock, copyArgumentsToFrameArray, location);
+                        uniquesRegion.build(), nullableBeforeBlock, nullableAfterBlock, copyArgumentsToFrameArray, location);
+
+        if (options.get(SulongEngineOption.INSTRUMENT_IR)) {
+            final LLVMNodeSourceDescriptor sourceDescriptor = body.getOrCreateSourceDescriptor();
+            sourceDescriptor.setTags(LLVMTags.Function.FUNCTION_TAGS);
+            final EconomicMap<String, Object> nodeObjectEntries = EconomicMap.create(2);
+            nodeObjectEntries.put(LLVMTags.Function.EXTRA_DATA_LLVM_NAME, method.getName());
+            nodeObjectEntries.put(LLVMTags.Function.EXTRA_DATA_SOURCE_NAME, method.getSourceName());
+            sourceDescriptor.setNodeObjectProvider(new LLVMNodeObjectBuilder(nodeObjectEntries));
+        }
+        // the source location was already set in the nodeFactory
 
         RootNode rootNode = runtime.getContext().getLanguage().getNodeFactory().createFunctionStartNode(body, frame, method.getName(), method.getSourceName(),
                         method.getParameters().size(), source, location);
@@ -178,27 +192,42 @@ public class LazyToTruffleConverterImpl implements LazyToTruffleConverter {
     }
 
     private List<LLVMStatementNode> copyArgumentsToFrame(FrameDescriptor frame) {
+        final NodeFactory nodeFactory = runtime.getContext().getLanguage().getNodeFactory();
+
         List<FunctionParameter> parameters = method.getParameters();
         List<LLVMStatementNode> formalParamInits = new ArrayList<>();
-        LLVMExpressionNode stackPointerNode = runtime.getContext().getLanguage().getNodeFactory().createFunctionArgNode(0, PrimitiveType.I64);
-        formalParamInits.add(runtime.getContext().getLanguage().getNodeFactory().createFrameWrite(PointerType.VOID, stackPointerNode, frame.findFrameSlot(LLVMStack.FRAME_ID)));
+        LLVMExpressionNode stackPointerNode = nodeFactory.createFunctionArgNode(0, PrimitiveType.I64);
+        formalParamInits.add(nodeFactory.createFrameWrite(PointerType.VOID, stackPointerNode, frame.findFrameSlot(LLVMStack.FRAME_ID)));
 
         int argIndex = 1;
         if (method.getType().getReturnType() instanceof StructureType) {
             argIndex++;
         }
-        for (FunctionParameter parameter : parameters) {
-            LLVMExpressionNode parameterNode = runtime.getContext().getLanguage().getNodeFactory().createFunctionArgNode(argIndex++, parameter.getType());
+
+        for (int i = 0; i < parameters.size(); i++) {
+            final FunctionParameter parameter = parameters.get(i);
+            LLVMExpressionNode parameterNode = nodeFactory.createFunctionArgNode(argIndex++, parameter.getType());
+
+            if (runtime.getContext().getEnv().getOptions().get(SulongEngineOption.INSTRUMENT_IR)) {
+                final LLVMNodeSourceDescriptor sourceDescriptor = parameterNode.getOrCreateSourceDescriptor();
+                sourceDescriptor.setTags(LLVMTags.ReadCallArg.EXPRESSION_TAGS);
+                final EconomicMap<String, Object> nodeObjectEntries = EconomicMap.create(2);
+                nodeObjectEntries.put(LLVMTags.ReadCallArg.EXTRA_DATA_SSA_SOURCE, parameter.getName());
+                nodeObjectEntries.put(LLVMTags.ReadCallArg.EXTRA_DATA_ARG_INDEX, i);
+                sourceDescriptor.setNodeObjectProvider(new LLVMNodeObjectBuilder(nodeObjectEntries));
+            }
+
             FrameSlot slot = frame.findFrameSlot(parameter.getName());
             if (isStructByValue(parameter)) {
-                Type type = ((PointerType) parameter.getType()).getPointeeType();
-                formalParamInits.add(
-                                runtime.getContext().getLanguage().getNodeFactory().createFrameWrite(parameter.getType(),
-                                                runtime.getContext().getLanguage().getNodeFactory().createCopyStructByValue(type, GetStackSpaceFactory.createAllocaFactory(), parameterNode), slot));
+                final Type type = ((PointerType) parameter.getType()).getPointeeType();
+                final LLVMExpressionNode readParameterValueNode = nodeFactory.createCopyStructByValue(type, GetStackSpaceFactory.createAllocaFactory(), parameterNode);
+                final LLVMStatementNode writeParameterValueToFrameNode = nodeFactory.createFrameWrite(parameter.getType(), readParameterValueNode, slot);
+                formalParamInits.add(writeParameterValueToFrameNode);
             } else {
-                formalParamInits.add(runtime.getContext().getLanguage().getNodeFactory().createFrameWrite(parameter.getType(), parameterNode, slot));
+                formalParamInits.add(nodeFactory.createFrameWrite(parameter.getType(), parameterNode, slot));
             }
         }
+
         return formalParamInits;
     }
 

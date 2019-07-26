@@ -888,7 +888,7 @@ final class Runner {
 
     private StaticInitsNode createGlobalVariableInitializer(FrameDescriptor rootFrame, LLVMParserResult parserResult) {
         LLVMParserRuntime runtime = parserResult.getRuntime();
-        LLVMSymbolReadResolver symbolResolver = new LLVMSymbolReadResolver(runtime, rootFrame, GetStackSpaceFactory.createAllocaFactory());
+        LLVMSymbolReadResolver symbolResolver = LLVMSymbolReadResolver.createUninstrumenting(runtime, rootFrame, GetStackSpaceFactory.createAllocaFactory());
         final List<LLVMStatementNode> globalNodes = new ArrayList<>();
         for (GlobalVariable global : parserResult.getDefinedGlobals()) {
             final LLVMStatementNode store = createGlobalInitialization(runtime, symbolResolver, global);

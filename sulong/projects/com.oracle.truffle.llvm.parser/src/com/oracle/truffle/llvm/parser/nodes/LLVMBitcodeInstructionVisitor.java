@@ -137,6 +137,8 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
 
     private LLVMSourceLocation lastLocation;
 
+    private final BitcodeInstructionInstrumentationVisitor instrumentationVisitor;
+
     private LLVMBitcodeInstructionVisitor(FrameDescriptor frame, LLVMStack.UniquesRegion uniquesRegion, List<LLVMPhiManager.Phi> blockPhis, int argCount, LLVMSymbolReadResolver symbols,
                     LLVMContext context, LLVMContext.ExternalLibrary library, ArrayList<LLVMLivenessAnalysis.NullerInformation> nullerInfos, List<FrameSlot> notNullable,
                     LLVMRuntimeDebugInformation dbgInfoHandler) {
@@ -154,6 +156,11 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         this.uniquesRegion = uniquesRegion;
 
         this.blockInstructions = new ArrayList<>();
+        if (context.getEnv().getOptions().get(SulongEngineOption.INSTRUMENT_IR)) {
+            this.instrumentationVisitor = new BitcodeInstructionInstrumentationVisitor(context);
+        } else {
+            this.instrumentationVisitor = null;
+        }
     }
 
     public LLVMStatementNode[] getInstructions() {
@@ -227,13 +234,16 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         LLVMControlFlowNode unconditionalBranchNode = nodeFactory.createUnconditionalBranch(branch.getSuccessor().getBlockIndex(),
                         getPhiWriteNodes(branch)[0]);
         addStatementTag(unconditionalBranchNode, getSourceLocation(branch));
-        setControlFlowNode(unconditionalBranchNode);
+        setControlFlowNode(unconditionalBranchNode, branch);
     }
 
     private LLVMExpressionNode tryGenerateBuiltinNode(SymbolImpl target, LLVMExpressionNode[] argNodes, LLVMSourceLocation source) {
         final LLVMExpressionNode llvmBuiltin = nodeFactory.createLLVMBuiltin(target, argNodes, argCount);
         if (llvmBuiltin != null) {
             addStatementTag(llvmBuiltin, source);
+            if (instrumentationVisitor != null) {
+                instrumentationVisitor.instrumentLLVMBuiltin(llvmBuiltin, target);
+            }
         }
         return llvmBuiltin;
     }
@@ -279,10 +289,13 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
             }
 
             addStatementTag(result, source);
+            if (instrumentationVisitor != null) {
+                instrumentationVisitor.instrument(result, call);
+            }
         }
 
         // the SourceSection references the call, not the return value assignment
-        createFrameWrite(result, call, null);
+        createFrameWrite(result, call, null, false);
     }
 
     @Override
@@ -303,7 +316,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
     public void visit(ResumeInstruction resumeInstruction) {
         LLVMControlFlowNode resume = nodeFactory.createResumeInstruction(getExceptionSlot());
         addStatementTag(resume, getSourceLocation(resumeInstruction));
-        setControlFlowNode(resume);
+        setControlFlowNode(resume, resumeInstruction);
     }
 
     @Override
@@ -339,6 +352,9 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
     public void visit(DebugTrapInstruction inst) {
         final LLVMStatementNode debugTrap = nodeFactory.createDebugTrap();
         addStatementTag(debugTrap, inst.getSourceLocation());
+        if (instrumentationVisitor != null) {
+            instrumentationVisitor.instrumentLLVMBuiltin(debugTrap, inst.getCallToIntrinsic().getCallTarget());
+        }
         addInstruction(debugTrap);
     }
 
@@ -376,6 +392,9 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
                 node = nodeFactory.createFunctionCall(function, args, functionType);
             }
             addStatementTag(node, source);
+            if (instrumentationVisitor != null) {
+                instrumentationVisitor.instrument(node, call);
+            }
         }
 
         addInstruction(LLVMVoidStatementNodeGen.create(node));
@@ -446,7 +465,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
                         unwindPhi);
         addStatementTag(result, source);
 
-        setControlFlowNode(result);
+        setControlFlowNode(result, call);
     }
 
     @Override
@@ -511,7 +530,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
                         regularIndex, unwindIndex, normalPhi, unwindPhi);
         addStatementTag(result, source);
 
-        setControlFlowNode(result);
+        setControlFlowNode(result, call);
 
     }
 
@@ -554,7 +573,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         LLVMControlFlowNode node = nodeFactory.createConditionalBranch(trueIndex, falseIndex, conditionNode, phiWriteNodes[0], phiWriteNodes[1]);
         addStatementTag(node, getSourceLocation(branch));
 
-        setControlFlowNode(node);
+        setControlFlowNode(node, branch);
     }
 
     @Override
@@ -615,12 +634,12 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
 
             LLVMControlFlowNode node = nodeFactory.createIndirectBranch(value, labelTargets, getPhiWriteNodes(branch));
             addStatementTag(node, getSourceLocation(branch));
-            setControlFlowNode(node);
+            setControlFlowNode(node, branch);
         } else {
             assert branch.getSuccessorCount() == 1;
             LLVMControlFlowNode node = nodeFactory.createUnconditionalBranch(branch.getSuccessor(0).getBlockIndex(), getPhiWriteNodes(branch)[0]);
             addStatementTag(node, getSourceLocation(branch));
-            setControlFlowNode(node);
+            setControlFlowNode(node, branch);
         }
     }
 
@@ -681,7 +700,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
             node = nodeFactory.createNonVoidRet(value, type);
         }
         addStatementTag(node, location);
-        setControlFlowNode(node);
+        setControlFlowNode(node, ret);
     }
 
     @Override
@@ -786,7 +805,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
 
         LLVMControlFlowNode node = nodeFactory.createSwitch(cond, successors, cases, llvmType, getPhiWriteNodes(zwitch));
         addStatementTag(node, getSourceLocation(zwitch));
-        setControlFlowNode(node);
+        setControlFlowNode(node, zwitch);
     }
 
     private LLVMStatementNode[] getPhiWriteNodes(TerminatingInstruction terminatingInstruction) {
@@ -797,8 +816,12 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         return new LLVMStatementNode[terminatingInstruction.getSuccessorCount()];
     }
 
-    private LLVMStatementNode createAggregatePhi(LLVMExpressionNode[] from, FrameSlot[] to, Type[] types) {
-        return nodeFactory.createPhi(from, to, types);
+    private LLVMStatementNode createAggregatePhi(LLVMExpressionNode[] from, FrameSlot[] to, Type[] types, ArrayList<LLVMPhiManager.Phi> phis) {
+        final LLVMStatementNode phiWrites = nodeFactory.createPhi(from, to, types);
+        if (phiWrites != null && instrumentationVisitor != null) {
+            instrumentationVisitor.instrumentPhiWrites(phiWrites, phis);
+        }
+        return phiWrites;
     }
 
     private LLVMStatementNode[] convertToPhiWriteNodes(ArrayList<LLVMPhiManager.Phi>[] phisPerSuccessor) {
@@ -812,12 +835,12 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
             FrameSlot[] to = new FrameSlot[phisPerSuccessor[i].size()];
             Type[] types = new Type[phisPerSuccessor[i].size()];
             for (int j = 0; j < phisPerSuccessor[i].size(); j++) {
-                Phi phi = phisPerSuccessor[i].get(j);
+                LLVMPhiManager.Phi phi = phisPerSuccessor[i].get(j);
                 to[j] = getSlot(phi.getPhiValue());
                 from[j] = symbols.resolve(phi.getValue());
                 types[j] = phi.getValue().getType();
             }
-            result[i] = createAggregatePhi(from, to, types);
+            result[i] = createAggregatePhi(from, to, types, phisPerSuccessor[i]);
         }
         return result;
     }
@@ -854,14 +877,14 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
 
         LLVMControlFlowNode node = nodeFactory.createSwitch(cond, successors, cases, llvmType, getPhiWriteNodes(zwitch));
         addStatementTag(node, getSourceLocation(zwitch));
-        setControlFlowNode(node);
+        setControlFlowNode(node, zwitch);
     }
 
     @Override
     public void visit(UnreachableInstruction ui) {
         final LLVMControlFlowNode node = nodeFactory.createUnreachableNode();
         addStatementTag(node, getSourceLocation(ui));
-        setControlFlowNode(node);
+        setControlFlowNode(node, ui);
     }
 
     private void createFrameWrite(LLVMExpressionNode result, ValueInstruction source) {
@@ -869,8 +892,23 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
     }
 
     private void createFrameWrite(LLVMExpressionNode valueNode, ValueInstruction sourceInstruction, LLVMSourceLocation sourceLocation) {
+        createFrameWrite(valueNode, sourceInstruction, sourceLocation, true);
+    }
+
+    private void createFrameWrite(LLVMExpressionNode valueNode, ValueInstruction sourceInstruction, LLVMSourceLocation sourceLocation, boolean addInstrumentationTagsToValue) {
+        // instrument the expression that creates the value
+        if (addInstrumentationTagsToValue && instrumentationVisitor != null) {
+            instrumentationVisitor.instrument(valueNode, sourceInstruction);
+        }
+
         final LLVMStatementNode writeNode = nodeFactory.createFrameWrite(sourceInstruction.getType(), valueNode, getSlot(sourceInstruction));
+
+        // instrument the node that stores the value
+        if (instrumentationVisitor != null) {
+            instrumentationVisitor.instrumentFrameWrite(writeNode, sourceInstruction);
+        }
         addStatementTag(writeNode, sourceLocation);
+
         addInstruction(writeNode);
     }
 
@@ -927,9 +965,12 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         }
     }
 
-    private void setControlFlowNode(LLVMControlFlowNode controlFlowNode) {
+    private void setControlFlowNode(LLVMControlFlowNode controlFlowNode, SymbolImpl source) {
         assert this.controlFlowNode == null;
         this.controlFlowNode = controlFlowNode;
+        if (instrumentationVisitor != null) {
+            instrumentationVisitor.instrument(controlFlowNode, source);
+        }
     }
 
     private LLVMExpressionNode capsuleAddressByValue(LLVMExpressionNode child, Type type, AttributesGroup paramAttr) {
