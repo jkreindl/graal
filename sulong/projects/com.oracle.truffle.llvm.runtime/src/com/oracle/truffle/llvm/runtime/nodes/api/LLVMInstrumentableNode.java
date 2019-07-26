@@ -79,6 +79,18 @@ public interface LLVMInstrumentableNode extends InstrumentableNode {
     /**
      * If this node provides a non-null
      * {@link com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation}, describes whether
+     * this node represents a source-level function root.
+     *
+     * @return whether this node should have the
+     *         {@link com.oracle.truffle.api.instrumentation.StandardTags.RootTag}
+     */
+    default boolean hasRootBodyTag() {
+        return false;
+    }
+
+    /**
+     * If this node provides a non-null
+     * {@link com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation}, describes whether
      * this node represents a source-level function call.
      *
      * @return whether this node should have the
@@ -108,7 +120,8 @@ public interface LLVMInstrumentableNode extends InstrumentableNode {
         }
 
         // only and all nodes with attached source locations are source-level statements
-        if ((tag == StandardTags.StatementTag.class && hasStatementTag()) || (tag == StandardTags.CallTag.class && hasCallTag()) || (tag == StandardTags.RootTag.class && hasRootTag())) {
+        if ((tag == StandardTags.StatementTag.class && hasStatementTag()) || (tag == StandardTags.CallTag.class && hasCallTag()) || (tag == StandardTags.RootTag.class && hasRootTag()) ||
+                        (tag == StandardTags.RootBodyTag.class && hasRootBodyTag())) {
             return sourceDescriptor.getSourceLocation() != null;
         }
 

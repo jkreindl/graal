@@ -35,6 +35,7 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
 
+import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
 import org.graalvm.collections.EconomicMap;
 import org.graalvm.options.OptionValues;
 
@@ -141,8 +142,7 @@ public class LazyToTruffleConverterImpl implements LazyToTruffleConverter {
         List<LLVMStatementNode> copyArgumentsToFrame = copyArgumentsToFrame(frame);
         LLVMStatementNode[] copyArgumentsToFrameArray = copyArgumentsToFrame.toArray(LLVMStatementNode.NO_STATEMENTS);
         LLVMExpressionNode body = runtime.getContext().getLanguage().getNodeFactory().createFunctionBlockNode(frame.findFrameSlot(LLVMUserException.FRAME_SLOT_ID), visitor.getBlocks(),
-                        uniquesRegion.build(),
-                        nullableBeforeBlock, nullableAfterBlock, copyArgumentsToFrameArray);
+                        uniquesRegion.build(), nullableBeforeBlock, nullableAfterBlock, copyArgumentsToFrameArray, location);
 
         final LLVMNodeSourceDescriptor sourceDescriptor = body.getOrCreateSourceDescriptor();
         sourceDescriptor.setTags(LLVMTags.Function.FUNCTION_TAGS);
@@ -150,7 +150,7 @@ public class LazyToTruffleConverterImpl implements LazyToTruffleConverter {
         nodeObjectEntries.put(LLVMTags.Function.EXTRA_DATA_LLVM_NAME, method.getName());
         nodeObjectEntries.put(LLVMTags.Function.EXTRA_DATA_SOURCE_NAME, method.getSourceName());
         sourceDescriptor.setNodeObjectEntries(nodeObjectEntries);
-        sourceDescriptor.setSourceLocation(location);
+        // the source location was already set in the nodeFactory
 
         RootNode rootNode = runtime.getContext().getLanguage().getNodeFactory().createFunctionStartNode(body, frame, method.getName(), method.getSourceName(),
                         method.getParameters().size(), source, location);

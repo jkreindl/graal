@@ -77,6 +77,7 @@ public final class LLVMCallNode extends LLVMExpressionNode {
     @CompilationFinal private boolean mayBeBuiltin = true;
 
     public LLVMCallNode(FunctionType functionType, LLVMExpressionNode functionNode, LLVMExpressionNode[] argumentNodes) {
+        this.functionType = functionType;
         this.argumentNodes = argumentNodes;
         this.dispatchTargetNode = LLVMLookupDispatchTargetNodeGen.create(functionNode);
         this.dispatchNode = LLVMDispatchNodeGen.create(functionType);

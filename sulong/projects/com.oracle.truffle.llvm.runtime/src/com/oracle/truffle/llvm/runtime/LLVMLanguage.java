@@ -121,6 +121,7 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
                 LLVMTags.Function.class, //
                 LLVMTags.LLVMExpression.class, //
                 LLVMTags.LLVMStatement.class, //
+                LLVMTags.LLVMControlFlow.class, //
                 LLVMTags.Literal.class //
 })
 public class LLVMLanguage extends TruffleLanguage<LLVMContext> {
