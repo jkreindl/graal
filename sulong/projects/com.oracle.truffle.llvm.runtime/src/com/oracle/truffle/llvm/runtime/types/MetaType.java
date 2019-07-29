@@ -29,10 +29,21 @@
  */
 package com.oracle.truffle.llvm.runtime.types;
 
+import com.oracle.truffle.api.TruffleLanguage;
+import com.oracle.truffle.api.dsl.CachedContext;
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.TruffleObject;
+import com.oracle.truffle.api.interop.UnknownIdentifierException;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
+import com.oracle.truffle.llvm.runtime.LLVMLanguage;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
-public final class MetaType extends Type {
+@ExportLibrary(InteropLibrary.class)
+public final class MetaType extends Type implements TruffleObject {
     public static final MetaType UNKNOWN = new MetaType("unknown");
     public static final MetaType LABEL = new MetaType("label");
     public static final MetaType TOKEN = new MetaType("token");
@@ -103,5 +114,38 @@ public final class MetaType extends Type {
     @Override
     public String toString() {
         return name;
+    }
+
+    private static final String MEMBER_GET_KIND = "getKind";
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public boolean hasMembers() {
+        return true;
+    }
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public LLVMNodeObjectKeys getMembers(@SuppressWarnings("unused") boolean includeInternal) {
+        return getDefaultTypeKeys(MEMBER_GET_KIND);
+    }
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public boolean isMemberReadable(String member) {
+        return MEMBER_GET_KIND.equals(member) || isDefaultMember(member);
+    }
+
+    @ExportMessage
+    public Object readMember(String member, @CachedContext(LLVMLanguage.class) TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {
+        assert member != null;
+        switch (member) {
+            case MEMBER_IS_META:
+                return true;
+            case MEMBER_GET_KIND:
+                return name;
+            default:
+                return readDefaultMember(member, contextReference);
+        }
     }
 }

@@ -33,6 +33,8 @@ import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 
+import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayoutParser.DataTypeSpecification;
 import com.oracle.truffle.llvm.runtime.types.FunctionType;
 import com.oracle.truffle.llvm.runtime.types.PointerType;
@@ -63,7 +65,9 @@ public final class DataLayout {
         this.dataLayout = DataLayoutParser.parseDataLayout(layout);
     }
 
+    @TruffleBoundary
     public int getSize(Type type) {
+        CompilerDirectives.transferToInterpreter();
         Integer cachedSize = sizeCache.get(type);
         if (cachedSize != null) {
             return cachedSize;
@@ -78,7 +82,9 @@ public final class DataLayout {
         return size;
     }
 
+    @TruffleBoundary
     public int getBitAlignment(Type baseType) {
+        CompilerDirectives.transferToInterpreter();
         Integer cachedAlignment = alignmentCache.get(baseType);
         if (cachedAlignment != null) {
             return cachedAlignment;
