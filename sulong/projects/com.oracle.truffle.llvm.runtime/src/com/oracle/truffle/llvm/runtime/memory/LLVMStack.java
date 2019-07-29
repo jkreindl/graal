@@ -35,6 +35,9 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameUtil;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.TruffleObject;
+import com.oracle.truffle.api.library.ExportLibrary;
 
 /**
  * Implements a stack that grows from the top to the bottom. The stack is allocated lazily when it
@@ -63,7 +66,8 @@ public final class LLVMStack {
         isAllocated = false;
     }
 
-    public final class StackPointer implements AutoCloseable {
+    @ExportLibrary(InteropLibrary.class)
+    public final class StackPointer implements AutoCloseable, TruffleObject {
         private long basePointer;
         private final long uniquesRegionBasePointer;
 
