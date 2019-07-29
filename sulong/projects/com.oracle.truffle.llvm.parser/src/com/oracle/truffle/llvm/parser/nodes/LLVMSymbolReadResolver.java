@@ -101,7 +101,7 @@ public final class LLVMSymbolReadResolver {
         throw new LLVMParserException("Cannot resolve symbol: " + obj);
     }
 
-    private final class InternalVisitor extends ValueInstructionVisitor {
+    private final class InternalVisitor implements ValueInstructionVisitor {
 
         private final TypeVisitor nullValueVisitor = new TypeVisitor() {
 
