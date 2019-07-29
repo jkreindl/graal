@@ -39,12 +39,18 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.CompilerDirectives.ValueType;
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.TruffleObject;
+import com.oracle.truffle.api.interop.UnsupportedMessageException;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
 
 /**
  * Implementation of variable-width integers with > 64 bits in size.
  */
 @ValueType
-public final class LLVMIVarBitLarge extends LLVMIVarBit {
+@ExportLibrary(InteropLibrary.class)
+public final class LLVMIVarBitLarge extends LLVMIVarBit implements TruffleObject {
 
     // see https://bugs.chromium.org/p/nativeclient/issues/detail?id=3360 for use cases where
     // variable ints arise
@@ -437,6 +443,131 @@ public final class LLVMIVarBitLarge extends LLVMIVarBit {
             return asBigInteger();
         } else {
             return asUnsignedBigInteger();
+        }
+    }
+
+    @ExportMessage
+    public boolean isNumber() {
+        return isZero() || asBigInteger().compareTo(BigInteger.valueOf(Long.MAX_VALUE)) <= 0 && asBigInteger().compareTo(BigInteger.valueOf(Long.MIN_VALUE)) >= 0;
+    }
+
+    @ExportMessage
+    @TruffleBoundary
+    public boolean fitsInByte() {
+        return isZero() || asBigInteger().equals(BigInteger.valueOf(getByteValue()));
+    }
+
+    @ExportMessage()
+    public byte asByte() throws UnsupportedMessageException {
+        if (isZero()) {
+            return 0;
+        } else if (fitsInByte()) {
+            return getByteValue();
+        } else {
+            CompilerDirectives.transferToInterpreter();
+            throw UnsupportedMessageException.create();
+        }
+    }
+
+    @ExportMessage
+    @TruffleBoundary
+    public boolean fitsInShort() {
+        return isZero() || asBigInteger().equals(BigInteger.valueOf(getShortValue()));
+    }
+
+    @ExportMessage
+    public short asShort() throws UnsupportedMessageException {
+        if (isZero()) {
+            return 0;
+        } else if (fitsInShort()) {
+            return getShortValue();
+        } else {
+            CompilerDirectives.transferToInterpreter();
+            throw UnsupportedMessageException.create();
+        }
+    }
+
+    @ExportMessage
+    @TruffleBoundary
+    public boolean fitsInInt() {
+        return isZero() || asBigInteger().equals(BigInteger.valueOf(getIntValue()));
+    }
+
+    @ExportMessage
+    public int asInt() throws UnsupportedMessageException {
+        if (isZero()) {
+            return 0;
+        } else if (fitsInInt()) {
+            return getIntValue();
+        } else {
+            CompilerDirectives.transferToInterpreter();
+            throw UnsupportedMessageException.create();
+        }
+    }
+
+    @ExportMessage
+    @TruffleBoundary
+    public boolean fitsInLong() {
+        return isZero() || asBigInteger().equals(BigInteger.valueOf(getLongValue()));
+    }
+
+    @ExportMessage
+    public long asLong() throws UnsupportedMessageException {
+        if (isZero()) {
+            return 0L;
+        } else if (fitsInLong()) {
+            return getLongValue();
+        } else {
+            CompilerDirectives.transferToInterpreter();
+            throw UnsupportedMessageException.create();
+        }
+    }
+
+    @ExportMessage
+    @TruffleBoundary
+    public boolean fitsInFloat() {
+        if (isZero()) {
+            return true;
+        }
+
+        final double asFloat = asBigInteger().floatValue();
+        return asFloat != Float.POSITIVE_INFINITY && asFloat != Float.NEGATIVE_INFINITY;
+    }
+
+    @ExportMessage
+    @TruffleBoundary
+    public float asFloat() throws UnsupportedMessageException {
+        if (isZero()) {
+            return 0.0f;
+        } else if (fitsInFloat()) {
+            return asBigInteger().floatValue();
+        } else {
+            CompilerDirectives.transferToInterpreter();
+            throw UnsupportedMessageException.create();
+        }
+    }
+
+    @ExportMessage
+    @TruffleBoundary
+    public boolean fitsInDouble() {
+        if (isZero()) {
+            return true;
+        }
+
+        final double asDouble = asBigInteger().doubleValue();
+        return asDouble != Double.POSITIVE_INFINITY && asDouble != Double.NEGATIVE_INFINITY;
+    }
+
+    @ExportMessage
+    @TruffleBoundary
+    public double asDouble() throws UnsupportedMessageException {
+        if (isZero()) {
+            return 0.0d;
+        } else if (fitsInDouble()) {
+            return asBigInteger().doubleValue();
+        } else {
+            CompilerDirectives.transferToInterpreter();
+            throw UnsupportedMessageException.create();
         }
     }
 }
