@@ -30,10 +30,21 @@
 package com.oracle.truffle.llvm.runtime.types;
 
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.TruffleLanguage;
+import com.oracle.truffle.api.dsl.CachedContext;
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.TruffleObject;
+import com.oracle.truffle.api.interop.UnknownIdentifierException;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
+import com.oracle.truffle.llvm.runtime.LLVMLanguage;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
-public final class PrimitiveType extends Type {
+@ExportLibrary(InteropLibrary.class)
+public final class PrimitiveType extends Type implements TruffleObject {
 
     public static final PrimitiveType I1 = new PrimitiveType(PrimitiveKind.I1, null);
     public static final PrimitiveType I8 = new PrimitiveType(PrimitiveKind.I8, null);
@@ -196,5 +207,59 @@ public final class PrimitiveType extends Type {
             return false;
         }
         return true;
+    }
+
+    private static final String MEMBER_BIT_SIZE = "getBitSize";
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public boolean hasMembers() {
+        return true;
+    }
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public LLVMNodeObjectKeys getMembers(@SuppressWarnings("unused") boolean includeInternal) {
+        return getDefaultTypeKeys(MEMBER_BIT_SIZE);
+    }
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public boolean isMemberReadable(String member) {
+        return MEMBER_BIT_SIZE.equals(member) || isDefaultMember(member);
+    }
+
+    @ExportMessage
+    public Object readMember(String member, @CachedContext(LLVMLanguage.class) TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {
+        assert member != null;
+        switch (member) {
+            case MEMBER_IS_INTEGER:
+                switch (kind) {
+                    case I1:
+                    case I8:
+                    case I16:
+                    case I32:
+                    case I64:
+                        return true;
+                    default:
+                        return false;
+                }
+            case MEMBER_IS_FLOATING_POINT:
+                switch (kind) {
+                    case HALF:
+                    case FLOAT:
+                    case DOUBLE:
+                    case X86_FP80:
+                    case F128:
+                    case PPC_FP128:
+                        return true;
+                    default:
+                        return false;
+                }
+            case MEMBER_BIT_SIZE:
+                return getBitSize();
+            default:
+                return readDefaultMember(member, contextReference);
+        }
     }
 }

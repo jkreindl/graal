@@ -31,11 +31,22 @@ package com.oracle.truffle.llvm.runtime.types;
 
 import java.util.Objects;
 
+import com.oracle.truffle.api.TruffleLanguage;
+import com.oracle.truffle.api.dsl.CachedContext;
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.TruffleObject;
+import com.oracle.truffle.api.interop.UnknownIdentifierException;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
+import com.oracle.truffle.llvm.runtime.LLVMLanguage;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.types.symbols.LLVMIdentifier;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
-public final class OpaqueType extends Type {
+@ExportLibrary(InteropLibrary.class)
+public final class OpaqueType extends Type implements TruffleObject {
 
     private final String name;
 
@@ -95,5 +106,48 @@ public final class OpaqueType extends Type {
             return Objects.equals(name, other.name);
         }
         return false;
+    }
+
+    private static final String MEMBER_HAS_NAME = "hasName";
+    private static final String MEMBER_GET_NAME = "getName";
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public boolean hasMembers() {
+        return true;
+    }
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public LLVMNodeObjectKeys getMembers(@SuppressWarnings("unused") boolean includeInternal) {
+        return getDefaultTypeKeys(MEMBER_HAS_NAME, MEMBER_GET_NAME);
+    }
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public boolean isMemberReadable(String member) {
+        assert member != null;
+        switch (member) {
+            case MEMBER_HAS_NAME:
+            case MEMBER_GET_NAME:
+                return true;
+            default:
+                return isDefaultMember(member);
+        }
+    }
+
+    @ExportMessage
+    public Object readMember(String member, @CachedContext(LLVMLanguage.class) TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {
+        assert member != null;
+        switch (member) {
+            case MEMBER_IS_OPAQUE:
+                return true;
+            case MEMBER_HAS_NAME:
+                return !LLVMIdentifier.UNKNOWN.equals(name);
+            case MEMBER_GET_NAME:
+                return name;
+            default:
+                return readDefaultMember(member, contextReference);
+        }
     }
 }
