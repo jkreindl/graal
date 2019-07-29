@@ -29,10 +29,21 @@
  */
 package com.oracle.truffle.llvm.runtime.types;
 
+import com.oracle.truffle.api.TruffleLanguage;
+import com.oracle.truffle.api.dsl.CachedContext;
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.TruffleObject;
+import com.oracle.truffle.api.interop.UnknownIdentifierException;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
+import com.oracle.truffle.llvm.runtime.LLVMLanguage;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
-public final class VoidType extends Type {
+@ExportLibrary(InteropLibrary.class)
+public final class VoidType extends Type implements TruffleObject {
 
     public static final VoidType INSTANCE = new VoidType();
 
@@ -73,5 +84,32 @@ public final class VoidType extends Type {
     @Override
     public int hashCode() {
         return 123;
+    }
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public boolean hasMembers() {
+        return true;
+    }
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public LLVMNodeObjectKeys getMembers(@SuppressWarnings("unused") boolean includeInternal) {
+        return getDefaultTypeKeys();
+    }
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public boolean isMemberReadable(String member) {
+        return isDefaultMember(member);
+    }
+
+    @ExportMessage
+    public Object readMember(String member, @CachedContext(LLVMLanguage.class) TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {
+        if (MEMBER_IS_VOID.equals(member)) {
+            return true;
+        } else {
+            return readDefaultMember(member, contextReference);
+        }
     }
 }

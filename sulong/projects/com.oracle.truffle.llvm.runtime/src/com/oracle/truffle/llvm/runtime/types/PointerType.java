@@ -34,11 +34,22 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
+import com.oracle.truffle.api.TruffleLanguage;
+import com.oracle.truffle.api.dsl.CachedContext;
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.TruffleObject;
+import com.oracle.truffle.api.interop.UnknownIdentifierException;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
+import com.oracle.truffle.llvm.runtime.LLVMLanguage;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObjectKeys;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
-public final class PointerType extends AggregateType {
+@ExportLibrary(InteropLibrary.class)
+public final class PointerType extends AggregateType implements TruffleObject {
     public static final PointerType I8 = new PointerType(PrimitiveType.I8);
     public static final PointerType VOID = new PointerType(VoidType.INSTANCE);
 
@@ -118,5 +129,38 @@ public final class PointerType extends AggregateType {
     @Override
     public boolean equals(Object obj) {
         return obj instanceof PointerType;
+    }
+
+    private static final String MEMBER_BASE_TYPE = "getBaseType";
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public boolean hasMembers() {
+        return true;
+    }
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public LLVMNodeObjectKeys getMembers(@SuppressWarnings("unused") boolean includeInternal) {
+        return getDefaultTypeKeys(MEMBER_BASE_TYPE);
+    }
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public boolean isMemberReadable(String member) {
+        return MEMBER_BASE_TYPE.equals(member) || isDefaultMember(member);
+    }
+
+    @ExportMessage
+    public Object readMember(String member, @CachedContext(LLVMLanguage.class) TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {
+        assert member != null;
+        switch (member) {
+            case MEMBER_IS_POINTER:
+                return true;
+            case MEMBER_BASE_TYPE:
+                return pointeeType;
+            default:
+                return readDefaultMember(member, contextReference);
+        }
     }
 }
