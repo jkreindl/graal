@@ -55,11 +55,6 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMPointerVector;
 @GenerateWrapper
 public abstract class LLVMExpressionNode extends LLVMInstrumentableNode {
 
-    @GenerateWrapper.OutgoingConverter
-    Object convertOutgoing(@SuppressWarnings("unused") Object object) {
-        return null;
-    }
-
     public static final LLVMExpressionNode[] NO_EXPRESSIONS = {};
 
     public abstract Object executeGeneric(VirtualFrame frame);
