@@ -29,6 +29,7 @@
  */
 package com.oracle.truffle.llvm.runtime.instruments;
 
+import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
@@ -55,6 +56,7 @@ import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMTypes;
 import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
+import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 import com.oracle.truffle.llvm.runtime.types.symbols.LLVMIdentifier;
 
 import java.io.BufferedOutputStream;
@@ -116,6 +118,7 @@ public final class LLVMExecutionTracer {
         });
 
         traceContext.setBinding(eventBinding);
+        traceContext.setHideNativePointers(env.getOptions().get(SulongEngineOption.TRACE_IR_HIDE_NATIVE_POINTERS));
         setTargetStream(env, env.getOptions().get(SulongEngineOption.TRACE_IR), traceContext);
     }
 
@@ -183,9 +186,10 @@ public final class LLVMExecutionTracer {
         @CompilationFinal private EventBinding<ExecutionEventNodeFactory> eventBinding;
         @CompilationFinal private PrintWriter targetWriter;
         @CompilationFinal private boolean closeTarget;
+        @CompilationFinal private boolean hideNativePointers;
 
         void setBinding(EventBinding<ExecutionEventNodeFactory> newBinding) {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
+            CompilerAsserts.neverPartOfCompilation();
             this.eventBinding = newBinding;
         }
 
@@ -194,7 +198,7 @@ public final class LLVMExecutionTracer {
         }
 
         void setTargetWriter(PrintWriter targetWriter, boolean closeTarget) {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
+            CompilerAsserts.neverPartOfCompilation();
             this.targetWriter = targetWriter;
             this.closeTarget = closeTarget;
         }
@@ -205,6 +209,15 @@ public final class LLVMExecutionTracer {
 
         boolean isCloseTarget() {
             return closeTarget;
+        }
+
+        boolean hideNativePointers() {
+            return hideNativePointers;
+        }
+
+        void setHideNativePointers(boolean hideNativePointers) {
+            CompilerAsserts.neverPartOfCompilation();
+            this.hideNativePointers = hideNativePointers;
         }
     }
 
@@ -229,7 +242,12 @@ public final class LLVMExecutionTracer {
             this.traceContext = traceContext;
             this.id = String.valueOf(nextID++);
 
-            this.printValueNode = LLVMExecutionTracerFactory.PrintValueNodeGen.create();
+            this.printValueNode = null;
+        }
+
+        private void initializeValueFormatter() {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            this.printValueNode = LLVMExecutionTracerFactory.PrintValueNodeGen.create(traceContext.hideNativePointers());
         }
 
         @TruffleBoundary
@@ -245,6 +263,10 @@ public final class LLVMExecutionTracer {
 
         @Override
         protected void onInputValue(VirtualFrame frame, EventContext inputContext, int inputIndex, Object inputValue) {
+            if (printValueNode == null) {
+                initializeValueFormatter();
+            }
+
             final TraceNode inputEventNode = (TraceNode) inputContext.lookupExecutionEventNode(traceContext.getBinding());
             assert inputEventNode != null;
 
@@ -256,6 +278,10 @@ public final class LLVMExecutionTracer {
         @Override
         protected void onReturnValue(VirtualFrame frame, Object result) {
             if (result != null) {
+                if (printValueNode == null) {
+                    initializeValueFormatter();
+                }
+
                 print("<output>" + printValueNode.executeWithTarget(result) + "</output>");
             }
 
@@ -280,6 +306,12 @@ public final class LLVMExecutionTracer {
     @TypeSystemReference(LLVMTypes.class)
     abstract static class PrintValueNode extends Node {
 
+        final boolean hideNativePointers;
+
+        PrintValueNode(boolean hideNativePointers) {
+            this.hideNativePointers = hideNativePointers;
+        }
+
         abstract String executeWithTarget(Object value);
 
         @Specialization
@@ -298,12 +330,12 @@ public final class LLVMExecutionTracer {
             return value.getName();
         }
 
-        protected static PrintValueNode createRecursive() {
-            return LLVMExecutionTracerFactory.PrintValueNodeGen.create();
+        protected static PrintValueNode createRecursive(boolean hideNativePointers) {
+            return LLVMExecutionTracerFactory.PrintValueNodeGen.create(hideNativePointers);
         }
 
         @Specialization
-        protected String doLLVMManagedPointer(LLVMManagedPointer value, @Cached("createRecursive()") PrintValueNode childFormatter) {
+        protected String doLLVMManagedPointer(LLVMManagedPointer value, @Cached("createRecursive(hideNativePointers)") PrintValueNode childFormatter) {
             final String target = childFormatter.executeWithTarget(value.getObject());
 
             final long offset = value.getOffset();
@@ -312,6 +344,20 @@ public final class LLVMExecutionTracer {
             } else {
                 return "Managed Pointer(target = \'" + target + "\', offset = " + offset + ")";
             }
+        }
+
+        @Specialization
+        protected String doLLVMNativePointer(LLVMNativePointer value) {
+            if (hideNativePointers) {
+                return "<native pointer>";
+            } else {
+                return formatNativePointer(value.asNative());
+            }
+        }
+
+        @TruffleBoundary
+        private static String formatNativePointer(long value) {
+            return String.format("0x%x", value);
         }
 
         protected static boolean hasCheckedToString(Object value) {

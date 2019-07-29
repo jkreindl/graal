@@ -110,6 +110,9 @@ public final class SulongEngineOption {
 
     @Option(name = "llvm.traceIR.functions", category = OptionCategory.EXPERT, help = "Limit tracing to select functions. Must be 'all' or an llvm-level function name. Multiple functions can be specified, separated by ':'.") //
     public static final OptionKey<String> TRACE_IR_FUNCTIONS = new OptionKey<>("all");
+
+    @Option(name = "llvm.traceIR.hideNativePointers", category = OptionCategory.INTERNAL, help = "Displays all native pointers as \'<native pointer>\' to enable reproducible output.") //
+    public static final OptionKey<Boolean> TRACE_IR_HIDE_NATIVE_POINTERS = new OptionKey<>(false);
     // @formatter:on
 
     public static List<OptionDescriptor> describeOptions() {
