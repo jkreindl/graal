@@ -34,12 +34,18 @@ import java.math.BigInteger;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.CompilerDirectives.ValueType;
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.TruffleObject;
+import com.oracle.truffle.api.interop.UnsupportedMessageException;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
 
 /**
  * Efficient implementation of variable-width integers with <= 64 bits in size.
  */
 @ValueType
-public final class LLVMIVarBitSmall extends LLVMIVarBit {
+@ExportLibrary(InteropLibrary.class)
+public final class LLVMIVarBitSmall extends LLVMIVarBit implements TruffleObject {
 
     // see https://bugs.chromium.org/p/nativeclient/issues/detail?id=3360 for use cases where
     // variable ints arise
@@ -300,6 +306,143 @@ public final class LLVMIVarBitSmall extends LLVMIVarBit {
         } else {
             long v = getCleanedValue(false);
             return BigInteger.valueOf(v >>> 1).shiftLeft(1).add(BigInteger.valueOf(v & 1));
+        }
+    }
+
+    @ExportMessage
+    public boolean isBoolean() {
+        return bits == 1;
+    }
+
+    @ExportMessage
+    public boolean asBoolean() {
+        assert isBoolean();
+        return !isZero();
+    }
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    public boolean isNumber() {
+        return true;
+    }
+
+    @ExportMessage
+    public boolean fitsInByte() {
+        return bits <= Byte.SIZE;
+    }
+
+    @ExportMessage()
+    public byte asByte() throws UnsupportedMessageException {
+        if (isZero()) {
+            return 0;
+        } else if (fitsInByte()) {
+            return getByteValue();
+        } else {
+            CompilerDirectives.transferToInterpreter();
+            throw UnsupportedMessageException.create();
+        }
+    }
+
+    @ExportMessage
+    public boolean fitsInShort() {
+        return bits <= Short.SIZE;
+    }
+
+    @ExportMessage
+    public short asShort() throws UnsupportedMessageException {
+        if (isZero()) {
+            return 0;
+        } else if (fitsInShort()) {
+            return getShortValue();
+        } else {
+            CompilerDirectives.transferToInterpreter();
+            throw UnsupportedMessageException.create();
+        }
+    }
+
+    @ExportMessage
+    public boolean fitsInInt() {
+        return bits <= Integer.SIZE;
+    }
+
+    @ExportMessage
+    public int asInt() throws UnsupportedMessageException {
+        if (isZero()) {
+            return 0;
+        } else if (fitsInInt()) {
+            return getIntValue();
+        } else {
+            CompilerDirectives.transferToInterpreter();
+            throw UnsupportedMessageException.create();
+        }
+    }
+
+    @ExportMessage
+    public boolean fitsInLong() {
+        return bits <= Long.SIZE;
+    }
+
+    @ExportMessage
+    public long asLong() throws UnsupportedMessageException {
+        if (isZero()) {
+            return 0L;
+        } else if (fitsInLong()) {
+            return getLongValue();
+        } else {
+            CompilerDirectives.transferToInterpreter();
+            throw UnsupportedMessageException.create();
+        }
+    }
+
+    private float castToFloatWithTruncate() {
+        return getLongValue();
+    }
+
+    @ExportMessage
+    public boolean fitsInFloat() {
+        if (isZero()) {
+            return true;
+        }
+
+        final long longValue = getLongValue();
+        return ((long) castToFloatWithTruncate()) == longValue;
+    }
+
+    @ExportMessage
+    public float asFloat() throws UnsupportedMessageException {
+        if (isZero()) {
+            return 0.0f;
+        } else if (fitsInFloat()) {
+            return getLongValue();
+        } else {
+            CompilerDirectives.transferToInterpreter();
+            throw UnsupportedMessageException.create();
+        }
+    }
+
+    private double castToDoubleWithTruncate() {
+        return getLongValue();
+    }
+
+    @ExportMessage
+    public boolean fitsInDouble() {
+        if (isZero()) {
+            return true;
+        }
+
+        final long longValue = getLongValue();
+        return ((long) castToDoubleWithTruncate()) == longValue;
+    }
+
+    @ExportMessage
+    public double asDouble() throws UnsupportedMessageException {
+        if (isZero()) {
+            return 0.0d;
+        } else if (fitsInDouble()) {
+            return getLongValue();
+        } else {
+            CompilerDirectives.transferToInterpreter();
+            throw UnsupportedMessageException.create();
         }
     }
 }

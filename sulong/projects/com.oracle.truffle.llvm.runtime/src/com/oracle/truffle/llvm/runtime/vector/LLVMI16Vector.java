@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,12 +29,19 @@
  */
 package com.oracle.truffle.llvm.runtime.vector;
 
+import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.ValueType;
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.InvalidArrayIndexException;
+import com.oracle.truffle.api.interop.TruffleObject;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
 import com.oracle.truffle.llvm.runtime.types.Type;
 
 @ValueType
-public final class LLVMI16Vector extends LLVMVector {
+@ExportLibrary(InteropLibrary.class)
+public final class LLVMI16Vector extends LLVMVector implements TruffleObject {
 
     private final short[] vector;
 
@@ -63,5 +70,31 @@ public final class LLVMI16Vector extends LLVMVector {
     @Override
     public Object getElement(int index) {
         return index >= 0 && index < vector.length ? vector[index] : null;
+    }
+
+    @ExportMessage
+    @SuppressWarnings("static-method")
+    boolean hasArrayElements() {
+        return true;
+    }
+
+    @ExportMessage
+    long getArraySize() {
+        return vector.length;
+    }
+
+    @ExportMessage
+    boolean isArrayElementReadable(long index) {
+        return 0 <= index && index < getArraySize();
+    }
+
+    @ExportMessage
+    short readArrayElement(long index) throws InvalidArrayIndexException {
+        if (isArrayElementReadable(index)) {
+            return vector[(int) index];
+        }
+
+        CompilerDirectives.transferToInterpreter();
+        throw InvalidArrayIndexException.create(index);
     }
 }
