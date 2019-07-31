@@ -51,8 +51,10 @@ import com.oracle.truffle.llvm.runtime.LLVMFunctionDescriptor;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBitLarge;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBitSmall;
+import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
+import com.oracle.truffle.llvm.runtime.nodes.api.LLVMInstrumentableNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMTypes;
 import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
@@ -66,6 +68,7 @@ import java.io.PrintWriter;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public final class LLVMExecutionTracer {
@@ -76,7 +79,6 @@ public final class LLVMExecutionTracer {
         this.traceContext = new TraceContext();
     }
 
-    @SuppressWarnings("unchecked")
     public void initialize(TruffleLanguage.Env env) {
         final Instrumenter instrumenter = env.lookup(Instrumenter.class);
         assert instrumenter != null;
@@ -110,12 +112,7 @@ public final class LLVMExecutionTracer {
         final SourceSectionFilter llvmNodeFilter = builder.build();
         final SourceSectionFilter llvmInputFilter = SourceSectionFilter.newBuilder().tagIs(LLVMTags.LLVMExpression.class).includeInternal(true).build();
 
-        final HashSet<Class<? extends Tag>> llvmTags = new HashSet<>(Arrays.asList(LLVMTags.ALL_TAGS));
-        EventBinding<ExecutionEventNodeFactory> eventBinding = instrumenter.attachExecutionEventFactory(llvmNodeFilter, llvmInputFilter, context -> {
-            final String tags = instrumenter.queryTags(context.getInstrumentedNode()).stream().map(tag -> (Class<? extends Tag>) tag).filter(llvmTags::contains).map(
-                            Tag::getIdentifier).collect(Collectors.joining(", "));
-            return new TraceNode(tags, formatNodeProperties(context.getNodeObject()), traceContext);
-        });
+        EventBinding<ExecutionEventNodeFactory> eventBinding = instrumenter.attachExecutionEventFactory(llvmNodeFilter, llvmInputFilter, new TraceNodeFactory(traceContext, instrumenter));
 
         traceContext.setBinding(eventBinding);
         traceContext.setHideNativePointers(env.getOptions().get(SulongEngineOption.TRACE_IR_HIDE_NATIVE_POINTERS));
@@ -130,6 +127,28 @@ public final class LLVMExecutionTracer {
         }
     }
 
+    private static final class TraceNodeFactory implements ExecutionEventNodeFactory {
+
+        private final TraceContext traceContext;
+        private final Instrumenter instrumenter;
+        private final HashSet<Class<? extends Tag>> llvmTags;
+
+        private TraceNodeFactory(TraceContext traceContext, Instrumenter instrumenter) {
+            this.traceContext = traceContext;
+            this.instrumenter = instrumenter;
+            llvmTags = new HashSet<>(Arrays.asList(LLVMTags.ALL_TAGS));
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public ExecutionEventNode create(EventContext context) {
+            final Set<Class<?>> nodeTags = instrumenter.queryTags(context.getInstrumentedNode());
+            final String tags = nodeTags.stream().map(tag -> (Class<? extends Tag>) tag).filter(llvmTags::contains).map(Tag::getIdentifier).collect(Collectors.joining(", "));
+
+            return new TraceNode(tags, formatNodeProperties(context.getNodeObject()), getSourceLocation(context.getInstrumentedNode()), traceContext);
+        }
+    }
+
     @TruffleBoundary
     private static String formatNodeProperties(Object nodeObject) {
         if (nodeObject instanceof LLVMNodeObject) {
@@ -137,6 +156,18 @@ public final class LLVMExecutionTracer {
         } else {
             return "";
         }
+    }
+
+    @TruffleBoundary
+    private static String getSourceLocation(Node node) {
+        if (node instanceof LLVMInstrumentableNode) {
+            final LLVMSourceLocation sourceLocation = ((LLVMInstrumentableNode) node).getSourceLocation();
+            if (sourceLocation != null) {
+                return sourceLocation.describeLocation();
+            }
+        }
+
+        return null;
     }
 
     private static final String FILE_TARGET_PREFIX = "file://";
@@ -226,8 +257,7 @@ public final class LLVMExecutionTracer {
         private static int nextID = 0;
 
         private final String id;
-        private final String tags;
-        private final String extraData;
+        private final String nodeDescription;
 
         private final PrintWriter targetWriter;
         private final TraceContext traceContext;
@@ -235,12 +265,11 @@ public final class LLVMExecutionTracer {
         @Child private PrintValueNode printValueNode;
 
         @TruffleBoundary
-        TraceNode(String tags, String extraData, TraceContext traceContext) {
-            this.tags = tags;
-            this.extraData = extraData;
+        TraceNode(String tags, String extraData, String sourceLocation, TraceContext traceContext) {
+            this.id = String.valueOf(nextID++);
+            this.nodeDescription = "<node id=\"" + id + "\" tags=\"" + tags + "\" properties=\"" + extraData + (sourceLocation != null ? "source=\"" + sourceLocation + "\"" : "") + "\">";
             this.targetWriter = traceContext.getTargetWriter();
             this.traceContext = traceContext;
-            this.id = String.valueOf(nextID++);
 
             this.printValueNode = null;
         }
@@ -258,7 +287,7 @@ public final class LLVMExecutionTracer {
 
         @Override
         protected void onEnter(VirtualFrame frame) {
-            print("<node id=\"" + id + "\" tags=\"" + tags + "\" properties=\"" + extraData + "\">");
+            print(nodeDescription);
         }
 
         @Override
