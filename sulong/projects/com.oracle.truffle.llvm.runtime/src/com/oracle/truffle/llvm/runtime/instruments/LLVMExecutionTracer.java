@@ -133,19 +133,23 @@ public final class LLVMExecutionTracer {
         private final Instrumenter instrumenter;
         private final HashSet<Class<? extends Tag>> llvmTags;
 
+        private int nextNodeId;
+
         private TraceNodeFactory(TraceContext traceContext, Instrumenter instrumenter) {
             this.traceContext = traceContext;
             this.instrumenter = instrumenter;
-            llvmTags = new HashSet<>(Arrays.asList(LLVMTags.ALL_TAGS));
+            this.llvmTags = new HashSet<>(Arrays.asList(LLVMTags.ALL_TAGS));
+
+            this.nextNodeId = 0;
         }
 
         @Override
         @SuppressWarnings("unchecked")
         public ExecutionEventNode create(EventContext context) {
             final Set<Class<?>> nodeTags = instrumenter.queryTags(context.getInstrumentedNode());
-            final String tags = nodeTags.stream().map(tag -> (Class<? extends Tag>) tag).filter(llvmTags::contains).map(Tag::getIdentifier).collect(Collectors.joining(", "));
+            final String tags = nodeTags.stream().map(tag -> (Class<? extends Tag>) tag).filter(llvmTags::contains).map(Tag::getIdentifier).sorted().collect(Collectors.joining(", "));
 
-            return new TraceNode(tags, formatNodeProperties(context.getNodeObject()), getSourceLocation(context.getInstrumentedNode()), traceContext);
+            return new TraceNode(nextNodeId++, tags, formatNodeProperties(context.getNodeObject()), getSourceLocation(context.getInstrumentedNode()), traceContext);
         }
     }
 
@@ -254,8 +258,6 @@ public final class LLVMExecutionTracer {
 
     static class TraceNode extends ExecutionEventNode {
 
-        private static int nextID = 0;
-
         private final String id;
         private final String nodeDescription;
 
@@ -265,8 +267,8 @@ public final class LLVMExecutionTracer {
         @Child private PrintValueNode printValueNode;
 
         @TruffleBoundary
-        TraceNode(String tags, String extraData, String sourceLocation, TraceContext traceContext) {
-            this.id = String.valueOf(nextID++);
+        TraceNode(int id, String tags, String extraData, String sourceLocation, TraceContext traceContext) {
+            this.id = String.valueOf(id);
             this.nodeDescription = "<node id=\"" + id + "\" tags=\"" + tags + "\" properties=\"" + extraData + (sourceLocation != null ? "source=\"" + sourceLocation + "\"" : "") + "\">";
             this.targetWriter = traceContext.getTargetWriter();
             this.traceContext = traceContext;
@@ -378,7 +380,7 @@ public final class LLVMExecutionTracer {
         @Specialization
         protected String doLLVMNativePointer(LLVMNativePointer value) {
             if (hideNativePointers) {
-                return "<native pointer>";
+                return "Native Pointer";
             } else {
                 return formatNativePointer(value.asNative());
             }

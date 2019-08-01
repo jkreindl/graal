@@ -461,6 +461,20 @@ suite = {
       "testProject" : True,
       "defaultBuild" : False,
     },
+    "com.oracle.truffle.llvm.tests.irtrace.native" : {
+      "subDir" : "tests",
+      "class" : "SulongTestSuite",
+      "variants" : ["O0"],
+      "buildEnv" : {
+        "OS" : "<os>",
+        "SUITE_CPPFLAGS" : "-lm",
+      },
+      "dependencies" : [
+        "SULONG_TEST",
+      ],
+      "testProject" : True,
+      "defaultBuild" : False,
+    },
     "com.oracle.truffle.llvm.tests.interop.native" : {
       "subDir" : "tests",
       "class" : "SulongTestSuite",
@@ -1010,6 +1024,7 @@ suite = {
           "dependency:com.oracle.truffle.llvm.tests.bitcodeformat.native/*",
           "dependency:com.oracle.truffle.llvm.tests.debug.native/*",
           "dependency:com.oracle.truffle.llvm.tests.irdebug.native/*",
+          "dependency:com.oracle.truffle.llvm.tests.irtrace.native/*",
           "dependency:com.oracle.truffle.llvm.tests.interop.native/*",
           "dependency:com.oracle.truffle.llvm.tests.other.native/*",
           "dependency:com.oracle.truffle.llvm.tests.sulong.native/*",

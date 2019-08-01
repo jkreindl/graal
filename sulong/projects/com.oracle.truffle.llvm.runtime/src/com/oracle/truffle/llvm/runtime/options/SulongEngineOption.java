@@ -105,16 +105,20 @@ public final class SulongEngineOption {
                    "Files with a relative path will be looked up relative to llvm.libraryPath. Libraries are delimited by " + OPTION_ARRAY_SEPARATOR + " .") //
     public static final OptionKey<String> LIBRARIES = new OptionKey<>("");
 
-    @Option(name = "llvm.instrumentIR", category = OptionCategory.EXPERT, help = "Enable support for LLVM IR instrumentation.") //
+    public static final String INSTRUMENT_IR_NAME = "llvm.instrumentIR";
+    @Option(name = INSTRUMENT_IR_NAME, category = OptionCategory.EXPERT, help = "Enable support for LLVM IR instrumentation.") //
     public static final OptionKey<Boolean> INSTRUMENT_IR = new OptionKey<>(false);
 
-    @Option(name = "llvm.traceIR", category = OptionCategory.EXPERT, help = "Prints a trace of the executed bitcode. Requires \'--llvm.instrumentIR=true\'. Set value to \'stdout\', \'stderr\' or \'file://<path to writable file>\' to enable.") //
+    public static final String TRACE_IR_NAME = "llvm.traceIR";
+    @Option(name = TRACE_IR_NAME, category = OptionCategory.EXPERT, help = "Prints a trace of the executed bitcode. Requires \'--llvm.instrumentIR=true\'. Set value to \'stdout\', \'stderr\' or \'file://<path to writable file>\' to enable.") //
     public static final OptionKey<String> TRACE_IR = new OptionKey<>("");
 
-    @Option(name = "llvm.traceIR.functions", category = OptionCategory.EXPERT, help = "Limit tracing to select functions. Must be 'all' or an llvm-level function name. Multiple functions can be specified, separated by ':'.") //
+    public static final String TRACE_IR_FUNCTIONS_NAME = "llvm.traceIR.functions";
+    @Option(name = TRACE_IR_FUNCTIONS_NAME, category = OptionCategory.EXPERT, help = "Limit tracing to select functions. Must be 'all' or an llvm-level function name. Multiple functions can be specified, separated by ':'.") //
     public static final OptionKey<String> TRACE_IR_FUNCTIONS = new OptionKey<>("all");
 
-    @Option(name = "llvm.traceIR.hideNativePointers", category = OptionCategory.INTERNAL, help = "Displays all native pointers as \'<native pointer>\' to enable reproducible output.") //
+    public static final String TRACE_IR_HIDE_NATIVE_POINTERS_NAME = "llvm.traceIR.hideNativePointers";
+    @Option(name = TRACE_IR_HIDE_NATIVE_POINTERS_NAME, category = OptionCategory.INTERNAL, help = "Displays all native pointers as \'<native pointer>\' to enable reproducible output.") //
     public static final OptionKey<Boolean> TRACE_IR_HIDE_NATIVE_POINTERS = new OptionKey<>(false);
     // @formatter:on
 
