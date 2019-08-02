@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,66 +27,60 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.runtime.debug;
+package com.oracle.truffle.llvm.runtime.instrumentation;
 
+import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
-import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.InvalidArrayIndexException;
 import com.oracle.truffle.api.interop.TruffleObject;
-import com.oracle.truffle.api.interop.UnknownIdentifierException;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
-import com.oracle.truffle.api.profiles.BranchProfile;
-import com.oracle.truffle.llvm.runtime.instrumentation.LLVMKeysObject;
+
+import java.util.Arrays;
 
 @ExportLibrary(InteropLibrary.class)
-public abstract class LLVMDebuggerValue implements TruffleObject {
+public final class LLVMKeysObject implements TruffleObject {
 
-    protected static final String[] NO_KEYS = new String[0];
+    public static final LLVMKeysObject EMPTY = new LLVMKeysObject(new String[0]);
 
-    protected abstract int getElementCountForDebugger();
+    @CompilationFinal(dimensions = 1) private final String[] properties;
 
-    protected abstract String[] getKeysForDebugger();
-
-    protected abstract Object getElementForDebugger(String key);
-
-    public Object getMetaObject() {
-        return null;
+    public LLVMKeysObject(String[] properties) {
+        assert properties != null;
+        this.properties = properties;
     }
 
+    @SuppressWarnings("static-method")
     @ExportMessage
-    boolean hasMembers() {
+    public boolean hasArrayElements() {
         return true;
     }
 
     @ExportMessage
-    @TruffleBoundary
-    Object getMembers(@SuppressWarnings("unused") boolean includeInternal) {
-        if (getElementCountForDebugger() == 0) {
-            return LLVMKeysObject.EMPTY;
-        }
-
-        String[] keys = getKeysForDebugger();
-        return new LLVMKeysObject(keys);
+    public long getArraySize() {
+        return properties.length;
     }
 
     @ExportMessage
-    @TruffleBoundary
-    boolean isMemberReadable(String key) {
-        Object element = getElementForDebugger(key);
-        return element != null;
+    public boolean isArrayElementReadable(long index) {
+        return index >= 0 && index < properties.length;
     }
 
     @ExportMessage
-    @TruffleBoundary
-    Object readMember(String key,
-                    @Cached BranchProfile exception) throws UnknownIdentifierException {
-        Object element = getElementForDebugger(key);
-        if (element != null) {
-            return element;
+    public String readArrayElement(long index) throws InvalidArrayIndexException {
+        if (index >= 0 && index < properties.length) {
+            return properties[(int) index];
         } else {
-            exception.enter();
-            throw UnknownIdentifierException.create(key);
+            CompilerDirectives.transferToInterpreter();
+            throw InvalidArrayIndexException.create(index);
         }
+    }
+
+    @Override
+    @TruffleBoundary
+    public String toString() {
+        return Arrays.toString(properties);
     }
 }
