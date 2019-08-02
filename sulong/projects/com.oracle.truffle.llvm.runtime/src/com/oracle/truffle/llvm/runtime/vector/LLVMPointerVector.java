@@ -33,16 +33,16 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.ValueType;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.interop.InvalidArrayIndexException;
-import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
+import com.oracle.truffle.llvm.runtime.interop.LLVMInternalTruffleObject;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 import com.oracle.truffle.llvm.runtime.types.PointerType;
 import com.oracle.truffle.llvm.runtime.types.Type;
 
 @ValueType
 @ExportLibrary(InteropLibrary.class)
-public final class LLVMPointerVector extends LLVMVector implements TruffleObject {
+public final class LLVMPointerVector extends LLVMVector implements LLVMInternalTruffleObject {
     private final LLVMPointer[] vector;
 
     public static LLVMPointerVector create(LLVMPointer[] vector) {

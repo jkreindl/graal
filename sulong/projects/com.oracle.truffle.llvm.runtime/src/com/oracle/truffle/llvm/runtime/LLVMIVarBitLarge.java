@@ -40,17 +40,17 @@ import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.CompilerDirectives.ValueType;
 import com.oracle.truffle.api.interop.InteropLibrary;
-import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
+import com.oracle.truffle.llvm.runtime.interop.LLVMInternalTruffleObject;
 
 /**
  * Implementation of variable-width integers with > 64 bits in size.
  */
 @ValueType
 @ExportLibrary(InteropLibrary.class)
-public final class LLVMIVarBitLarge extends LLVMIVarBit implements TruffleObject {
+public final class LLVMIVarBitLarge extends LLVMIVarBit implements LLVMInternalTruffleObject {
 
     // see https://bugs.chromium.org/p/nativeclient/issues/detail?id=3360 for use cases where
     // variable ints arise

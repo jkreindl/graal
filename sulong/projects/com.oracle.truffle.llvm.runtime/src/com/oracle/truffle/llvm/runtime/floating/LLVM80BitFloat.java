@@ -49,6 +49,7 @@ import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.LLVMLanguage;
 import com.oracle.truffle.llvm.runtime.NFIContextExtension;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloatFactory.LLVM80BitFloatNativeCallNodeGen;
+import com.oracle.truffle.llvm.runtime.interop.LLVMInternalTruffleObject;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMArithmetic;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
@@ -56,7 +57,7 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 
 @ValueType
 @ExportLibrary(InteropLibrary.class)
-public final class LLVM80BitFloat implements LLVMArithmetic, TruffleObject {
+public final class LLVM80BitFloat implements LLVMArithmetic, LLVMInternalTruffleObject {
 
     private static final int BIT_TO_HEX_FACTOR = 4;
     public static final int BIT_WIDTH = 80;
