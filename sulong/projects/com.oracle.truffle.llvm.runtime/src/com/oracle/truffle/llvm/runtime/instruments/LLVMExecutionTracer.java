@@ -158,7 +158,7 @@ public final class LLVMExecutionTracer {
         if (nodeObject instanceof LLVMNodeObject) {
             return String.valueOf(nodeObject);
         } else {
-            return "";
+            return "{}";
         }
     }
 

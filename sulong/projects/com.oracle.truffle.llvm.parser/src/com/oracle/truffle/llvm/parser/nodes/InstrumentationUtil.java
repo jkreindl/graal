@@ -35,6 +35,7 @@ import com.oracle.truffle.llvm.parser.model.ValueSymbol;
 import com.oracle.truffle.llvm.parser.model.enums.BinaryOperator;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMGenericInteropArray;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMInstrumentableNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNodeSourceDescriptor;
@@ -46,10 +47,8 @@ import java.util.List;
 
 final class InstrumentationUtil {
 
-    static EconomicMap<String, Object> createTypedNodeObject(Symbol symbol) {
-        final EconomicMap<String, Object> entries = EconomicMap.create(1);
-        entries.put(LLVMTags.EXTRA_DATA_VALUE_TYPE, symbol.getType());
-        return entries;
+    static void createTypedNodeObject(EconomicMap<String, Object> nodeObjectEntries, Symbol symbol) {
+        nodeObjectEntries.put(LLVMTags.EXTRA_DATA_VALUE_TYPE, symbol.getType());
     }
 
     static Class<? extends Tag>[] getBinaryOperationTags(BinaryOperator operator, boolean isConstant) {
@@ -92,23 +91,23 @@ final class InstrumentationUtil {
         }
     }
 
-    static EconomicMap<String, Object> createSSAAccessDescriptor(ValueSymbol ssaValue, String ssaNameKey) {
+    static void createSSAAccessDescriptor(EconomicMap<String, Object> nodeObjectEntries, ValueSymbol ssaValue, String ssaNameKey) {
         final String ssaName = ssaValue.getName();
-        final EconomicMap<String, Object> entries = createTypedNodeObject(ssaValue);
-        entries.put(ssaNameKey, ssaName);
-        return entries;
+        createTypedNodeObject(nodeObjectEntries, ssaValue);
+        nodeObjectEntries.put(ssaNameKey, ssaName);
     }
 
-    static EconomicMap<String, Object> createGlobalAccessDescriptor(ValueSymbol global) {
+    static void createGlobalAccessDescriptor(EconomicMap<String, Object> nodeObjectEntries, ValueSymbol global) {
         final String llvmName = global.getName();
-        final EconomicMap<String, Object> entries = createTypedNodeObject(global);
-        entries.put(LLVMTags.GlobalRead.EXTRA_DATA_GLOBAL_NAME_LLVM, llvmName);
-        return entries;
+        createTypedNodeObject(nodeObjectEntries, global);
+        nodeObjectEntries.put(LLVMTags.GlobalRead.EXTRA_DATA_GLOBAL_NAME_LLVM, llvmName);
     }
 
-    static void addTags(LLVMInstrumentableNode node, Class<? extends Tag>[] tags, EconomicMap<String, Object> nodeObject) {
+    static void addTags(LLVMInstrumentableNode node, Class<? extends Tag>[] tags, EconomicMap<String, Object> nodeObjectEntries) {
         final LLVMNodeSourceDescriptor sourceDescriptor = node.getOrCreateSourceDescriptor();
-        sourceDescriptor.setNodeObjectProvider(new LLVMNodeObjectBuilder(nodeObject));
+        sourceDescriptor.setNodeObject(LLVMNodeObject.create(nodeObjectEntries));
+        nodeObjectEntries.clear();
+
         if (sourceDescriptor.getTags() == null) {
             sourceDescriptor.setTags(tags);
         } else {

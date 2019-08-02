@@ -35,7 +35,7 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
 
-import com.oracle.truffle.llvm.parser.nodes.LLVMNodeObjectBuilder;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
 import org.graalvm.collections.EconomicMap;
 import org.graalvm.options.OptionValues;
@@ -151,7 +151,7 @@ public class LazyToTruffleConverterImpl implements LazyToTruffleConverter {
             final EconomicMap<String, Object> nodeObjectEntries = EconomicMap.create(2);
             nodeObjectEntries.put(LLVMTags.Function.EXTRA_DATA_LLVM_NAME, method.getName());
             nodeObjectEntries.put(LLVMTags.Function.EXTRA_DATA_SOURCE_NAME, method.getSourceName());
-            sourceDescriptor.setNodeObjectProvider(new LLVMNodeObjectBuilder(nodeObjectEntries));
+            sourceDescriptor.setNodeObject(LLVMNodeObject.create(nodeObjectEntries));
         }
         // the source location was already set in the nodeFactory
 
@@ -214,7 +214,7 @@ public class LazyToTruffleConverterImpl implements LazyToTruffleConverter {
                 final EconomicMap<String, Object> nodeObjectEntries = EconomicMap.create(2);
                 nodeObjectEntries.put(LLVMTags.ReadCallArg.EXTRA_DATA_SSA_SOURCE, parameter.getName());
                 nodeObjectEntries.put(LLVMTags.ReadCallArg.EXTRA_DATA_ARG_INDEX, i);
-                sourceDescriptor.setNodeObjectProvider(new LLVMNodeObjectBuilder(nodeObjectEntries));
+                sourceDescriptor.setNodeObject(LLVMNodeObject.create(nodeObjectEntries));
             }
 
             FrameSlot slot = frame.findFrameSlot(parameter.getName());

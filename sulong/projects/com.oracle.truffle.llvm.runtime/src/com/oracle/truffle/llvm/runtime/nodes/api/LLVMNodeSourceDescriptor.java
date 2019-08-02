@@ -30,9 +30,11 @@
 package com.oracle.truffle.llvm.runtime.nodes.api;
 
 import com.oracle.truffle.api.CompilerAsserts;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.source.SourceSection;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 
 public final class LLVMNodeSourceDescriptor {
 
@@ -45,6 +47,9 @@ public final class LLVMNodeSourceDescriptor {
 
     private LLVMSourceLocation sourceLocation;
     private boolean hasStatementTag;
+
+    private Class<? extends Tag>[] tags;
+    private LLVMNodeObject nodeObject;
 
     public LLVMSourceLocation getSourceLocation() {
         return sourceLocation;
@@ -61,6 +66,25 @@ public final class LLVMNodeSourceDescriptor {
         return hasStatementTag && sourceLocation != null;
     }
 
+    public Class<? extends Tag>[] getTags() {
+        return tags;
+    }
+
+    public boolean hasTag(Class<? extends Tag> tag) {
+        if (tags != null) {
+            for (Class<? extends Tag> providedTag : tags) {
+                if (tag == providedTag) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public Object getNodeObject() {
+        return nodeObject != null ? nodeObject : LLVMNodeObject.EMPTY;
+    }
+
     public void setSourceLocation(LLVMSourceLocation sourceLocation) {
         CompilerAsserts.neverPartOfCompilation();
         this.sourceLocation = sourceLocation;
@@ -69,5 +93,15 @@ public final class LLVMNodeSourceDescriptor {
     public void setHasStatementTag(boolean hasStatementTag) {
         CompilerAsserts.neverPartOfCompilation();
         this.hasStatementTag = hasStatementTag;
+    }
+
+    public void setTags(Class<? extends Tag>[] tags) {
+        CompilerAsserts.neverPartOfCompilation();
+        this.tags = tags;
+    }
+
+    public void setNodeObject(LLVMNodeObject nodeObject) {
+        CompilerAsserts.neverPartOfCompilation();
+        this.nodeObject = nodeObject;
     }
 }

@@ -70,7 +70,8 @@ import com.oracle.truffle.llvm.parser.util.LLVMBitcodeTypeHelper;
 import com.oracle.truffle.llvm.runtime.ArithmeticFlag;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMGenericInteropArray;
-import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObjectKeys;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMKeysObject;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMInstrumentableNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNodeSourceDescriptor;
@@ -82,6 +83,7 @@ import org.graalvm.collections.EconomicMap;
 
 import java.util.ArrayList;
 
+import static com.oracle.truffle.llvm.parser.nodes.InstrumentationUtil.createSSAAccessDescriptor;
 import static com.oracle.truffle.llvm.parser.nodes.InstrumentationUtil.createTypedNodeObject;
 
 final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
@@ -90,12 +92,12 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
     private final LLVMContext context;
 
     private Class<? extends Tag>[] tags;
-    private EconomicMap<String, Object> nodeObjectEntries;
+    private final EconomicMap<String, Object> nodeObjectEntries;
 
     BitcodeInstructionInstrumentationVisitor(LLVMContext context) {
         this.context = context;
         this.tags = null;
-        this.nodeObjectEntries = null;
+        this.nodeObjectEntries = EconomicMap.create();
     }
 
     @Override
@@ -106,7 +108,7 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
         if (alignment > 0) {
             alignment = 1 << (allocate.getAlign() - 1);
         }
-        nodeObjectEntries = createTypedNodeObject(allocate);
+        createTypedNodeObject(nodeObjectEntries, allocate);
         nodeObjectEntries.put(LLVMTags.Alloca.EXTRA_DATA_ALLOCATION_TYPE, allocate.getPointeeType());
         nodeObjectEntries.put(LLVMTags.Alloca.EXTRA_DATA_ALLOCATION_ALIGNMENT, alignment);
     }
@@ -115,7 +117,7 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
     public void visit(BinaryOperationInstruction operation) {
         tags = InstrumentationUtil.getBinaryOperationTags(operation.getOperator(), false);
 
-        nodeObjectEntries = EconomicMap.create(ArithmeticFlag.ALL_VALUES.length);
+        EconomicMap.create(ArithmeticFlag.ALL_VALUES.length);
         final ArithmeticFlag[] allFlags = ArithmeticFlag.ALL_VALUES;
         for (ArithmeticFlag flag : allFlags) {
             final String key = flag.toString();
@@ -132,14 +134,14 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
     @Override
     public void visit(CallInstruction call) {
         tags = LLVMTags.Call.VALUE_CALL_TAGS;
-        nodeObjectEntries = createTypedNodeObject(call);
+        createTypedNodeObject(nodeObjectEntries, call);
         nodeObjectEntries.put(LLVMTags.Call.EXTRA_DATA_ARGS_COUNT, call.getArgumentCount());
     }
 
     @Override
     public void visit(LandingpadInstruction landingpadInstruction) {
         tags = LLVMTags.LandingPad.STATEMENT_TAGS;
-        nodeObjectEntries = createTypedNodeObject(landingpadInstruction);
+        createTypedNodeObject(nodeObjectEntries, landingpadInstruction);
     }
 
     @Override
@@ -150,20 +152,19 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
     @Override
     public void visit(CompareExchangeInstruction cmpxchg) {
         tags = LLVMTags.CmpXchg.EXPRESSION_TAGS;
-        nodeObjectEntries = createTypedNodeObject(cmpxchg);
+        createTypedNodeObject(nodeObjectEntries, cmpxchg);
     }
 
     @Override
     public void visit(VoidCallInstruction call) {
         tags = LLVMTags.Call.VOID_CALL_TAGS;
-        nodeObjectEntries = EconomicMap.create(1);
         nodeObjectEntries.put(LLVMTags.Call.EXTRA_DATA_ARGS_COUNT, call.getArgumentCount());
     }
 
     @Override
     public void visit(InvokeInstruction call) {
         tags = LLVMTags.Invoke.VALUE_INVOKE_TAGS;
-        nodeObjectEntries = createTypedNodeObject(call);
+        createTypedNodeObject(nodeObjectEntries, call);
         nodeObjectEntries.put(LLVMTags.Invoke.EXTRA_DATA_ARGS_COUNT, call.getArgumentCount());
         nodeObjectEntries.put(LLVMTags.Invoke.EXTRA_DATA_SSA_TARGET, call.getName());
     }
@@ -171,7 +172,7 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
     @Override
     public void visit(VoidInvokeInstruction call) {
         tags = LLVMTags.Invoke.VOID_INVOKE_TAGS;
-        nodeObjectEntries = EconomicMap.create(1);
+        EconomicMap.create(1);
         nodeObjectEntries.put(LLVMTags.Invoke.EXTRA_DATA_ARGS_COUNT, call.getArgumentCount());
         nodeObjectEntries.put(LLVMTags.Invoke.EXTRA_DATA_SSA_TARGET, LLVMTags.Invoke.NO_TARGET);
     }
@@ -181,14 +182,14 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
         tags = LLVMTags.Cast.EXPRESSION_TAGS;
         final Type srcType = cast.getValue().getType();
         final String castKind = cast.getOperator().getIrString();
-        nodeObjectEntries = createTypedNodeObject(cast);
+        createTypedNodeObject(nodeObjectEntries, cast);
         nodeObjectEntries.put(LLVMTags.Cast.EXTRA_DATA_SOURCE_TYPE, srcType);
         nodeObjectEntries.put(LLVMTags.Cast.EXTRA_DATA_KIND, castKind);
     }
 
     @Override
     public void visit(CompareInstruction compare) {
-        nodeObjectEntries = createTypedNodeObject(compare);
+        createTypedNodeObject(nodeObjectEntries, compare);
         final String cmpKind = compare.getOperator().name();
 
         if (Type.isFloatingpointType(compare.getLHS().getType())) {
@@ -209,13 +210,13 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
     @Override
     public void visit(ExtractElementInstruction extract) {
         tags = LLVMTags.ExtractElement.EXPRESSION_TAGS;
-        nodeObjectEntries = createTypedNodeObject(extract);
+        createTypedNodeObject(nodeObjectEntries, extract);
     }
 
     @Override
     public void visit(ExtractValueInstruction extract) {
         tags = LLVMTags.ExtractValue.EXPRESSION_TAGS;
-        nodeObjectEntries = createTypedNodeObject(extract);
+        createTypedNodeObject(nodeObjectEntries, extract);
         // Sulong currently does not support nested indexing, but that may change in the future
         nodeObjectEntries.put(LLVMTags.ExtractValue.EXTRA_DATA_INDICES, new LLVMGenericInteropArray(new Object[]{extract.getIndex()}));
     }
@@ -223,7 +224,7 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
     @Override
     public void visit(GetElementPointerInstruction gep) {
         tags = LLVMTags.GetElementPtr.EXPRESSION_TAGS;
-        nodeObjectEntries = createTypedNodeObject(gep);
+        createTypedNodeObject(nodeObjectEntries, gep);
         nodeObjectEntries.put(LLVMTags.GetElementPtr.EXTRA_DATA_SOURCE_TYPE, gep.getBasePointer().getType());
         nodeObjectEntries.put(LLVMTags.GetElementPtr.EXTRA_DATA_IS_INBOUND, gep.isInbounds());
         InstrumentationUtil.addElementPointerIndices(gep.getIndices(), nodeObjectEntries);
@@ -237,13 +238,13 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
     @Override
     public void visit(InsertElementInstruction insert) {
         tags = LLVMTags.InsertElement.EXPRESSION_TAGS;
-        nodeObjectEntries = createTypedNodeObject(insert);
+        createTypedNodeObject(nodeObjectEntries, insert);
     }
 
     @Override
     public void visit(InsertValueInstruction insert) {
         tags = LLVMTags.InsertValue.EXPRESSION_TAGS;
-        nodeObjectEntries = createTypedNodeObject(insert);
+        createTypedNodeObject(nodeObjectEntries, insert);
         // Sulong currently does not support nested indexing, but that may change in the future
         nodeObjectEntries.put(LLVMTags.InsertValue.EXTRA_DATA_INDICES, new LLVMGenericInteropArray(new Object[]{insert.getIndex()}));
     }
@@ -253,14 +254,14 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
         tags = LLVMTags.Load.EXPRESSION_TAGS;
         // TODO alignment
         final int loadByteSize = context.getByteSize(load.getSource().getType());
-        nodeObjectEntries = createTypedNodeObject(load);
+        createTypedNodeObject(nodeObjectEntries, load);
         nodeObjectEntries.put(LLVMTags.Load.EXTRA_DATA_BYTE_SIZE, loadByteSize);
     }
 
     @Override
     public void visit(PhiInstruction phi) {
         tags = LLVMTags.Phi.EXPRESSION_TAGS;
-        nodeObjectEntries = createTypedNodeObject(phi);
+        createTypedNodeObject(nodeObjectEntries, phi);
     }
 
     @Override
@@ -270,19 +271,19 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
         } else {
             tags = LLVMTags.Ret.EXPRESSION_TAGS;
         }
-        nodeObjectEntries = createTypedNodeObject(ret);
+        createTypedNodeObject(nodeObjectEntries, ret);
     }
 
     @Override
     public void visit(SelectInstruction select) {
         tags = LLVMTags.Select.EXPRESSION_TAGS;
-        nodeObjectEntries = createTypedNodeObject(select);
+        createTypedNodeObject(nodeObjectEntries, select);
     }
 
     @Override
     public void visit(ShuffleVectorInstruction shuffle) {
         tags = LLVMTags.ShuffleVector.EXPRESSION_TAGS;
-        nodeObjectEntries = createTypedNodeObject(shuffle);
+        createTypedNodeObject(nodeObjectEntries, shuffle);
     }
 
     @Override
@@ -290,14 +291,13 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
         tags = LLVMTags.Store.STATEMENT_TAGS;
         // TODO alignment
         final int storeByteSize = context.getByteSize(store.getDestination().getType());
-        nodeObjectEntries = EconomicMap.create(1);
         nodeObjectEntries.put(LLVMTags.Store.EXTRA_DATA_BYTE_SIZE, storeByteSize);
     }
 
     @Override
     public void visit(ReadModifyWriteInstruction rmw) {
         tags = LLVMTags.AtomicRMW.EXPRESSION_TAGS;
-        nodeObjectEntries = createTypedNodeObject(rmw);
+        createTypedNodeObject(nodeObjectEntries, rmw);
         nodeObjectEntries.put(LLVMTags.AtomicRMW.EXTRA_DATA_OPERATION, rmw.getOperator().getIrString());
     }
 
@@ -331,7 +331,7 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
 
     void instrument(LLVMInstrumentableNode node, SymbolImpl source) {
         tags = null;
-        nodeObjectEntries = null;
+        nodeObjectEntries.clear();
 
         source.accept(this);
 
@@ -340,7 +340,7 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
 
     void instrumentFrameWrite(LLVMInstrumentableNode node, ValueSymbol source) {
         tags = LLVMTags.SSAWrite.EXPRESSION_TAGS;
-        nodeObjectEntries = InstrumentationUtil.createSSAAccessDescriptor(source, LLVMTags.SSAWrite.EXTRA_DATA_SSA_TARGET);
+        createSSAAccessDescriptor(nodeObjectEntries, source, LLVMTags.SSAWrite.EXTRA_DATA_SSA_TARGET);
         applyNodeProperties(node);
     }
 
@@ -359,7 +359,6 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
             tags = LLVMTags.Intrinsic.VOID_INTRINSIC_TAGS;
         }
 
-        nodeObjectEntries = EconomicMap.create(2);
         nodeObjectEntries.put(LLVMTags.Intrinsic.EXTRA_DATA_FUNCTION_NAME, builtinName);
         nodeObjectEntries.put(LLVMTags.Intrinsic.EXTRA_DATA_FUNCTION_TYPE, builtinType);
 
@@ -373,8 +372,8 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
         for (int i = 0; i < targets.length; i++) {
             targets[i] = phis.get(i).getPhiValue().getName();
         }
-        nodeObjectEntries = EconomicMap.create(1);
-        nodeObjectEntries.put(LLVMTags.Phi.EXTRA_DATA_TARGETS, new LLVMNodeObjectKeys(targets));
+
+        nodeObjectEntries.put(LLVMTags.Phi.EXTRA_DATA_TARGETS, new LLVMKeysObject(targets));
 
         applyNodeProperties(phiWrites);
     }
@@ -385,10 +384,12 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
         }
 
         final LLVMNodeSourceDescriptor sourceDescriptor = node.getOrCreateSourceDescriptor();
-        sourceDescriptor.setNodeObjectProvider(new LLVMNodeObjectBuilder(nodeObjectEntries));
-
         assert sourceDescriptor.getTags() == null : "Unexpected tags";
         sourceDescriptor.setTags(tags);
-    }
 
+        if (nodeObjectEntries != null && !nodeObjectEntries.isEmpty()) {
+            sourceDescriptor.setNodeObject(LLVMNodeObject.create(nodeObjectEntries));
+            nodeObjectEntries.clear();
+        }
+    }
 }

@@ -44,11 +44,11 @@ import com.oracle.truffle.llvm.parser.model.functions.FunctionDefinition;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.Instruction;
 import com.oracle.truffle.llvm.parser.model.visitors.FunctionVisitor;
 import com.oracle.truffle.llvm.parser.nodes.LLVMBitcodeInstructionVisitor;
-import com.oracle.truffle.llvm.parser.nodes.LLVMNodeObjectBuilder;
 import com.oracle.truffle.llvm.parser.nodes.LLVMRuntimeDebugInformation;
 import com.oracle.truffle.llvm.parser.nodes.LLVMSymbolReadResolver;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.LLVMContext.ExternalLibrary;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack.UniquesRegion;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNodeSourceDescriptor;
@@ -129,7 +129,7 @@ final class LLVMBitcodeFunctionVisitor implements FunctionVisitor {
             final EconomicMap<String, Object> nodeObjectEntries = EconomicMap.create(2);
             nodeObjectEntries.put(LLVMTags.Block.EXTRA_DATA_BLOCK_ID, block.getBlockIndex());
             nodeObjectEntries.put(LLVMTags.Block.EXTRA_DATA_BLOCK_NAME, block.getName());
-            sourceDescriptor.setNodeObjectProvider(new LLVMNodeObjectBuilder(nodeObjectEntries));
+            sourceDescriptor.setNodeObject(LLVMNodeObject.create(nodeObjectEntries));
         }
         blocks.add(blockNode);
     }

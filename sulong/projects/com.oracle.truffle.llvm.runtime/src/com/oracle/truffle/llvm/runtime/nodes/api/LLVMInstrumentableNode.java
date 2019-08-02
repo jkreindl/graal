@@ -36,6 +36,7 @@ import com.oracle.truffle.api.instrumentation.StandardTags;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.source.SourceSection;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 
 public abstract class LLVMInstrumentableNode extends LLVMNode implements InstrumentableNode {
 
@@ -106,7 +107,9 @@ public abstract class LLVMInstrumentableNode extends LLVMNode implements Instrum
     /**
      * If this node {@link LLVMInstrumentableNode#hasStatementTag() is a statement for source-level
      * instrumentatipon}, this function considers the node to be tagged with
-     * {@link com.oracle.truffle.api.instrumentation.StandardTags.StatementTag}.
+     * {@link com.oracle.truffle.api.instrumentation.StandardTags.StatementTag}. The node also
+     * checks an attached {@link LLVMNodeSourceDescriptor source descriptor} for additional tags to
+     * provide.
      *
      * @param tag class of a tag {@link com.oracle.truffle.api.instrumentation.ProvidedTags
      *            provided} by {@link com.oracle.truffle.llvm.runtime.LLVMLanguage}
@@ -117,8 +120,15 @@ public abstract class LLVMInstrumentableNode extends LLVMNode implements Instrum
     public boolean hasTag(Class<? extends Tag> tag) {
         if (tag == StandardTags.StatementTag.class) {
             return hasStatementTag();
+        } else if (sourceDescriptor != null) {
+            return sourceDescriptor.hasTag(tag);
         } else {
             return false;
         }
+    }
+
+    @Override
+    public Object getNodeObject() {
+        return sourceDescriptor != null ? sourceDescriptor.getNodeObject() : LLVMNodeObject.EMPTY;
     }
 }
