@@ -35,7 +35,7 @@ import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.interop.UnknownIdentifierException;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
-import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObjectKeys;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMKeysObject;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType.PrimitiveKind;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
@@ -188,7 +188,7 @@ public abstract class Type {
         }
     }
 
-    static LLVMNodeObjectKeys getDefaultTypeKeys(String... additionalMembers) {
+    static LLVMKeysObject getDefaultTypeKeys(String... additionalMembers) {
         final String[] members = new String[DEFAULT_MEMBER_COUNT + additionalMembers.length];
         members[0] = MEMBER_BYTESIZE;
         members[1] = MEMBER_ALIGNMENT;
@@ -205,7 +205,7 @@ public abstract class Type {
         for (int i = 0; i < additionalMembers.length; i++) {
             members[DEFAULT_MEMBER_COUNT + i] = additionalMembers[i];
         }
-        return new LLVMNodeObjectKeys(members);
+        return new LLVMKeysObject(members);
     }
 
     public Object readDefaultMember(String member, TruffleLanguage.ContextReference<LLVMContext> contextReference) throws UnknownIdentifierException {

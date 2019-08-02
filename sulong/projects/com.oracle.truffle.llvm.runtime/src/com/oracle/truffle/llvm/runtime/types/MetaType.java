@@ -39,7 +39,7 @@ import com.oracle.truffle.api.library.ExportMessage;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.LLVMLanguage;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
-import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObjectKeys;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMKeysObject;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
 
 @ExportLibrary(InteropLibrary.class)
@@ -126,7 +126,7 @@ public final class MetaType extends Type implements TruffleObject {
 
     @ExportMessage
     @SuppressWarnings("static-method")
-    public LLVMNodeObjectKeys getMembers(@SuppressWarnings("unused") boolean includeInternal) {
+    public LLVMKeysObject getMembers(@SuppressWarnings("unused") boolean includeInternal) {
         return getDefaultTypeKeys(MEMBER_GET_KIND);
     }
 
