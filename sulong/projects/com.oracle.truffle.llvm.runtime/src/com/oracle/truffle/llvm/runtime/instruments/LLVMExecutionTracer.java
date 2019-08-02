@@ -198,7 +198,7 @@ public final class LLVMExecutionTracer {
                 if (target.startsWith(FILE_TARGET_PREFIX)) {
                     final String fileName = target.substring(FILE_TARGET_PREFIX.length());
                     try {
-                        final TruffleFile file = env.getTruffleFile(fileName);
+                        final TruffleFile file = env.getPublicTruffleFile(fileName);
                         targetStream = new BufferedOutputStream(file.newOutputStream(StandardOpenOption.CREATE, StandardOpenOption.APPEND));
                         closeTarget = true;
                     } catch (IOException e) {
