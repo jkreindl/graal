@@ -269,7 +269,7 @@ public final class LLVMExecutionTracer {
         @TruffleBoundary
         TraceNode(int id, String tags, String extraData, String sourceLocation, TraceContext traceContext) {
             this.id = String.valueOf(id);
-            this.nodeDescription = "<node id=\"" + id + "\" tags=\"" + tags + "\" properties=\"" + extraData + (sourceLocation != null ? "source=\"" + sourceLocation + "\"" : "") + "\">";
+            this.nodeDescription = "<node id=\"" + id + "\" tags=\"" + tags + "\" properties=\"" + extraData + "\"" + (sourceLocation != null ? " source=\"" + sourceLocation + "\"" : "") + ">";
             this.targetWriter = traceContext.getTargetWriter();
             this.traceContext = traceContext;
 
