@@ -35,9 +35,6 @@ import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.TruffleFile;
 import com.oracle.truffle.api.TruffleLanguage;
-import com.oracle.truffle.api.dsl.Cached;
-import com.oracle.truffle.api.dsl.Specialization;
-import com.oracle.truffle.api.dsl.TypeSystemReference;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.EventBinding;
 import com.oracle.truffle.api.instrumentation.EventContext;
@@ -47,18 +44,11 @@ import com.oracle.truffle.api.instrumentation.Instrumenter;
 import com.oracle.truffle.api.instrumentation.SourceSectionFilter;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.Node;
-import com.oracle.truffle.llvm.runtime.LLVMFunctionDescriptor;
-import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
-import com.oracle.truffle.llvm.runtime.LLVMIVarBitLarge;
-import com.oracle.truffle.llvm.runtime.LLVMIVarBitSmall;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMInstrumentableNode;
-import com.oracle.truffle.llvm.runtime.nodes.api.LLVMTypes;
 import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
-import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
-import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 import com.oracle.truffle.llvm.runtime.types.symbols.LLVMIdentifier;
 
 import java.io.BufferedOutputStream;
@@ -147,9 +137,44 @@ public final class LLVMExecutionTracer {
         @SuppressWarnings("unchecked")
         public ExecutionEventNode create(EventContext context) {
             final Set<Class<?>> nodeTags = instrumenter.queryTags(context.getInstrumentedNode());
-            final String tags = nodeTags.stream().map(tag -> (Class<? extends Tag>) tag).filter(llvmTags::contains).map(Tag::getIdentifier).sorted().collect(Collectors.joining(", "));
+            final String tags = nodeTags.stream().map(tag -> (Class<? extends Tag>) tag).filter(llvmTags::contains).filter(TraceNodeFactory::isNoMetaTag).map(Tag::getIdentifier).sorted().collect(
+                            Collectors.joining(", "));
+            final String nodeId = String.valueOf(nextNodeId++);
 
-            return new TraceNode(nextNodeId++, tags, formatNodeProperties(context.getNodeObject()), getSourceLocation(context.getInstrumentedNode()), traceContext);
+            final StringBuilder nodePropertiesBuilder = new StringBuilder();
+            addProperty(nodePropertiesBuilder, "id", nodeId);
+            addProperty(nodePropertiesBuilder, "tags", tags);
+            addProperty(nodePropertiesBuilder, "properties", formatNodeProperties(context.getNodeObject()));
+            addProperty(nodePropertiesBuilder, "source", getSourceLocation(context.getInstrumentedNode()));
+            final String nodeProperties = nodePropertiesBuilder.toString();
+
+            if (nodeTags.contains(LLVMTags.Function.class)) {
+                return new FunctionTraceNode(nodeId, nodeProperties, traceContext);
+            } else if (nodeTags.contains(LLVMTags.LLVMControlFlow.class)) {
+                return new ControlFlowTraceNode(nodeId, nodeProperties, traceContext);
+            } else if (nodeTags.contains(LLVMTags.LLVMStatement.class)) {
+                return new StatementTraceNode(nodeId, nodeProperties, traceContext);
+            } else if (nodeTags.contains(LLVMTags.LLVMExpression.class)) {
+                if (nodeTags.contains(LLVMTags.Constant.class)) {
+                    return new ConstantExpressionTraceNode(nodeId, nodeProperties, traceContext);
+                } else {
+                    return new ExpressionTraceNode(nodeId, nodeProperties, traceContext);
+                }
+            } else {
+                return new GenericTraceNode(nodeId, nodeProperties, traceContext);
+            }
+        }
+
+        private static boolean isNoMetaTag(Class<? extends Tag> tag) {
+            return tag != LLVMTags.LLVMExpression.class && tag != LLVMTags.LLVMStatement.class && tag != LLVMTags.LLVMControlFlow.class && tag != LLVMTags.Constant.class &&
+                            tag != LLVMTags.Function.class;
+        }
+
+        @TruffleBoundary
+        private static void addProperty(StringBuilder builder, String property, String value) {
+            if (value != null) {
+                builder.append(' ').append(property).append("=\"").append(value).append('\"');
+            }
         }
     }
 
@@ -256,29 +281,30 @@ public final class LLVMExecutionTracer {
         }
     }
 
-    static class TraceNode extends ExecutionEventNode {
+    private abstract static class TraceNode extends ExecutionEventNode {
 
         private final String id;
-        private final String nodeDescription;
+        private final String nodeProperties;
 
         private final PrintWriter targetWriter;
         private final TraceContext traceContext;
 
         @Child private PrintValueNode printValueNode;
 
-        @TruffleBoundary
-        TraceNode(int id, String tags, String extraData, String sourceLocation, TraceContext traceContext) {
-            this.id = String.valueOf(id);
-            this.nodeDescription = "<node id=\"" + id + "\" tags=\"" + tags + "\" properties=\"" + extraData + "\"" + (sourceLocation != null ? " source=\"" + sourceLocation + "\"" : "") + ">";
+        TraceNode(String id, String nodeProperties, TraceContext traceContext) {
+            this.id = id;
+            this.nodeProperties = nodeProperties;
             this.targetWriter = traceContext.getTargetWriter();
             this.traceContext = traceContext;
 
             this.printValueNode = null;
         }
 
+        abstract String getNodeKind();
+
         private void initializeValueFormatter() {
             CompilerDirectives.transferToInterpreterAndInvalidate();
-            this.printValueNode = LLVMExecutionTracerFactory.PrintValueNodeGen.create(traceContext.hideNativePointers());
+            this.printValueNode = PrintValueNodeGen.create(traceContext.hideNativePointers());
         }
 
         @TruffleBoundary
@@ -289,7 +315,45 @@ public final class LLVMExecutionTracer {
 
         @Override
         protected void onEnter(VirtualFrame frame) {
-            print(nodeDescription);
+            // nodeProperties includes leading space
+            print("<" + getNodeKind() + nodeProperties + ">");
+        }
+
+        @CompilationFinal(dimensions = 1) private Node[] inputNodes = null;
+        @CompilationFinal(dimensions = 1) private String[] inputEvents = null;
+
+        private void extendInputNodes(int inputIndex) {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            if (inputNodes == null) {
+                assert inputEvents == null;
+                inputNodes = new Node[inputIndex + 1];
+                inputEvents = new String[inputIndex + 1];
+
+            } else if (inputIndex >= inputNodes.length) {
+                assert inputNodes.length == inputEvents.length;
+
+                final Node[] newInputNodes = new Node[inputIndex + 1];
+                for (int i = 0; i < inputNodes.length; i++) {
+                    newInputNodes[i] = inputNodes[i];
+                }
+                inputNodes = newInputNodes;
+
+                final String[] newInputEvents = new String[inputIndex + 1];
+                for (int i = 0; i < inputEvents.length; i++) {
+                    newInputEvents[i] = inputEvents[i];
+                }
+                inputEvents = newInputEvents;
+            }
+        }
+
+        private void updateInputNodes(EventContext inputContext, int inputIndex) {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+
+            final TraceNode inputEventNode = (TraceNode) inputContext.lookupExecutionEventNode(traceContext.getBinding());
+            assert inputEventNode != null;
+
+            inputNodes[inputIndex] = inputContext.getInstrumentedNode();
+            inputEvents[inputIndex] = "<input index=\"" + inputIndex + "\" source=\"" + inputEventNode.id + "\">";
         }
 
         @Override
@@ -298,10 +362,18 @@ public final class LLVMExecutionTracer {
                 initializeValueFormatter();
             }
 
-            final TraceNode inputEventNode = (TraceNode) inputContext.lookupExecutionEventNode(traceContext.getBinding());
-            assert inputEventNode != null;
+            // ensure cached input reports are initialized
+            if (inputNodes == null || inputIndex >= inputNodes.length) {
+                extendInputNodes(inputIndex);
+            }
 
-            print("<input index=\"" + inputIndex + "\" source=\"" + inputEventNode.id + "\">");
+            // ensure cached input reports are up-to-date
+            if (inputNodes[inputIndex] != inputContext.getInstrumentedNode()) {
+                updateInputNodes(inputContext, inputIndex);
+            }
+
+            // print the now known-to-be-correct input report
+            print(inputEvents[inputIndex]);
             print(printValueNode.executeWithTarget(inputValue));
             print("</input>");
         }
@@ -313,10 +385,12 @@ public final class LLVMExecutionTracer {
                     initializeValueFormatter();
                 }
 
-                print("<output>" + printValueNode.executeWithTarget(result) + "</output>");
+                print("<output>");
+                print(printValueNode.executeWithTarget(result));
+                print("</output>");
             }
 
-            print("</node>");
+            printNodeExit();
         }
 
         @Override
@@ -325,7 +399,11 @@ public final class LLVMExecutionTracer {
             printExceptionMessage(exception);
             print("</exception>");
 
-            print("</node>");
+            printNodeExit();
+        }
+
+        private void printNodeExit() {
+            print("</" + getNodeKind() + ">");
         }
 
         @TruffleBoundary
@@ -334,70 +412,75 @@ public final class LLVMExecutionTracer {
         }
     }
 
-    @TypeSystemReference(LLVMTypes.class)
-    abstract static class PrintValueNode extends Node {
+    private static final class ExpressionTraceNode extends TraceNode {
 
-        final boolean hideNativePointers;
-
-        PrintValueNode(boolean hideNativePointers) {
-            this.hideNativePointers = hideNativePointers;
+        ExpressionTraceNode(String id, String nodeProperties, TraceContext traceContext) {
+            super(id, nodeProperties, traceContext);
         }
 
-        abstract String executeWithTarget(Object value);
+        @Override
+        String getNodeKind() {
+            return "expression";
+        }
+    }
 
-        @Specialization
-        protected String doSmallIVarBit(LLVMIVarBitSmall value) {
-            return String.valueOf(value.getLongValue());
+    private static final class ConstantExpressionTraceNode extends TraceNode {
+
+        ConstantExpressionTraceNode(String id, String nodeProperties, TraceContext traceContext) {
+            super(id, nodeProperties, traceContext);
         }
 
-        @Specialization
-        @TruffleBoundary
-        protected String doLargeIVarBit(LLVMIVarBitLarge value) {
-            return value.asBigInteger().toString();
+        @Override
+        String getNodeKind() {
+            return "constant";
+        }
+    }
+
+    private static final class StatementTraceNode extends TraceNode {
+
+        StatementTraceNode(String id, String nodeProperties, TraceContext traceContext) {
+            super(id, nodeProperties, traceContext);
         }
 
-        @Specialization
-        protected String doLLVMFunctionDescriptor(LLVMFunctionDescriptor value) {
-            return value.getName();
+        @Override
+        String getNodeKind() {
+            return "statement";
+        }
+    }
+
+    private static final class ControlFlowTraceNode extends TraceNode {
+
+        ControlFlowTraceNode(String id, String nodeProperties, TraceContext traceContext) {
+            super(id, nodeProperties, traceContext);
         }
 
-        protected static PrintValueNode createRecursive(boolean hideNativePointers) {
-            return LLVMExecutionTracerFactory.PrintValueNodeGen.create(hideNativePointers);
+        @Override
+        String getNodeKind() {
+            return "controlflow";
+        }
+    }
+
+    private static final class FunctionTraceNode extends TraceNode {
+
+        FunctionTraceNode(String id, String nodeProperties, TraceContext traceContext) {
+            super(id, nodeProperties, traceContext);
         }
 
-        @Specialization
-        protected String doLLVMManagedPointer(LLVMManagedPointer value, @Cached("createRecursive(hideNativePointers)") PrintValueNode childFormatter) {
-            final String target = childFormatter.executeWithTarget(value.getObject());
+        @Override
+        String getNodeKind() {
+            return "function";
+        }
+    }
 
-            final long offset = value.getOffset();
-            if (offset == 0L) {
-                return "Managed Pointer(target = \'" + target + "\')";
-            } else {
-                return "Managed Pointer(target = \'" + target + "\', offset = " + offset + ")";
-            }
+    private static final class GenericTraceNode extends TraceNode {
+
+        GenericTraceNode(String id, String nodeProperties, TraceContext traceContext) {
+            super(id, nodeProperties, traceContext);
         }
 
-        @Specialization
-        protected String doLLVMNativePointer(LLVMNativePointer value) {
-            if (hideNativePointers) {
-                return "Native Pointer";
-            } else {
-                return formatNativePointer(value.asNative());
-            }
-        }
-
-        @TruffleBoundary
-        private static String formatNativePointer(long value) {
-            return String.format("0x%x", value);
-        }
-
-        protected static boolean hasCheckedToString(Object value) {
-            return !(value instanceof LLVMIVarBit) && !(value instanceof LLVMFunctionDescriptor) && !LLVMManagedPointer.isInstance(value);
-        }
-
-        @Specialization(guards = "hasCheckedToString(value)")
-        protected String doGeneric(Object value) {
-            return String.valueOf(value);
+        @Override
+        String getNodeKind() {
+            return "node";
         }
     }
 }
