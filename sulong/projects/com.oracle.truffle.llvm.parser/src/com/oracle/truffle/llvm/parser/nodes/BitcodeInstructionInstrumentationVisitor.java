@@ -253,7 +253,7 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
     public void visit(LoadInstruction load) {
         tags = LLVMTags.Load.EXPRESSION_TAGS;
         // TODO alignment
-        final int loadByteSize = context.getByteSize(load.getSource().getType());
+        final int loadByteSize = context.getByteSize(load.getType());
         createTypedNodeObject(nodeObjectEntries, load);
         nodeObjectEntries.put(LLVMTags.Load.EXTRA_DATA_BYTE_SIZE, loadByteSize);
     }
@@ -290,7 +290,7 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
     public void visit(StoreInstruction store) {
         tags = LLVMTags.Store.STATEMENT_TAGS;
         // TODO alignment
-        final int storeByteSize = context.getByteSize(store.getDestination().getType());
+        final int storeByteSize = context.getByteSize(store.getSource().getType());
         nodeObjectEntries.put(LLVMTags.Store.EXTRA_DATA_BYTE_SIZE, storeByteSize);
     }
 
