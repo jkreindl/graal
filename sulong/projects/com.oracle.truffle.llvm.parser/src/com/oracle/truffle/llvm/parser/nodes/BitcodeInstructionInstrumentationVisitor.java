@@ -386,6 +386,7 @@ final class BitcodeInstructionInstrumentationVisitor implements SymbolVisitor {
         final LLVMNodeSourceDescriptor sourceDescriptor = node.getOrCreateSourceDescriptor();
         assert sourceDescriptor.getTags() == null : "Unexpected tags";
         sourceDescriptor.setTags(tags);
+        node.enableIRTags();
 
         if (nodeObjectEntries != null && !nodeObjectEntries.isEmpty()) {
             sourceDescriptor.setNodeObject(LLVMNodeObject.create(nodeObjectEntries));

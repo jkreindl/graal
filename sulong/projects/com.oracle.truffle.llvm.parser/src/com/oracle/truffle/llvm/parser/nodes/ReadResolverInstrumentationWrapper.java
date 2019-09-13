@@ -88,6 +88,7 @@ public class ReadResolverInstrumentationWrapper extends LLVMSymbolReadResolver i
         }
 
         InstrumentationUtil.addTags(resolvedNode, tags, nodeObjectEntriesCache);
+        resolvedNode.enableIRTags();
         tags = null;
         nodeObjectEntriesCache.clear();
 

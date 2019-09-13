@@ -57,6 +57,14 @@ public final class LLVMNodeObject implements TruffleObject {
         this.values = values;
     }
 
+    public String[] getKeys() {
+        return keys;
+    }
+
+    public Object[] getValues() {
+        return values;
+    }
+
     @SuppressWarnings("static-method")
     @ExportMessage
     boolean hasMembers() {

@@ -38,7 +38,7 @@ import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 
 public final class LLVMNodeSourceDescriptor {
 
-    private static final SourceSection DEFAULT_SOURCE_SECTION;
+    static final SourceSection DEFAULT_SOURCE_SECTION;
 
     static {
         final Source source = Source.newBuilder("llvm", "LLVM IR", "<llvm ir>").mimeType("text/plain").build();
@@ -81,7 +81,7 @@ public final class LLVMNodeSourceDescriptor {
         return false;
     }
 
-    public Object getNodeObject() {
+    public LLVMNodeObject getNodeObject() {
         return nodeObject != null ? nodeObject : LLVMNodeObject.EMPTY;
     }
 
