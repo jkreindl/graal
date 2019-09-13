@@ -31,15 +31,23 @@ package com.oracle.truffle.llvm.runtime.nodes.api;
 
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.instrumentation.InstrumentableNode;
 import com.oracle.truffle.api.instrumentation.StandardTags;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.source.SourceSection;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTypeInteropWrapper;
+import com.oracle.truffle.llvm.runtime.types.Type;
+import com.oracle.truffle.llvm.runtime.types.VoidType;
+import org.graalvm.collections.EconomicMap;
 
 public abstract class LLVMInstrumentableNode extends LLVMNode implements InstrumentableNode {
 
     @CompilationFinal private LLVMNodeSourceDescriptor sourceDescriptor = null;
+    @CompilationFinal private Type irNodeType = null;
 
     /**
      * Get a {@link LLVMNodeSourceDescriptor descriptor} for the debug and instrumentation
@@ -72,9 +80,20 @@ public abstract class LLVMInstrumentableNode extends LLVMNode implements Instrum
         this.sourceDescriptor = sourceDescriptor;
     }
 
+    public final void enableIRTags(Type irNodeType) {
+        CompilerAsserts.neverPartOfCompilation();
+        this.irNodeType = irNodeType;
+    }
+
     @Override
     public SourceSection getSourceSection() {
-        return sourceDescriptor != null ? sourceDescriptor.getSourceSection() : null;
+        if (sourceDescriptor != null) {
+            return sourceDescriptor.getSourceSection();
+        } else if (irNodeType != null) {
+            return LLVMNodeSourceDescriptor.DEFAULT_SOURCE_SECTION;
+        } else {
+            return null;
+        }
     }
 
     @Override
@@ -103,6 +122,9 @@ public abstract class LLVMInstrumentableNode extends LLVMNode implements Instrum
         return sourceDescriptor != null ? sourceDescriptor.getSourceLocation() : null;
     }
 
+    @SuppressWarnings("unchecked") //
+    private static final Class<? extends Tag>[] NO_TAGS = new Class[0];
+
     /**
      * If this node {@link LLVMInstrumentableNode#hasStatementTag() is a statement for source-level
      * instrumentatipon}, this function considers the node to be tagged with
@@ -115,10 +137,56 @@ public abstract class LLVMInstrumentableNode extends LLVMNode implements Instrum
      */
     @Override
     public boolean hasTag(Class<? extends Tag> tag) {
+        return hasTag(tag, NO_TAGS);
+    }
+
+    protected boolean hasTag(Class<? extends Tag> tag, Class<? extends Tag>[] irTags) {
+        assert irTags != null;
+
         if (tag == StandardTags.StatementTag.class) {
             return hasStatementTag();
-        } else {
-            return false;
         }
+
+        if (irNodeType != null) {
+            for (Class<? extends Tag> providedTag : irTags) {
+                if (tag == providedTag) {
+                    return true;
+                }
+            }
+        }
+
+        return sourceDescriptor != null && sourceDescriptor.hasTag(tag);
+    }
+
+    @Override
+    public Object getNodeObject() {
+        return collectIRNodeData(sourceDescriptor != null ? sourceDescriptor.getNodeObject() : null);
+    }
+
+    @TruffleBoundary
+    private LLVMNodeObject collectIRNodeData(LLVMNodeObject staticMembers) {
+        final EconomicMap<String, Object> members = EconomicMap.create();
+
+        // import IR-level node properties
+        if (irNodeType != null) {
+            if (irNodeType != VoidType.INSTANCE) {
+                members.put(LLVMTags.EXTRA_DATA_VALUE_TYPE, LLVMTypeInteropWrapper.create(irNodeType, getDataLayout()));
+            }
+            collectIRNodeData(members);
+        }
+
+        // import dynamic properties not encoded in the nodes
+        if (staticMembers != null) {
+            final String[] keys = staticMembers.getKeys();
+            final Object[] values = staticMembers.getValues();
+            for (int i = 0; i < keys.length; i++) {
+                members.put(keys[i], values[i]);
+            }
+        }
+
+        return LLVMNodeObject.create(members);
+    }
+
+    protected void collectIRNodeData(@SuppressWarnings("unused") EconomicMap<String, Object> members) {
     }
 }

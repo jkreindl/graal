@@ -30,13 +30,15 @@
 package com.oracle.truffle.llvm.runtime.nodes.api;
 
 import com.oracle.truffle.api.CompilerAsserts;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.source.SourceSection;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 
 public final class LLVMNodeSourceDescriptor {
 
-    private static final SourceSection DEFAULT_SOURCE_SECTION;
+    static final SourceSection DEFAULT_SOURCE_SECTION;
 
     static {
         final Source source = Source.newBuilder("llvm", "LLVM IR", "<llvm ir>").mimeType("text/plain").build();
@@ -45,6 +47,9 @@ public final class LLVMNodeSourceDescriptor {
 
     private LLVMSourceLocation sourceLocation;
     private boolean hasStatementTag;
+
+    private Class<? extends Tag>[] tags;
+    private LLVMNodeObject nodeObject;
 
     public LLVMSourceLocation getSourceLocation() {
         return sourceLocation;
@@ -59,6 +64,25 @@ public final class LLVMNodeSourceDescriptor {
 
     public boolean hasStatementTag() {
         return hasStatementTag && sourceLocation != null;
+    }
+
+    public Class<? extends Tag>[] getTags() {
+        return tags;
+    }
+
+    public boolean hasTag(Class<? extends Tag> tag) {
+        if (tags != null) {
+            for (Class<? extends Tag> providedTag : tags) {
+                if (tag == providedTag) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public LLVMNodeObject getNodeObject() {
+        return nodeObject != null ? nodeObject : LLVMNodeObject.EMPTY;
     }
 
     public void setSourceLocation(LLVMSourceLocation sourceLocation) {
