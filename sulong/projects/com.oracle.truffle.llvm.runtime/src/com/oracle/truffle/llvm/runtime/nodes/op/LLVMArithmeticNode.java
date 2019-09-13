@@ -29,27 +29,30 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes.op;
 
+import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.CreateCast;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
 import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.nodes.UnexpectedResultException;
 import com.oracle.truffle.api.profiles.ValueProfile;
 import com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticFlag;
 import com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticOperator;
-import com.oracle.truffle.llvm.runtime.nodes.op.arith.floating.LLVMArithmeticFactory;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.interop.LLVMNegatedForeignObject;
 import com.oracle.truffle.llvm.runtime.library.internal.LLVMNativeLibrary;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMArithmetic.LLVMArithmeticOpNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMTypesGen;
+import com.oracle.truffle.llvm.runtime.nodes.op.arith.floating.LLVMArithmeticFactory;
 import com.oracle.truffle.llvm.runtime.nodes.op.LLVMArithmeticNodeFactory.LLVMI64ArithmeticNodeGen;
 import com.oracle.truffle.llvm.runtime.nodes.op.LLVMArithmeticNodeFactory.LLVMI64SubNodeGen;
 import com.oracle.truffle.llvm.runtime.nodes.op.LLVMArithmeticNodeFactory.ManagedAndNodeGen;
@@ -59,7 +62,11 @@ import com.oracle.truffle.llvm.runtime.nodes.op.LLVMArithmeticNodeFactory.Manage
 import com.oracle.truffle.llvm.runtime.nodes.op.LLVMArithmeticNodeFactory.PointerToI64NodeGen;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
+import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
+import com.oracle.truffle.llvm.runtime.types.Type;
+import com.oracle.truffle.llvm.runtime.types.VariableBitWidthType;
 import com.oracle.truffle.llvm.spi.ReferenceLibrary;
+import org.graalvm.collections.EconomicMap;
 
 @NodeChild("leftNode")
 @NodeChild("rightNode")
@@ -495,8 +502,11 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
 
     public abstract static class LLVMIVarBitArithmeticNode extends LLVMArithmeticNode {
 
-        LLVMIVarBitArithmeticNode(LLVMArithmeticOperator op, int flags) {
+        private final Type type;
+
+        LLVMIVarBitArithmeticNode(LLVMArithmeticOperator op, Type type, int flags) {
             super(op, flags);
+            this.type = type;
         }
 
         @Specialization
