@@ -29,15 +29,19 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes.op;
 
+import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.CreateCast;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
 import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.nodes.UnexpectedResultException;
 import com.oracle.truffle.api.profiles.ValueProfile;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.op.arith.floating.LLVMArithmeticFactory;
 import com.oracle.truffle.llvm.runtime.ArithmeticOperation;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
@@ -57,7 +61,11 @@ import com.oracle.truffle.llvm.runtime.nodes.op.LLVMArithmeticNodeFactory.Manage
 import com.oracle.truffle.llvm.runtime.nodes.op.LLVMArithmeticNodeFactory.PointerToI64NodeGen;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
+import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
+import com.oracle.truffle.llvm.runtime.types.Type;
+import com.oracle.truffle.llvm.runtime.types.VariableBitWidthType;
 import com.oracle.truffle.llvm.spi.ReferenceLibrary;
+import org.graalvm.collections.EconomicMap;
 
 @NodeChild("leftNode")
 @NodeChild("rightNode")
@@ -177,6 +185,75 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         }
     }
 
+    abstract Type getValueType();
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        CompilerAsserts.neverPartOfCompilation();
+        if (op == ADD) {
+            return super.hasTag(tag, LLVMTags.Add.EXPRESSION_TAGS);
+        } else if (op == SUB) {
+            return super.hasTag(tag, LLVMTags.Sub.EXPRESSION_TAGS);
+        } else if (op == MUL) {
+            return super.hasTag(tag, LLVMTags.Mul.EXPRESSION_TAGS);
+        } else if (op == UDIV) {
+            return super.hasTag(tag, LLVMTags.UDiv.EXPRESSION_TAGS);
+        } else if (op == DIV) {
+            return super.hasTag(tag, selectTypedInstructionTags(getValueType(), LLVMTags.SDiv.EXPRESSION_TAGS, LLVMTags.FDiv.EXPRESSION_TAGS));
+        } else if (op == UREM) {
+            return super.hasTag(tag, LLVMTags.URem.EXPRESSION_TAGS);
+        } else if (op == REM) {
+            return super.hasTag(tag, selectTypedInstructionTags(getValueType(), LLVMTags.SRem.EXPRESSION_TAGS, LLVMTags.FRem.EXPRESSION_TAGS));
+        } else if (op == AND) {
+            return super.hasTag(tag, LLVMTags.And.EXPRESSION_TAGS);
+        } else if (op == OR) {
+            return super.hasTag(tag, LLVMTags.Or.EXPRESSION_TAGS);
+        } else if (op == XOR) {
+            return super.hasTag(tag, LLVMTags.XOr.EXPRESSION_TAGS);
+        } else if (op == SHL) {
+            return super.hasTag(tag, LLVMTags.ShL.EXPRESSION_TAGS);
+        } else if (op == LSHR) {
+            return super.hasTag(tag, LLVMTags.LShR.EXPRESSION_TAGS);
+        } else if (op == ASHR) {
+            return super.hasTag(tag, LLVMTags.AShR.EXPRESSION_TAGS);
+        } else {
+            throw new AssertionError("Cannot determine tag from unknown operation");
+        }
+    }
+
+    private static Class<? extends Tag>[] selectTypedInstructionTags(Type valueType, Class<? extends Tag>[] integerTags, Class<? extends Tag>[] floatingPointTags) {
+        CompilerAsserts.neverPartOfCompilation();
+        if (valueType instanceof PrimitiveType) {
+            switch (((PrimitiveType) valueType).getPrimitiveKind()) {
+                case I1:
+                case I8:
+                case I16:
+                case I32:
+                case I64:
+                    return integerTags;
+                case HALF:
+                case FLOAT:
+                case DOUBLE:
+                case F128:
+                case X86_FP80:
+                case PPC_FP128:
+                    return floatingPointTags;
+            }
+        } else if (valueType instanceof VariableBitWidthType) {
+            return integerTags;
+        }
+
+        throw new AssertionError("Cannot determine kind of value: " + valueType);
+    }
+
+    @Override
+    @TruffleBoundary
+    protected void collectIRNodeData(EconomicMap<String, Object> members) {
+        super.collectIRNodeData(members);
+        members.put(LLVMTags.EXTRA_DATA_VALUE_TYPE, getValueType());
+        // TODO (jk) add arithmetic flags
+    }
+
     public abstract static class LLVMI1ArithmeticNode extends LLVMArithmeticNode {
 
         LLVMI1ArithmeticNode(ArithmeticOperation op) {
@@ -186,6 +263,11 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         @Specialization
         boolean doBoolean(boolean left, boolean right) {
             return op.doBoolean(left, right);
+        }
+
+        @Override
+        Type getValueType() {
+            return PrimitiveType.I1;
         }
     }
 
@@ -199,6 +281,11 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         byte doByte(byte left, byte right) {
             return op.doByte(left, right);
         }
+
+        @Override
+        Type getValueType() {
+            return PrimitiveType.I8;
+        }
     }
 
     public abstract static class LLVMI16ArithmeticNode extends LLVMArithmeticNode {
@@ -211,6 +298,11 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         short doShort(short left, short right) {
             return op.doShort(left, right);
         }
+
+        @Override
+        Type getValueType() {
+            return PrimitiveType.I16;
+        }
     }
 
     public abstract static class LLVMI32ArithmeticNode extends LLVMArithmeticNode {
@@ -222,6 +314,11 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         @Specialization
         int doInt(int left, int right) {
             return op.doInt(left, right);
+        }
+
+        @Override
+        Type getValueType() {
+            return PrimitiveType.I32;
         }
     }
 
@@ -329,6 +426,11 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
                         @CachedLibrary("left") LLVMNativeLibrary leftLib) {
             return op.doLong(leftLib.toNativePointer(left).asNative(), right);
         }
+
+        @Override
+        Type getValueType() {
+            return PrimitiveType.I64;
+        }
     }
 
     abstract static class LLVMI64ArithmeticNode extends LLVMAbstractI64ArithmeticNode {
@@ -368,13 +470,21 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
 
     public abstract static class LLVMIVarBitArithmeticNode extends LLVMArithmeticNode {
 
-        LLVMIVarBitArithmeticNode(ArithmeticOperation op) {
+        private final Type type;
+
+        LLVMIVarBitArithmeticNode(ArithmeticOperation op, Type type) {
             super(op);
+            this.type = type;
         }
 
         @Specialization
         LLVMIVarBit doVarBit(LLVMIVarBit left, LLVMIVarBit right) {
             return op.doVarBit(left, right);
+        }
+
+        @Override
+        Type getValueType() {
+            return type;
         }
     }
 
@@ -400,6 +510,11 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         float doFloat(float left, float right) {
             return fpOp().doFloat(left, right);
         }
+
+        @Override
+        Type getValueType() {
+            return PrimitiveType.FLOAT;
+        }
     }
 
     public abstract static class LLVMDoubleArithmeticNode extends LLVMFloatingArithmeticNode {
@@ -411,6 +526,11 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         @Specialization
         double doDouble(double left, double right) {
             return fpOp().doDouble(left, right);
+        }
+
+        @Override
+        Type getValueType() {
+            return PrimitiveType.DOUBLE;
         }
     }
 
@@ -428,6 +548,11 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         LLVM80BitFloat do80BitFloat(LLVM80BitFloat left, LLVM80BitFloat right,
                         @Cached("createFP80Node()") LLVMArithmeticOpNode node) {
             return (LLVM80BitFloat) node.execute(left, right);
+        }
+
+        @Override
+        Type getValueType() {
+            return PrimitiveType.X86_FP80;
         }
     }
 

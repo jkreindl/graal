@@ -1285,7 +1285,7 @@ public class BasicNodeFactory implements NodeFactory {
                     throw new AssertionError(type);
             }
         } else if (type instanceof VariableBitWidthType) {
-            return LLVMIVarBitArithmeticNodeGen.create(op, left, right);
+            return LLVMIVarBitArithmeticNodeGen.create(op, type, left, right);
         } else {
             throw new AssertionError(type);
         }
