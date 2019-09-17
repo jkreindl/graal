@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,60 +27,41 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.model.enums;
+package com.oracle.truffle.llvm.runtime.arithmetic;
 
-public enum BinaryOperator {
+import static com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticFlag.EXACT;
+import static com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticFlag.FAST_MATH_FLAGS;
+import static com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticFlag.INTEGER_ARITHMETIC_FLAGS;
+import static com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticFlag.NO_FLAGS;
 
-    INT_ADD(13, "add"),
-    INT_SUBTRACT(14, "sub"),
-    INT_MULTIPLY(15, "mul"),
-    INT_UNSIGNED_DIVIDE(-1, "udiv"),
-    INT_SIGNED_DIVIDE(16, "sdiv"),
-    INT_UNSIGNED_REMAINDER(-1, "urem"),
-    INT_SIGNED_REMAINDER(17, "srem"),
-    INT_SHIFT_LEFT(-1, "shl"),
-    INT_LOGICAL_SHIFT_RIGHT(-1, "lshr"),
-    INT_ARITHMETIC_SHIFT_RIGHT(-1, "ashr"),
-    INT_AND(-1, "and"),
-    INT_OR(-1, "or"),
-    INT_XOR(-1, "xor"),
+public enum LLVMArithmeticOperator {
 
-    FP_ADD(-1, "fadd"),
-    FP_SUBTRACT(-1, "fsub"),
-    FP_MULTIPLY(-1, "fmul"),
-    FP_DIVIDE(-1, "fdiv"),
-    FP_REMAINDER(-1, "frem");
+    ADD(INTEGER_ARITHMETIC_FLAGS),
+    FADD(FAST_MATH_FLAGS),
+    SUB(INTEGER_ARITHMETIC_FLAGS),
+    FSUB(FAST_MATH_FLAGS),
+    MUL(INTEGER_ARITHMETIC_FLAGS),
+    FMUL(FAST_MATH_FLAGS),
+    SDIV(EXACT),
+    UDIV(EXACT),
+    FDIV(FAST_MATH_FLAGS),
+    SREM(),
+    UREM(),
+    FREM(FAST_MATH_FLAGS),
+    AND(),
+    OR(),
+    XOR(),
+    SHL(INTEGER_ARITHMETIC_FLAGS),
+    LSHR(EXACT),
+    ASHR(EXACT);
 
-    private static final BinaryOperator[] VALUES = values();
+    private final LLVMArithmeticFlag[] possibleFlags;
 
-    public static BinaryOperator decode(int opcode, boolean isFloatingPoint) {
-        if (opcode >= 0 && opcode <= INT_XOR.ordinal()) {
-            BinaryOperator op = VALUES[opcode];
-            return isFloatingPoint ? op.fp() : op;
-        }
-        return null;
+    LLVMArithmeticOperator(LLVMArithmeticFlag... possibleFlags) {
+        this.possibleFlags = possibleFlags != null ? possibleFlags : NO_FLAGS;
     }
 
-    private final int fpmap;
-    private final String irString;
-
-    BinaryOperator(int fpmap, String irString) {
-        this.fpmap = fpmap;
-        this.irString = irString;
-    }
-
-    private BinaryOperator fp() {
-        return fpmap < 0 ? null : VALUES[fpmap];
-    }
-
-    public boolean isFloatingPoint() {
-        return this.ordinal() > INT_XOR.ordinal();
-    }
-
-    /**
-     * Useful to get the llvm ir equivalent string of the enum.
-     */
-    public String getIrString() {
-        return irString;
+    public LLVMArithmeticFlag[] getPossibleFlags() {
+        return possibleFlags;
     }
 }

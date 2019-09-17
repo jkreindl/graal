@@ -29,57 +29,12 @@
  */
 package com.oracle.truffle.llvm.parser.util;
 
-import com.oracle.truffle.llvm.parser.model.enums.BinaryOperator;
 import com.oracle.truffle.llvm.parser.model.enums.CastOperator;
-import com.oracle.truffle.llvm.runtime.ArithmeticOperation;
 import com.oracle.truffle.llvm.runtime.NodeFactory;
-import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class LLVMBitcodeTypeHelper {
-
-    public static LLVMExpressionNode createArithmeticInstruction(NodeFactory nodeFactory, LLVMExpressionNode lhs, LLVMExpressionNode rhs, BinaryOperator operator, Type type) {
-        return nodeFactory.createArithmeticOp(getArithmeticOperation(operator), type, lhs, rhs);
-    }
-
-    private static ArithmeticOperation getArithmeticOperation(BinaryOperator operator) {
-        switch (operator) {
-            case INT_ADD:
-            case FP_ADD:
-                return ArithmeticOperation.ADD;
-            case INT_SUBTRACT:
-            case FP_SUBTRACT:
-                return ArithmeticOperation.SUB;
-            case INT_MULTIPLY:
-            case FP_MULTIPLY:
-                return ArithmeticOperation.MUL;
-            case INT_UNSIGNED_DIVIDE:
-                return ArithmeticOperation.UDIV;
-            case INT_SIGNED_DIVIDE:
-            case FP_DIVIDE:
-                return ArithmeticOperation.DIV;
-            case INT_UNSIGNED_REMAINDER:
-                return ArithmeticOperation.UREM;
-            case INT_SIGNED_REMAINDER:
-            case FP_REMAINDER:
-                return ArithmeticOperation.REM;
-            case INT_SHIFT_LEFT:
-                return ArithmeticOperation.SHL;
-            case INT_LOGICAL_SHIFT_RIGHT:
-                return ArithmeticOperation.LSHR;
-            case INT_ARITHMETIC_SHIFT_RIGHT:
-                return ArithmeticOperation.ASHR;
-            case INT_AND:
-                return ArithmeticOperation.AND;
-            case INT_OR:
-                return ArithmeticOperation.OR;
-            case INT_XOR:
-                return ArithmeticOperation.XOR;
-            default:
-                throw new LLVMParserException("Unknown binary operator: " + operator);
-        }
-    }
 
     public static LLVMExpressionNode createCast(NodeFactory nodeFactory, LLVMExpressionNode fromNode, Type targetType, Type fromType, CastOperator operator) {
         switch (operator) {

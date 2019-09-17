@@ -37,6 +37,7 @@ import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.nodes.RootNode;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.llvm.runtime.LLVMContext.ExternalLibrary;
+import com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticOperator;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.debug.value.LLVMDebugObjectBuilder;
 import com.oracle.truffle.llvm.runtime.debug.value.LLVMDebugValue;
@@ -99,7 +100,7 @@ public interface NodeFactory extends InteropNodeFactory {
 
     LLVMStatementNode createFence();
 
-    LLVMExpressionNode createArithmeticOp(ArithmeticOperation op, Type type, LLVMExpressionNode left, LLVMExpressionNode right);
+    LLVMExpressionNode createArithmeticOp(LLVMArithmeticOperator op, Type type, LLVMExpressionNode left, LLVMExpressionNode right, int flags);
 
     LLVMExpressionNode createLiteral(Object value, Type type);
 
