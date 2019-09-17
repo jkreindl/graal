@@ -40,7 +40,7 @@ import com.oracle.truffle.llvm.parser.model.attributes.Attribute;
 import com.oracle.truffle.llvm.parser.model.attributes.Attribute.KnownAttribute;
 import com.oracle.truffle.llvm.parser.model.attributes.AttributesGroup;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDeclaration;
-import com.oracle.truffle.llvm.runtime.ArithmeticOperation;
+import com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticOperator;
 import com.oracle.truffle.llvm.runtime.CompareOperator;
 import com.oracle.truffle.llvm.runtime.GetStackSpaceFactory;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
@@ -1113,41 +1113,41 @@ public class BasicNodeFactory implements NodeFactory {
     }
 
     @Override
-    public LLVMExpressionNode createArithmeticOp(ArithmeticOperation op, Type type, LLVMExpressionNode left, LLVMExpressionNode right) {
+    public LLVMExpressionNode createArithmeticOp(LLVMArithmeticOperator op, Type type, LLVMExpressionNode left, LLVMExpressionNode right, int flags) {
         if (type instanceof VectorType) {
             VectorType vectorType = (VectorType) type;
-            LLVMArithmeticNode arithmeticNode = createScalarArithmeticOp(op, vectorType.getElementType(), null, null);
+            LLVMArithmeticNode arithmeticNode = createScalarArithmeticOp(op, vectorType.getElementType(), null, null, flags);
             return LLVMVectorArithmeticNodeGen.create(vectorType.getNumberOfElements(), arithmeticNode, left, right);
         } else {
-            return createScalarArithmeticOp(op, type, left, right);
+            return createScalarArithmeticOp(op, type, left, right, flags);
         }
     }
 
-    protected LLVMArithmeticNode createScalarArithmeticOp(ArithmeticOperation op, Type type, LLVMExpressionNode left, LLVMExpressionNode right) {
+    protected LLVMArithmeticNode createScalarArithmeticOp(LLVMArithmeticOperator op, Type type, LLVMExpressionNode left, LLVMExpressionNode right, int flags) {
         assert !(type instanceof VectorType);
         if (type instanceof PrimitiveType) {
             switch (((PrimitiveType) type).getPrimitiveKind()) {
                 case I1:
-                    return LLVMI1ArithmeticNodeGen.create(op, left, right);
+                    return LLVMI1ArithmeticNodeGen.create(op, flags, left, right);
                 case I8:
-                    return LLVMI8ArithmeticNodeGen.create(op, left, right);
+                    return LLVMI8ArithmeticNodeGen.create(op, flags, left, right);
                 case I16:
-                    return LLVMI16ArithmeticNodeGen.create(op, left, right);
+                    return LLVMI16ArithmeticNodeGen.create(op, flags, left, right);
                 case I32:
-                    return LLVMI32ArithmeticNodeGen.create(op, left, right);
+                    return LLVMI32ArithmeticNodeGen.create(op, flags, left, right);
                 case I64:
-                    return LLVMAbstractI64ArithmeticNode.create(op, left, right);
+                    return LLVMAbstractI64ArithmeticNode.create(op, left, right, flags);
                 case FLOAT:
-                    return LLVMFloatArithmeticNodeGen.create(op, left, right);
+                    return LLVMFloatArithmeticNodeGen.create(op, flags, left, right);
                 case DOUBLE:
-                    return LLVMDoubleArithmeticNodeGen.create(op, left, right);
+                    return LLVMDoubleArithmeticNodeGen.create(op, flags, left, right);
                 case X86_FP80:
-                    return LLVMFP80ArithmeticNodeGen.create(op, left, right);
+                    return LLVMFP80ArithmeticNodeGen.create(op, flags, left, right);
                 default:
                     throw new AssertionError(type);
             }
         } else if (type instanceof VariableBitWidthType) {
-            return LLVMIVarBitArithmeticNodeGen.create(op, left, right);
+            return LLVMIVarBitArithmeticNodeGen.create(op, flags, left, right);
         } else {
             throw new AssertionError(type);
         }

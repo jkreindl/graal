@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -30,21 +30,22 @@
 package com.oracle.truffle.llvm.parser.model.symbols.constants;
 
 import com.oracle.truffle.llvm.parser.model.SymbolTable;
-import com.oracle.truffle.llvm.parser.model.enums.BinaryOperator;
+import com.oracle.truffle.llvm.parser.model.enums.BinaryArithmeticParser;
 import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
+import com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticOperator;
 import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.runtime.types.VectorType;
 import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 
 public final class BinaryOperationConstant extends AbstractConstant {
 
-    private final BinaryOperator operator;
+    private final LLVMArithmeticOperator operator;
 
     private SymbolImpl lhs;
 
     private SymbolImpl rhs;
 
-    private BinaryOperationConstant(Type type, BinaryOperator operator) {
+    private BinaryOperationConstant(Type type, LLVMArithmeticOperator operator) {
         super(type);
         this.operator = operator;
         this.lhs = null;
@@ -60,7 +61,7 @@ public final class BinaryOperationConstant extends AbstractConstant {
         return lhs;
     }
 
-    public BinaryOperator getOperator() {
+    public LLVMArithmeticOperator getOperator() {
         return operator;
     }
 
@@ -80,7 +81,7 @@ public final class BinaryOperationConstant extends AbstractConstant {
 
     public static BinaryOperationConstant fromSymbols(SymbolTable symbols, Type type, int opcode, int lhs, int rhs) {
         final boolean isFloatingPoint = Type.isFloatingpointType(type) || (type instanceof VectorType && Type.isFloatingpointType(((VectorType) type).getElementType()));
-        final BinaryOperator operator = BinaryOperator.decode(opcode, isFloatingPoint);
+        final LLVMArithmeticOperator operator = BinaryArithmeticParser.parse(opcode, isFloatingPoint);
         final BinaryOperationConstant constant = new BinaryOperationConstant(type, operator);
         constant.lhs = symbols.getForwardReferenced(lhs, constant);
         constant.rhs = symbols.getForwardReferenced(rhs, constant);

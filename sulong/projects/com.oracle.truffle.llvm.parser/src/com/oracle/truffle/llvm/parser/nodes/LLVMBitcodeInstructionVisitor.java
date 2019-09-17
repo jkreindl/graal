@@ -224,7 +224,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         LLVMExpressionNode lhs = symbols.resolve(operation.getLHS());
         LLVMExpressionNode rhs = symbols.resolve(operation.getRHS());
 
-        LLVMExpressionNode result = LLVMBitcodeTypeHelper.createArithmeticInstruction(nodeFactory, lhs, rhs, operation.getOperator(), operation.getType());
+        LLVMExpressionNode result = nodeFactory.createArithmeticOp(operation.getOperator(), operation.getType(), lhs, rhs, operation.getFlags());
         createFrameWrite(result, operation);
     }
 

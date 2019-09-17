@@ -30,6 +30,7 @@
 package com.oracle.truffle.llvm.runtime.nodes.op;
 
 import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.CreateCast;
 import com.oracle.truffle.api.dsl.NodeChild;
@@ -38,8 +39,9 @@ import com.oracle.truffle.api.interop.UnsupportedMessageException;
 import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.nodes.UnexpectedResultException;
 import com.oracle.truffle.api.profiles.ValueProfile;
+import com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticFlag;
+import com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticOperator;
 import com.oracle.truffle.llvm.runtime.nodes.op.arith.floating.LLVMArithmeticFactory;
-import com.oracle.truffle.llvm.runtime.ArithmeticOperation;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
 import com.oracle.truffle.llvm.runtime.interop.LLVMNegatedForeignObject;
@@ -67,6 +69,12 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
 
     private abstract static class LLVMArithmeticOp {
 
+        private final LLVMArithmeticOperator operator;
+
+        protected LLVMArithmeticOp(LLVMArithmeticOperator operator) {
+            this.operator = operator;
+        }
+
         abstract boolean doBoolean(boolean left, boolean right);
 
         abstract byte doByte(byte left, byte right);
@@ -86,9 +94,22 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         ManagedArithmeticNode createManagedNode() {
             return null;
         }
+
+        public LLVMArithmeticOperator getOperator() {
+            return operator;
+        }
+
+        @Override
+        public String toString() {
+            return getOperator().toString();
+        }
     }
 
     private abstract static class LLVMFPArithmeticOp extends LLVMArithmeticOp {
+
+        private LLVMFPArithmeticOp(LLVMArithmeticOperator operator) {
+            super(operator);
+        }
 
         abstract float doFloat(float left, float right);
 
@@ -127,101 +148,202 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
 
     final LLVMArithmeticOp op;
 
+    private final int flags;
+
     protected boolean canDoManaged(long operand) {
         return op.canDoManaged(operand);
     }
 
-    protected LLVMArithmeticNode(ArithmeticOperation op) {
+    protected LLVMArithmeticNode(LLVMArithmeticOperator op, int flags) {
+        this.op = getOperationImplementation(op);
+        this.flags = flags;
+    }
+
+    private static LLVMArithmeticOp getOperationImplementation(LLVMArithmeticOperator op) {
+        assert op != null;
         switch (op) {
             case ADD:
-                this.op = ADD;
-                break;
+                return ADD;
+            case FADD:
+                return FADD;
             case SUB:
-                this.op = SUB;
-                break;
+                return SUB;
+            case FSUB:
+                return FSUB;
             case MUL:
-                this.op = MUL;
-                break;
-            case DIV:
-                this.op = DIV;
-                break;
+                return MUL;
+            case FMUL:
+                return FMUL;
+            case SDIV:
+                return SDIV;
+            case FDIV:
+                return FDIV;
             case UDIV:
-                this.op = UDIV;
-                break;
-            case REM:
-                this.op = REM;
-                break;
+                return UDIV;
+            case SREM:
+                return SREM;
+            case FREM:
+                return FREM;
             case UREM:
-                this.op = UREM;
-                break;
+                return UREM;
             case AND:
-                this.op = AND;
-                break;
+                return AND;
             case OR:
-                this.op = OR;
-                break;
+                return OR;
             case XOR:
-                this.op = XOR;
-                break;
+                return XOR;
             case SHL:
-                this.op = SHL;
-                break;
+                return SHL;
             case LSHR:
-                this.op = LSHR;
-                break;
+                return LSHR;
             case ASHR:
-                this.op = ASHR;
-                break;
+                return ASHR;
             default:
-                throw new AssertionError(op.name());
+                throw new AssertionError("Unimplemented arithmetic operation: " + op.name());
         }
+    }
+
+    @Override
+    @TruffleBoundary
+    public String toString() {
+        final LLVMArithmeticOperator arithmeticKind = op.getOperator();
+        return String.format("%s %s", arithmeticKind, LLVMArithmeticFlag.formatFlags(arithmeticKind, flags));
+    }
+
+    protected abstract Type getValueType();
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        CompilerAsserts.neverPartOfCompilation();
+        if (op == ADD) {
+            return super.hasTag(tag, LLVMTags.Add.EXPRESSION_TAGS);
+        } else if (op == SUB) {
+            return super.hasTag(tag, LLVMTags.Sub.EXPRESSION_TAGS);
+        } else if (op == MUL) {
+            return super.hasTag(tag, LLVMTags.Mul.EXPRESSION_TAGS);
+        } else if (op == UDIV) {
+            return super.hasTag(tag, LLVMTags.UDiv.EXPRESSION_TAGS);
+        } else if (op == SDIV) {
+            return super.hasTag(tag, selectTypedInstructionTags(getValueType(), LLVMTags.SDiv.EXPRESSION_TAGS, LLVMTags.FDiv.EXPRESSION_TAGS));
+        } else if (op == UREM) {
+            return super.hasTag(tag, LLVMTags.URem.EXPRESSION_TAGS);
+        } else if (op == SREM) {
+            return super.hasTag(tag, selectTypedInstructionTags(getValueType(), LLVMTags.SRem.EXPRESSION_TAGS, LLVMTags.FRem.EXPRESSION_TAGS));
+        } else if (op == AND) {
+            return super.hasTag(tag, LLVMTags.And.EXPRESSION_TAGS);
+        } else if (op == OR) {
+            return super.hasTag(tag, LLVMTags.Or.EXPRESSION_TAGS);
+        } else if (op == XOR) {
+            return super.hasTag(tag, LLVMTags.XOr.EXPRESSION_TAGS);
+        } else if (op == SHL) {
+            return super.hasTag(tag, LLVMTags.ShL.EXPRESSION_TAGS);
+        } else if (op == LSHR) {
+            return super.hasTag(tag, LLVMTags.LShR.EXPRESSION_TAGS);
+        } else if (op == ASHR) {
+            return super.hasTag(tag, LLVMTags.AShR.EXPRESSION_TAGS);
+        } else {
+            throw new AssertionError("Cannot determine tag from unknown operation");
+        }
+    }
+
+    private static Class<? extends Tag>[] selectTypedInstructionTags(Type valueType, Class<? extends Tag>[] integerTags, Class<? extends Tag>[] floatingPointTags) {
+        CompilerAsserts.neverPartOfCompilation();
+        if (valueType instanceof PrimitiveType) {
+            switch (((PrimitiveType) valueType).getPrimitiveKind()) {
+                case I1:
+                case I8:
+                case I16:
+                case I32:
+                case I64:
+                    return integerTags;
+                case HALF:
+                case FLOAT:
+                case DOUBLE:
+                case F128:
+                case X86_FP80:
+                case PPC_FP128:
+                    return floatingPointTags;
+            }
+        } else if (valueType instanceof VariableBitWidthType) {
+            return integerTags;
+        }
+
+        throw new AssertionError("Cannot determine kind of value: " + valueType);
+    }
+
+    @Override
+    @TruffleBoundary
+    protected void collectIRNodeData(EconomicMap<String, Object> members) {
+        super.collectIRNodeData(members);
+        members.put(LLVMTags.EXTRA_DATA_VALUE_TYPE, getValueType());
+        // TODO (jk) add arithmetic flags
     }
 
     public abstract static class LLVMI1ArithmeticNode extends LLVMArithmeticNode {
 
-        LLVMI1ArithmeticNode(ArithmeticOperation op) {
-            super(op);
+        LLVMI1ArithmeticNode(LLVMArithmeticOperator op, int flags) {
+            super(op, flags);
         }
 
         @Specialization
         boolean doBoolean(boolean left, boolean right) {
             return op.doBoolean(left, right);
         }
+
+        @Override
+        protected Type getValueType() {
+            return PrimitiveType.I1;
+        }
     }
 
     public abstract static class LLVMI8ArithmeticNode extends LLVMArithmeticNode {
 
-        LLVMI8ArithmeticNode(ArithmeticOperation op) {
-            super(op);
+        LLVMI8ArithmeticNode(LLVMArithmeticOperator op, int flags) {
+            super(op, flags);
         }
 
         @Specialization
         byte doByte(byte left, byte right) {
             return op.doByte(left, right);
         }
+
+        @Override
+        protected Type getValueType() {
+            return PrimitiveType.I8;
+        }
     }
 
     public abstract static class LLVMI16ArithmeticNode extends LLVMArithmeticNode {
 
-        LLVMI16ArithmeticNode(ArithmeticOperation op) {
-            super(op);
+        LLVMI16ArithmeticNode(LLVMArithmeticOperator op, int flags) {
+            super(op, flags);
         }
 
         @Specialization
         short doShort(short left, short right) {
             return op.doShort(left, right);
         }
+
+        @Override
+        protected Type getValueType() {
+            return PrimitiveType.I16;
+        }
     }
 
     public abstract static class LLVMI32ArithmeticNode extends LLVMArithmeticNode {
 
-        LLVMI32ArithmeticNode(ArithmeticOperation op) {
-            super(op);
+        LLVMI32ArithmeticNode(LLVMArithmeticOperator op, int flags) {
+            super(op, flags);
         }
 
         @Specialization
         int doInt(int left, int right) {
             return op.doInt(left, right);
+        }
+
+        @Override
+        protected Type getValueType() {
+            return PrimitiveType.I32;
         }
     }
 
@@ -268,16 +390,16 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
 
         public abstract long executeLongWithTarget(long left, long right);
 
-        public static LLVMAbstractI64ArithmeticNode create(ArithmeticOperation op, LLVMExpressionNode left, LLVMExpressionNode right) {
-            if (op == ArithmeticOperation.SUB) {
-                return LLVMI64SubNodeGen.create(left, right);
+        public static LLVMAbstractI64ArithmeticNode create(LLVMArithmeticOperator op, LLVMExpressionNode left, LLVMExpressionNode right, int flags) {
+            if (op == LLVMArithmeticOperator.SUB) {
+                return LLVMI64SubNodeGen.create(flags, left, right);
             } else {
-                return LLVMI64ArithmeticNodeGen.create(op, left, right);
+                return LLVMI64ArithmeticNodeGen.create(op, flags, left, right);
             }
         }
 
-        protected LLVMAbstractI64ArithmeticNode(ArithmeticOperation op) {
-            super(op);
+        protected LLVMAbstractI64ArithmeticNode(LLVMArithmeticOperator op, int flags) {
+            super(op, flags);
         }
 
         @CreateCast({"leftNode", "rightNode"})
@@ -329,12 +451,17 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
                         @CachedLibrary("left") LLVMNativeLibrary leftLib) {
             return op.doLong(leftLib.toNativePointer(left).asNative(), right);
         }
+
+        @Override
+        public Type getValueType() {
+            return PrimitiveType.I64;
+        }
     }
 
     abstract static class LLVMI64ArithmeticNode extends LLVMAbstractI64ArithmeticNode {
 
-        protected LLVMI64ArithmeticNode(ArithmeticOperation op) {
-            super(op);
+        protected LLVMI64ArithmeticNode(LLVMArithmeticOperator op, int flags) {
+            super(op, flags);
         }
 
         @Specialization(limit = "3")
@@ -347,8 +474,8 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
 
     abstract static class LLVMI64SubNode extends LLVMAbstractI64ArithmeticNode {
 
-        protected LLVMI64SubNode() {
-            super(ArithmeticOperation.SUB);
+        protected LLVMI64SubNode(int flags) {
+            super(LLVMArithmeticOperator.SUB, flags);
         }
 
         @Specialization(limit = "3", guards = "sameObject.isSame(left.getObject(), right.getObject())")
@@ -368,20 +495,25 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
 
     public abstract static class LLVMIVarBitArithmeticNode extends LLVMArithmeticNode {
 
-        LLVMIVarBitArithmeticNode(ArithmeticOperation op) {
-            super(op);
+        LLVMIVarBitArithmeticNode(LLVMArithmeticOperator op, int flags) {
+            super(op, flags);
         }
 
         @Specialization
         LLVMIVarBit doVarBit(LLVMIVarBit left, LLVMIVarBit right) {
             return op.doVarBit(left, right);
         }
+
+        @Override
+        protected Type getValueType() {
+            return type;
+        }
     }
 
     public abstract static class LLVMFloatingArithmeticNode extends LLVMArithmeticNode {
 
-        LLVMFloatingArithmeticNode(ArithmeticOperation op) {
-            super(op);
+        LLVMFloatingArithmeticNode(LLVMArithmeticOperator op, int flags) {
+            super(op, flags);
             assert this.op instanceof LLVMFPArithmeticOp;
         }
 
@@ -392,32 +524,42 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
 
     public abstract static class LLVMFloatArithmeticNode extends LLVMFloatingArithmeticNode {
 
-        LLVMFloatArithmeticNode(ArithmeticOperation op) {
-            super(op);
+        LLVMFloatArithmeticNode(LLVMArithmeticOperator op, int flags) {
+            super(op, flags);
         }
 
         @Specialization
         float doFloat(float left, float right) {
             return fpOp().doFloat(left, right);
         }
+
+        @Override
+        protected Type getValueType() {
+            return PrimitiveType.FLOAT;
+        }
     }
 
     public abstract static class LLVMDoubleArithmeticNode extends LLVMFloatingArithmeticNode {
 
-        LLVMDoubleArithmeticNode(ArithmeticOperation op) {
-            super(op);
+        LLVMDoubleArithmeticNode(LLVMArithmeticOperator op, int flags) {
+            super(op, flags);
         }
 
         @Specialization
         double doDouble(double left, double right) {
             return fpOp().doDouble(left, right);
         }
+
+        @Override
+        protected Type getValueType() {
+            return PrimitiveType.DOUBLE;
+        }
     }
 
     public abstract static class LLVMFP80ArithmeticNode extends LLVMFloatingArithmeticNode {
 
-        LLVMFP80ArithmeticNode(ArithmeticOperation op) {
-            super(op);
+        LLVMFP80ArithmeticNode(LLVMArithmeticOperator op, int flags) {
+            super(op, flags);
         }
 
         LLVMArithmeticOpNode createFP80Node() {
@@ -429,6 +571,11 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
                         @Cached("createFP80Node()") LLVMArithmeticOpNode node) {
             return (LLVM80BitFloat) node.execute(left, right);
         }
+
+        @Override
+        protected Type getValueType() {
+            return PrimitiveType.X86_FP80;
+        }
     }
 
     static final class ManagedAddNode extends ManagedCommutativeArithmeticNode {
@@ -439,7 +586,14 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         }
     }
 
-    private static final LLVMFPArithmeticOp ADD = new LLVMFPArithmeticOp() {
+    private static final LLVMFPArithmeticOp ADD = new Addition(LLVMArithmeticOperator.ADD);
+    private static final LLVMFPArithmeticOp FADD = new Addition(LLVMArithmeticOperator.FADD);
+
+    private static final class Addition extends LLVMFPArithmeticOp {
+
+        private Addition(LLVMArithmeticOperator operator) {
+            super(operator);
+        }
 
         @Override
         boolean doBoolean(boolean left, boolean right) {
@@ -495,7 +649,7 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         LLVMArithmeticOpNode createFP80Node() {
             return LLVMArithmeticFactory.createAddNode();
         }
-    };
+    }
 
     abstract static class ManagedMulNode extends ManagedCommutativeArithmeticNode {
 
@@ -521,7 +675,14 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         }
     }
 
-    private static final LLVMFPArithmeticOp MUL = new LLVMFPArithmeticOp() {
+    private static final LLVMFPArithmeticOp MUL = new Multiplication(LLVMArithmeticOperator.MUL);
+    private static final LLVMFPArithmeticOp FMUL = new Multiplication(LLVMArithmeticOperator.FMUL);
+
+    private static final class Multiplication extends LLVMFPArithmeticOp {
+
+        private Multiplication(LLVMArithmeticOperator operator) {
+            super(operator);
+        }
 
         @Override
         boolean doBoolean(boolean left, boolean right) {
@@ -577,7 +738,7 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         LLVMArithmeticOpNode createFP80Node() {
             return LLVMArithmeticFactory.createMulNode();
         }
-    };
+    }
 
     abstract static class ManagedSubNode extends ManagedArithmeticNode {
 
@@ -596,7 +757,14 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         }
     }
 
-    private static final LLVMFPArithmeticOp SUB = new LLVMFPArithmeticOp() {
+    private static final LLVMFPArithmeticOp SUB = new Subtraction(LLVMArithmeticOperator.SUB);
+    private static final LLVMFPArithmeticOp FSUB = new Subtraction(LLVMArithmeticOperator.FSUB);
+
+    private static final class Subtraction extends LLVMFPArithmeticOp {
+
+        private Subtraction(LLVMArithmeticOperator operator) {
+            super(operator);
+        }
 
         @Override
         boolean doBoolean(boolean left, boolean right) {
@@ -652,9 +820,16 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         LLVMArithmeticOpNode createFP80Node() {
             return LLVMArithmeticFactory.createSubNode();
         }
-    };
+    }
 
-    private static final LLVMFPArithmeticOp DIV = new LLVMFPArithmeticOp() {
+    private static final LLVMFPArithmeticOp SDIV = new SignedDivision(LLVMArithmeticOperator.SDIV);
+    private static final LLVMFPArithmeticOp FDIV = new SignedDivision(LLVMArithmeticOperator.FDIV);
+
+    private static final class SignedDivision extends LLVMFPArithmeticOp {
+
+        private SignedDivision(LLVMArithmeticOperator operator) {
+            super(operator);
+        }
 
         @Override
         boolean doBoolean(boolean left, boolean right) {
@@ -704,9 +879,9 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         LLVMArithmeticOpNode createFP80Node() {
             return LLVMArithmeticFactory.createDivNode();
         }
-    };
+    }
 
-    private static final LLVMArithmeticOp UDIV = new LLVMArithmeticOp() {
+    private static final LLVMArithmeticOp UDIV = new LLVMArithmeticOp(LLVMArithmeticOperator.UDIV) {
 
         @Override
         boolean doBoolean(boolean left, boolean right) {
@@ -743,7 +918,14 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         }
     };
 
-    private static final LLVMFPArithmeticOp REM = new LLVMFPArithmeticOp() {
+    private static final LLVMFPArithmeticOp SREM = new SignedRemainder(LLVMArithmeticOperator.SREM);
+    private static final LLVMFPArithmeticOp FREM = new SignedRemainder(LLVMArithmeticOperator.FREM);
+
+    private static final class SignedRemainder extends LLVMFPArithmeticOp {
+
+        private SignedRemainder(LLVMArithmeticOperator operator) {
+            super(operator);
+        }
 
         @Override
         boolean doBoolean(boolean left, boolean right) {
@@ -793,9 +975,9 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         LLVMArithmeticOpNode createFP80Node() {
             return LLVMArithmeticFactory.createRemNode();
         }
-    };
+    }
 
-    private static final LLVMArithmeticOp UREM = new LLVMArithmeticOp() {
+    private static final LLVMArithmeticOp UREM = new LLVMArithmeticOp(LLVMArithmeticOperator.UREM) {
 
         @Override
         boolean doBoolean(boolean left, boolean right) {
@@ -866,7 +1048,7 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         }
     }
 
-    private static final LLVMArithmeticOp AND = new LLVMArithmeticOp() {
+    private static final LLVMArithmeticOp AND = new LLVMArithmeticOp(LLVMArithmeticOperator.AND) {
 
         @Override
         boolean doBoolean(boolean left, boolean right) {
@@ -909,7 +1091,7 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         }
     };
 
-    private static final LLVMArithmeticOp OR = new LLVMArithmeticOp() {
+    private static final LLVMArithmeticOp OR = new LLVMArithmeticOp(LLVMArithmeticOperator.OR) {
 
         @Override
         boolean doBoolean(boolean left, boolean right) {
@@ -958,7 +1140,7 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         }
     }
 
-    private static final LLVMArithmeticOp XOR = new LLVMArithmeticOp() {
+    private static final LLVMArithmeticOp XOR = new LLVMArithmeticOp(LLVMArithmeticOperator.XOR) {
 
         @Override
         boolean doBoolean(boolean left, boolean right) {
@@ -1001,7 +1183,7 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         }
     };
 
-    private static final LLVMArithmeticOp SHL = new LLVMArithmeticOp() {
+    private static final LLVMArithmeticOp SHL = new LLVMArithmeticOp(LLVMArithmeticOperator.SHL) {
 
         @Override
         boolean doBoolean(boolean left, boolean right) {
@@ -1034,7 +1216,7 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         }
     };
 
-    private static final LLVMArithmeticOp LSHR = new LLVMArithmeticOp() {
+    private static final LLVMArithmeticOp LSHR = new LLVMArithmeticOp(LLVMArithmeticOperator.LSHR) {
 
         @Override
         boolean doBoolean(boolean left, boolean right) {
@@ -1067,7 +1249,7 @@ public abstract class LLVMArithmeticNode extends LLVMExpressionNode {
         }
     };
 
-    private static final LLVMArithmeticOp ASHR = new LLVMArithmeticOp() {
+    private static final LLVMArithmeticOp ASHR = new LLVMArithmeticOp(LLVMArithmeticOperator.ASHR) {
 
         @Override
         boolean doBoolean(boolean left, boolean right) {

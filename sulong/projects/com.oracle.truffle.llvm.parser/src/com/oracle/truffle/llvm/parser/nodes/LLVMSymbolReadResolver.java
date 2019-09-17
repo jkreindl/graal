@@ -266,7 +266,7 @@ public final class LLVMSymbolReadResolver {
             final LLVMExpressionNode lhs = resolve(operation.getLHS());
             final LLVMExpressionNode rhs = resolve(operation.getRHS());
 
-            resolvedNode = LLVMBitcodeTypeHelper.createArithmeticInstruction(nodeFactory, lhs, rhs, operation.getOperator(), operation.getType());
+            resolvedNode = nodeFactory.createArithmeticOp(operation.getOperator(), operation.getType(), lhs, rhs, 0);
         }
 
         @Override
