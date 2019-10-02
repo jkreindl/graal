@@ -266,8 +266,7 @@ public final class LLVMSymbolReadResolver {
         public void visit(BinaryOperationConstant operation) {
             final LLVMExpressionNode lhs = resolve(operation.getLHS());
             final LLVMExpressionNode rhs = resolve(operation.getRHS());
-
-            resolvedNode = nodeFactory.createArithmeticOp(operation.getOperator(), operation.getType(), lhs, rhs, 0);
+            resolvedNode = nodeFactory.createArithmeticOp(operation.getOperator(), operation.getType(), lhs, rhs, operation.getFlags());
         }
 
         @Override

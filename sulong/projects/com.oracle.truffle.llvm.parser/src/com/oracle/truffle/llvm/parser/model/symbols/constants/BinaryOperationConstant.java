@@ -40,14 +40,16 @@ import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 public final class BinaryOperationConstant extends AbstractConstant {
 
     private final LLVMArithmeticOperator operator;
+    private final int flags;
 
     private SymbolImpl lhs;
 
     private SymbolImpl rhs;
 
-    private BinaryOperationConstant(Type type, LLVMArithmeticOperator operator) {
+    private BinaryOperationConstant(Type type, LLVMArithmeticOperator operator, int flags) {
         super(type);
         this.operator = operator;
+        this.flags = flags;
         this.lhs = null;
         this.rhs = null;
     }
@@ -69,6 +71,10 @@ public final class BinaryOperationConstant extends AbstractConstant {
         return rhs;
     }
 
+    public int getFlags() {
+        return flags;
+    }
+
     @Override
     public void replace(SymbolImpl original, SymbolImpl replacement) {
         if (lhs == original) {
@@ -79,10 +85,10 @@ public final class BinaryOperationConstant extends AbstractConstant {
         }
     }
 
-    public static BinaryOperationConstant fromSymbols(SymbolTable symbols, Type type, int opcode, int lhs, int rhs) {
+    public static BinaryOperationConstant fromSymbols(SymbolTable symbols, Type type, int opcode, int lhs, int rhs, int flags) {
         final boolean isFloatingPoint = Type.isFloatingpointType(type) || (type instanceof VectorType && Type.isFloatingpointType(((VectorType) type).getElementType()));
         final LLVMArithmeticOperator operator = BinaryArithmeticParser.parse(opcode, isFloatingPoint);
-        final BinaryOperationConstant constant = new BinaryOperationConstant(type, operator);
+        final BinaryOperationConstant constant = new BinaryOperationConstant(type, operator, flags);
         constant.lhs = symbols.getForwardReferenced(lhs, constant);
         constant.rhs = symbols.getForwardReferenced(rhs, constant);
         return constant;

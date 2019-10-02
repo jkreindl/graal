@@ -149,7 +149,8 @@ public final class Constants implements ParserListener {
                 int op = buffer.readInt();
                 int lhs = buffer.readInt();
                 int rhs = buffer.readInt();
-                scope.addSymbol(BinaryOperationConstant.fromSymbols(scope.getSymbols(), type, op, lhs, rhs), type);
+                int flags = buffer.remaining() > 0 ? buffer.readInt() : 0;
+                scope.addSymbol(BinaryOperationConstant.fromSymbols(scope.getSymbols(), type, op, lhs, rhs, flags), type);
                 return;
             }
 
