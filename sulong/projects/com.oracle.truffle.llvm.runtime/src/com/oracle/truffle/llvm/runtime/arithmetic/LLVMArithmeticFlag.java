@@ -46,7 +46,10 @@ public enum LLVMArithmeticFlag {
     NNAN(1 << 1),
     NINF(1 << 2),
     NSZ(1 << 3),
-    ARCP(1 << 4);
+    ARCP(1 << 4),
+    CONTRACT(1 << 5),
+    AFN(1 << 6),
+    REASSOC(1 << 7);
 
     public static final LLVMArithmeticFlag[] INTEGER_ARITHMETIC_FLAGS = new LLVMArithmeticFlag[]{
                     NUW,
@@ -57,7 +60,10 @@ public enum LLVMArithmeticFlag {
                     NNAN,
                     NINF,
                     NSZ,
-                    ARCP
+                    ARCP,
+                    CONTRACT,
+                    AFN,
+                    REASSOC
     };
 
     public static final LLVMArithmeticFlag[] NO_FLAGS = new LLVMArithmeticFlag[0];
