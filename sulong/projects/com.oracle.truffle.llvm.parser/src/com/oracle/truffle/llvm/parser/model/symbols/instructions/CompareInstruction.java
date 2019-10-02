@@ -33,32 +33,23 @@ import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 import com.oracle.truffle.llvm.parser.model.SymbolTable;
 import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
 import com.oracle.truffle.llvm.runtime.CompareOperator;
+import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
 import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.runtime.types.VectorType;
 
 public final class CompareInstruction extends ValueInstruction {
-    private static final long INTEGER_OPERATOR_FLAG = 32L;
-
-    private static final CompareOperator[] FP_COMPARISONS = {CompareOperator.FP_FALSE, CompareOperator.FP_ORDERED_EQUAL, CompareOperator.FP_ORDERED_GREATER_THAN,
-                    CompareOperator.FP_ORDERED_GREATER_OR_EQUAL, CompareOperator.FP_ORDERED_LESS_THAN, CompareOperator.FP_ORDERED_LESS_OR_EQUAL, CompareOperator.FP_ORDERED_NOT_EQUAL,
-                    CompareOperator.FP_ORDERED, CompareOperator.FP_UNORDERED, CompareOperator.FP_UNORDERED_EQUAL, CompareOperator.FP_UNORDERED_GREATER_THAN,
-                    CompareOperator.FP_UNORDERED_GREATER_OR_EQUAL, CompareOperator.FP_UNORDERED_LESS_THAN, CompareOperator.FP_UNORDERED_LESS_OR_EQUAL, CompareOperator.FP_UNORDERED_NOT_EQUAL,
-                    CompareOperator.FP_TRUE};
-
-    private static final CompareOperator[] INT_COMPARISONS = {CompareOperator.INT_EQUAL, CompareOperator.INT_NOT_EQUAL, CompareOperator.INT_UNSIGNED_GREATER_THAN,
-                    CompareOperator.INT_UNSIGNED_GREATER_OR_EQUAL, CompareOperator.INT_UNSIGNED_LESS_THAN, CompareOperator.INT_UNSIGNED_LESS_OR_EQUAL, CompareOperator.INT_SIGNED_GREATER_THAN,
-                    CompareOperator.INT_SIGNED_GREATER_OR_EQUAL, CompareOperator.INT_SIGNED_LESS_THAN, CompareOperator.INT_SIGNED_LESS_OR_EQUAL};
 
     private final CompareOperator operator;
+    private final int flags;
 
     private SymbolImpl lhs;
-
     private SymbolImpl rhs;
 
-    private CompareInstruction(Type type, CompareOperator operator) {
+    private CompareInstruction(Type type, CompareOperator operator, int flags) {
         super(calculateResultType(type));
         this.operator = operator;
+        this.flags = flags;
     }
 
     private static Type calculateResultType(Type type) {
@@ -86,6 +77,10 @@ public final class CompareInstruction extends ValueInstruction {
         return rhs;
     }
 
+    public int getFlags() {
+        return flags;
+    }
+
     @Override
     public void replace(SymbolImpl original, SymbolImpl replacement) {
         if (lhs == original) {
@@ -96,22 +91,69 @@ public final class CompareInstruction extends ValueInstruction {
         }
     }
 
-    public static CompareInstruction fromSymbols(SymbolTable symbols, Type type, int opcode, int lhs, int rhs) {
-        final CompareInstruction cmpInst = new CompareInstruction(type, decodeCompareOperator(opcode));
+    public static CompareInstruction fromSymbols(SymbolTable symbols, Type type, int opcode, int lhs, int rhs, int flags) {
+        final CompareInstruction cmpInst = new CompareInstruction(type, decodeCompareOperator(opcode), flags);
         cmpInst.lhs = symbols.getForwardReferenced(lhs, cmpInst);
         cmpInst.rhs = symbols.getForwardReferenced(rhs, cmpInst);
         return cmpInst;
     }
 
-    public static CompareOperator decodeCompareOperator(long opcode) {
-        if (opcode >= 0 && opcode < FP_COMPARISONS.length) {
-            return FP_COMPARISONS[(int) opcode];
-        } else {
-            long iopcode = opcode - INTEGER_OPERATOR_FLAG;
-            if (opcode >= 0 && iopcode < INT_COMPARISONS.length) {
-                return INT_COMPARISONS[(int) iopcode];
-            }
+    public static CompareOperator decodeCompareOperator(int opcode) {
+        switch (opcode) {
+            case 0:
+                return CompareOperator.FP_FALSE;
+            case 1:
+                return CompareOperator.FP_ORDERED_EQUAL;
+            case 2:
+                return CompareOperator.FP_ORDERED_GREATER_THAN;
+            case 3:
+                return CompareOperator.FP_ORDERED_GREATER_OR_EQUAL;
+            case 4:
+                return CompareOperator.FP_ORDERED_LESS_THAN;
+            case 5:
+                return CompareOperator.FP_ORDERED_LESS_OR_EQUAL;
+            case 6:
+                return CompareOperator.FP_ORDERED_NOT_EQUAL;
+            case 7:
+                return CompareOperator.FP_ORDERED;
+            case 8:
+                return CompareOperator.FP_UNORDERED;
+            case 9:
+                return CompareOperator.FP_UNORDERED_EQUAL;
+            case 10:
+                return CompareOperator.FP_UNORDERED_GREATER_THAN;
+            case 11:
+                return CompareOperator.FP_UNORDERED_GREATER_OR_EQUAL;
+            case 12:
+                return CompareOperator.FP_UNORDERED_LESS_THAN;
+            case 13:
+                return CompareOperator.FP_UNORDERED_LESS_OR_EQUAL;
+            case 14:
+                return CompareOperator.FP_UNORDERED_NOT_EQUAL;
+            case 15:
+                return CompareOperator.FP_TRUE;
+            case 32:
+                return CompareOperator.INT_EQUAL;
+            case 33:
+                return CompareOperator.INT_NOT_EQUAL;
+            case 34:
+                return CompareOperator.INT_UNSIGNED_GREATER_THAN;
+            case 35:
+                return CompareOperator.INT_UNSIGNED_GREATER_OR_EQUAL;
+            case 36:
+                return CompareOperator.INT_UNSIGNED_LESS_THAN;
+            case 37:
+                return CompareOperator.INT_UNSIGNED_LESS_OR_EQUAL;
+            case 38:
+                return CompareOperator.INT_SIGNED_GREATER_THAN;
+            case 39:
+                return CompareOperator.INT_SIGNED_GREATER_OR_EQUAL;
+            case 40:
+                return CompareOperator.INT_SIGNED_LESS_THAN;
+            case 41:
+                return CompareOperator.INT_SIGNED_LESS_OR_EQUAL;
+            default:
+                throw new LLVMParserException("Unknown comparison kind: " + opcode);
         }
-        return null;
     }
 }

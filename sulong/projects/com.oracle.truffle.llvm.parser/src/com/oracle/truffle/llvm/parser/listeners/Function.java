@@ -748,9 +748,16 @@ public final class Function implements ParserListener {
         Type operandType = readValueType(buffer, lhs);
         int rhs = readIndex(buffer);
         int opcode = buffer.readInt();
+        int flags = buffer.remaining() > 0 && Type.isFloatingPrimitiveOrVector(operandType) ? buffer.readInt() : 0;
 
-        Type type = operandType instanceof VectorType ? new VectorType(PrimitiveType.I1, Types.castToVector(operandType).getNumberOfElements()) : PrimitiveType.I1;
-        emit(CompareInstruction.fromSymbols(scope.getSymbols(), type, opcode, lhs, rhs));
+        final Type type;
+        if (operandType instanceof VectorType) {
+            type = new VectorType(PrimitiveType.I1, ((VectorType) operandType).getNumberOfElements());
+        } else {
+            type = PrimitiveType.I1;
+        }
+
+        emit(CompareInstruction.fromSymbols(scope.getSymbols(), type, opcode, lhs, rhs, flags));
     }
 
     private void createExtractElement(RecordBuffer buffer) {
