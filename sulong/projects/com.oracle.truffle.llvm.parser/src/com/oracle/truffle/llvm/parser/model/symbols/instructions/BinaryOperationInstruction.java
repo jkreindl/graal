@@ -34,7 +34,6 @@ import com.oracle.truffle.llvm.parser.model.enums.BinaryArithmeticParser;
 import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
 import com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticOperator;
 import com.oracle.truffle.llvm.runtime.types.Type;
-import com.oracle.truffle.llvm.runtime.types.VectorType;
 import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 
 public final class BinaryOperationInstruction extends ValueInstruction {
@@ -85,8 +84,7 @@ public final class BinaryOperationInstruction extends ValueInstruction {
     }
 
     public static BinaryOperationInstruction fromSymbols(SymbolTable symbols, Type type, int opcode, int flags, int lhs, int rhs) {
-        final boolean isFloatingPoint = Type.isFloatingpointType(type) || (type instanceof VectorType && Type.isFloatingpointType(((VectorType) type).getElementType()));
-        final LLVMArithmeticOperator operator = BinaryArithmeticParser.parse(opcode, isFloatingPoint);
+        final LLVMArithmeticOperator operator = BinaryArithmeticParser.parse(opcode, Type.isFloatingPrimitiveOrVector(type));
         final BinaryOperationInstruction inst = new BinaryOperationInstruction(type, operator, flags);
         inst.lhs = symbols.getForwardReferenced(lhs, inst);
         inst.rhs = symbols.getForwardReferenced(rhs, inst);

@@ -34,7 +34,6 @@ import com.oracle.truffle.llvm.parser.model.enums.BinaryArithmeticParser;
 import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
 import com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticOperator;
 import com.oracle.truffle.llvm.runtime.types.Type;
-import com.oracle.truffle.llvm.runtime.types.VectorType;
 import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 
 public final class BinaryOperationConstant extends AbstractConstant {
@@ -86,8 +85,7 @@ public final class BinaryOperationConstant extends AbstractConstant {
     }
 
     public static BinaryOperationConstant fromSymbols(SymbolTable symbols, Type type, int opcode, int lhs, int rhs, int flags) {
-        final boolean isFloatingPoint = Type.isFloatingpointType(type) || (type instanceof VectorType && Type.isFloatingpointType(((VectorType) type).getElementType()));
-        final LLVMArithmeticOperator operator = BinaryArithmeticParser.parse(opcode, isFloatingPoint);
+        final LLVMArithmeticOperator operator = BinaryArithmeticParser.parse(opcode, Type.isFloatingPrimitiveOrVector(type));
         final BinaryOperationConstant constant = new BinaryOperationConstant(type, operator, flags);
         constant.lhs = symbols.getForwardReferenced(lhs, constant);
         constant.rhs = symbols.getForwardReferenced(rhs, constant);

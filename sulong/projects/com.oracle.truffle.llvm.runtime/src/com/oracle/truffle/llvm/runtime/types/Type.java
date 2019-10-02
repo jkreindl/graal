@@ -96,6 +96,14 @@ public abstract class Type {
         return false;
     }
 
+    public static boolean isFloatingPrimitiveOrVector(Type type) {
+        if (type instanceof VectorType) {
+            return isFloatingpointType(((VectorType) type).getElementType());
+        } else {
+            return isFloatingpointType(type);
+        }
+    }
+
     public static FrameSlotKind getFrameSlotKind(Type type) {
         if (type instanceof PrimitiveType) {
             PrimitiveType primitive = (PrimitiveType) type;
