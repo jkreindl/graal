@@ -858,7 +858,10 @@ public final class Function implements ParserListener {
         int falseValue = readIndex(buffer);
         int condition = readIndex(buffer);
 
-        emit(SelectInstruction.fromSymbols(scope.getSymbols(), type, condition, trueValue, falseValue));
+        // select supports optional fast-math-flags
+        int flags = buffer.remaining() > 0 ? buffer.readInt() : 0;
+
+        emit(SelectInstruction.fromSymbols(scope.getSymbols(), type, condition, trueValue, falseValue, flags));
     }
 
     private void createShuffleVector(RecordBuffer buffer) {
