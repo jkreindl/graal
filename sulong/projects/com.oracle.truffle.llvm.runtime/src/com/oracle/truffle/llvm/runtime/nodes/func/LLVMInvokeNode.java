@@ -30,7 +30,6 @@
 package com.oracle.truffle.llvm.runtime.nodes.func;
 
 import com.oracle.truffle.api.CompilerAsserts;
-import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.VirtualFrame;
@@ -62,8 +61,6 @@ public abstract class LLVMInvokeNode extends LLVMControlFlowNode {
         @Child protected LLVMValueProfilingNode returnValueProfile;
 
         protected final FunctionType type;
-
-        @CompilationFinal private FrameSlot stackPointer;
 
         private final int normalSuccessor;
         private final int unwindSuccessor;
@@ -215,23 +212,6 @@ public abstract class LLVMInvokeNode extends LLVMControlFlowNode {
     public boolean needsBranchProfiling() {
         // we can't use branch profiling because the control flow happens via exception handling
         return false;
-    }
-
-    public static final class LLVMSubstitutionInvokeNode extends LLVMInvokeNodeImpl {
-
-        @Child private LLVMExpressionNode substitution;
-
-        public LLVMSubstitutionInvokeNode(FunctionType type, FrameSlot resultLocation, LLVMExpressionNode substitution,
-                        int normalSuccessor, int unwindSuccessor,
-                        LLVMStatementNode normalPhiNode, LLVMStatementNode unwindPhiNode) {
-            super(type, resultLocation, normalSuccessor, unwindSuccessor, normalPhiNode, unwindPhiNode);
-            this.substitution = substitution;
-        }
-
-        @Override
-        public void execute(VirtualFrame frame) {
-            writeResult(frame, substitution.executeGeneric(frame));
-        }
     }
 
     public static final class LLVMFunctionInvokeNode extends LLVMInvokeNodeImpl {
