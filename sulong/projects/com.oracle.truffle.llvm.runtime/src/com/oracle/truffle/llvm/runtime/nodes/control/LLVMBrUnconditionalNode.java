@@ -29,11 +29,15 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes.control;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
 import com.oracle.truffle.api.instrumentation.ProbeNode;
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
+import org.graalvm.collections.EconomicMap;
 
 @GenerateWrapper
 public abstract class LLVMBrUnconditionalNode extends LLVMControlFlowNode {
@@ -51,6 +55,17 @@ public abstract class LLVMBrUnconditionalNode extends LLVMControlFlowNode {
 
     // we need an execute method so the node can be properly instrumented
     public abstract void execute(VirtualFrame frame);
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return super.hasTag(tag, LLVMTags.Br.STATEMENT_TAGS);
+    }
+
+    @Override
+    @TruffleBoundary
+    protected void collectIRNodeData(EconomicMap<String, Object> members) {
+        members.put(LLVMTags.Br.EXTRA_DATA_IS_CONDITIONAL, false);
+    }
 
     private static final class LLVMBrUnconditionalNodeImpl extends LLVMBrUnconditionalNode {
         @Child private LLVMStatementNode phi;

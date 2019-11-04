@@ -29,12 +29,15 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes.control;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.NodeField;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
 import com.oracle.truffle.api.instrumentation.ProbeNode;
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.base.LLVMBasicBlockNode;
 import com.oracle.truffle.llvm.runtime.nodes.func.LLVMArgNode;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
@@ -52,6 +55,7 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI1Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI32Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI64Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
+import org.graalvm.collections.EconomicMap;
 
 @GenerateWrapper
 public abstract class LLVMRetNode extends LLVMControlFlowNode {
@@ -78,8 +82,22 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode {
 
     public abstract Object execute(VirtualFrame frame);
 
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return super.hasTag(tag, LLVMTags.Ret.STATEMENT_TAGS);
+    }
+
+    private abstract static class LLVMValueRetNode extends LLVMRetNode {
+
+        @Override
+        @TruffleBoundary
+        protected void collectIRNodeData(EconomicMap<String, Object> members) {
+            members.put(LLVMTags.Ret.EXTRA_DATA_RETURN_WITH_VALUE, true);
+        }
+    }
+
     @NodeChild(value = "retResult", type = LLVMExpressionNode.class)
-    public abstract static class LLVMI1RetNode extends LLVMRetNode {
+    public abstract static class LLVMI1RetNode extends LLVMValueRetNode {
 
         @Specialization
         protected Object doOp(boolean retResult) {
@@ -88,7 +106,7 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode {
     }
 
     @NodeChild(value = "retResult", type = LLVMExpressionNode.class)
-    public abstract static class LLVMI8RetNode extends LLVMRetNode {
+    public abstract static class LLVMI8RetNode extends LLVMValueRetNode {
 
         @Specialization
         protected Object doOp(byte retResult) {
@@ -97,7 +115,7 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode {
     }
 
     @NodeChild(value = "retResult", type = LLVMExpressionNode.class)
-    public abstract static class LLVMI16RetNode extends LLVMRetNode {
+    public abstract static class LLVMI16RetNode extends LLVMValueRetNode {
 
         @Specialization
         protected Object doOp(short retResult) {
@@ -106,7 +124,7 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode {
     }
 
     @NodeChild(value = "retResult", type = LLVMExpressionNode.class)
-    public abstract static class LLVMI32RetNode extends LLVMRetNode {
+    public abstract static class LLVMI32RetNode extends LLVMValueRetNode {
 
         @Specialization
         protected Object doOp(int retResult) {
@@ -115,7 +133,7 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode {
     }
 
     @NodeChild(value = "retResult", type = LLVMExpressionNode.class)
-    public abstract static class LLVMI64RetNode extends LLVMRetNode {
+    public abstract static class LLVMI64RetNode extends LLVMValueRetNode {
 
         @Specialization
         protected Object doOp(long retResult) {
@@ -129,7 +147,7 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode {
     }
 
     @NodeChild(value = "retResult", type = LLVMExpressionNode.class)
-    public abstract static class LLVMIVarBitRetNode extends LLVMRetNode {
+    public abstract static class LLVMIVarBitRetNode extends LLVMValueRetNode {
 
         @Specialization
         protected Object doOp(LLVMIVarBit retResult) {
@@ -138,7 +156,7 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode {
     }
 
     @NodeChild(value = "retResult", type = LLVMExpressionNode.class)
-    public abstract static class LLVMFloatRetNode extends LLVMRetNode {
+    public abstract static class LLVMFloatRetNode extends LLVMValueRetNode {
 
         @Specialization
         protected Object doOp(float retResult) {
@@ -147,7 +165,7 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode {
     }
 
     @NodeChild(value = "retResult", type = LLVMExpressionNode.class)
-    public abstract static class LLVMDoubleRetNode extends LLVMRetNode {
+    public abstract static class LLVMDoubleRetNode extends LLVMValueRetNode {
 
         @Specialization
         protected Object doOp(double retResult) {
@@ -156,7 +174,7 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode {
     }
 
     @NodeChild(value = "retResult", type = LLVMExpressionNode.class)
-    public abstract static class LLVM80BitFloatRetNode extends LLVMRetNode {
+    public abstract static class LLVM80BitFloatRetNode extends LLVMValueRetNode {
 
         @Specialization
         protected Object doOp(LLVM80BitFloat retResult) {
@@ -165,7 +183,7 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode {
     }
 
     @NodeChild(value = "retResult", type = LLVMExpressionNode.class)
-    public abstract static class LLVMAddressRetNode extends LLVMRetNode {
+    public abstract static class LLVMAddressRetNode extends LLVMValueRetNode {
 
         @Specialization
         protected Object doOp(Object retResult) {
@@ -174,7 +192,7 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode {
     }
 
     @NodeChild(value = "retResult", type = LLVMExpressionNode.class)
-    public abstract static class LLVMVectorRetNode extends LLVMRetNode {
+    public abstract static class LLVMVectorRetNode extends LLVMValueRetNode {
 
         @Specialization
         protected Object doOp(LLVMDoubleVector retResult) {
@@ -214,7 +232,7 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode {
 
     @NodeChild(value = "retResult", type = LLVMExpressionNode.class)
     @NodeField(name = "structSize", type = long.class)
-    public abstract static class LLVMStructRetNode extends LLVMRetNode {
+    public abstract static class LLVMStructRetNode extends LLVMValueRetNode {
 
         @Child private LLVMArgNode argIdx1 = LLVMArgNodeGen.create(1);
         @Child private LLVMMemMoveNode memMove;
@@ -242,6 +260,12 @@ public abstract class LLVMRetNode extends LLVMControlFlowNode {
         @Specialization
         protected Object doOp() {
             return null;
+        }
+
+        @Override
+        @TruffleBoundary
+        protected void collectIRNodeData(EconomicMap<String, Object> members) {
+            members.put(LLVMTags.Ret.EXTRA_DATA_RETURN_WITH_VALUE, false);
         }
     }
 }

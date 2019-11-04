@@ -31,6 +31,7 @@ package com.oracle.truffle.llvm.runtime.nodes.func;
 
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
@@ -39,6 +40,7 @@ import com.oracle.truffle.api.instrumentation.StandardTags;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.profiles.ConditionProfile;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
@@ -48,6 +50,7 @@ import com.oracle.truffle.llvm.runtime.types.PointerType;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
 import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.runtime.types.VoidType;
+import org.graalvm.collections.EconomicMap;
 
 @GenerateWrapper
 public abstract class LLVMInvokeNode extends LLVMControlFlowNode {
@@ -168,6 +171,23 @@ public abstract class LLVMInvokeNode extends LLVMControlFlowNode {
                 unwindPhiNode.execute(frame);
             }
         }
+
+        @Override
+        public boolean hasTag(Class<? extends Tag> tag) {
+            if (tag == StandardTags.CallTag.class) {
+                return getSourceLocation() != null;
+            } else if (resultLocation == null) {
+                return super.hasTag(tag, LLVMTags.Invoke.VOID_INVOKE_TAGS);
+            } else {
+                return super.hasTag(tag, LLVMTags.Invoke.VALUE_INVOKE_TAGS);
+            }
+        }
+
+        @Override
+        @TruffleBoundary
+        protected void collectIRNodeData(EconomicMap<String, Object> members) {
+            members.put(LLVMTags.Invoke.EXTRA_DATA_SSA_TARGET, resultLocation != null ? resultLocation.getIdentifier() : LLVMTags.Invoke.NO_TARGET);
+        }
     }
 
     public static final int NORMAL_SUCCESSOR = 0;
@@ -195,15 +215,6 @@ public abstract class LLVMInvokeNode extends LLVMControlFlowNode {
     public boolean needsBranchProfiling() {
         // we can't use branch profiling because the control flow happens via exception handling
         return false;
-    }
-
-    @Override
-    public boolean hasTag(Class<? extends Tag> tag) {
-        if (tag == StandardTags.CallTag.class) {
-            return getSourceLocation() != null;
-        } else {
-            return super.hasTag(tag);
-        }
     }
 
     public static final class LLVMSubstitutionInvokeNode extends LLVMInvokeNodeImpl {
@@ -252,6 +263,13 @@ public abstract class LLVMInvokeNode extends LLVMControlFlowNode {
                 argValues[i] = argumentNodes[i].executeGeneric(frame);
             }
             return argValues;
+        }
+
+        @Override
+        @TruffleBoundary
+        protected void collectIRNodeData(EconomicMap<String, Object> members) {
+            super.collectIRNodeData(members);
+            members.put(LLVMTags.Invoke.EXTRA_DATA_ARGS_COUNT, argumentNodes.length);
         }
     }
 }
