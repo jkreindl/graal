@@ -212,10 +212,10 @@ public abstract class Type {
         assert member != null;
         switch (member) {
             case MEMBER_BYTESIZE:
-                return contextReference.get().getByteSize(this);
+                return getSize(contextReference.get().getLibsulongDataLayout());
 
             case MEMBER_ALIGNMENT:
-                return contextReference.get().getByteAlignment(this);
+                return getAlignment(contextReference.get().getLibsulongDataLayout());
 
             case MEMBER_IS_INTEGER:
             case MEMBER_IS_FLOATING_POINT:
