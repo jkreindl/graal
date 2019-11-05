@@ -36,7 +36,9 @@ import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory.CMPXCHGI16;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory.CMPXCHGI32;
@@ -83,6 +85,11 @@ public abstract class LLVMCompareExchangeNode extends LLVMExpressionNode {
     @Specialization
     protected Object doOp(VirtualFrame frame, LLVMPointer address, Object comparisonValue, Object newValue) {
         return cmpxch.executeWithTarget(frame, address, comparisonValue, newValue);
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return super.hasTag(tag, LLVMTags.CmpXchg.EXPRESSION_TAGS);
     }
 
     abstract static class LLVMCMPXCHInternalNode extends LLVMNode {
