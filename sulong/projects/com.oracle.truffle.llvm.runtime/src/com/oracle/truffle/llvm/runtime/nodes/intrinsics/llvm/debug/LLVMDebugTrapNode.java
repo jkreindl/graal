@@ -29,11 +29,17 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes.intrinsics.llvm.debug;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.debug.DebuggerTags;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.StandardTags;
 import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
+import com.oracle.truffle.llvm.runtime.types.FunctionType;
+import com.oracle.truffle.llvm.runtime.types.Type;
+import com.oracle.truffle.llvm.runtime.types.VoidType;
+import org.graalvm.collections.EconomicMap;
 
 public class LLVMDebugTrapNode extends LLVMStatementNode {
 
@@ -48,6 +54,13 @@ public class LLVMDebugTrapNode extends LLVMStatementNode {
 
     @Override
     public boolean hasTag(Class<? extends Tag> tag) {
-        return tag == DebuggerTags.AlwaysHalt.class || tag == StandardTags.StatementTag.class || super.hasTag(tag);
+        return tag == DebuggerTags.AlwaysHalt.class || tag == StandardTags.StatementTag.class || super.hasTag(tag, LLVMTags.Intrinsic.VOID_INTRINSIC_TAGS);
+    }
+
+    @Override
+    @TruffleBoundary
+    protected void collectIRNodeData(EconomicMap<String, Object> members) {
+        members.put(LLVMTags.Intrinsic.EXTRA_DATA_FUNCTION_NAME, "llvm.debugtrap");
+        members.put(LLVMTags.Intrinsic.EXTRA_DATA_FUNCTION_TYPE, new FunctionType(VoidType.INSTANCE, Type.EMPTY_ARRAY, false));
     }
 }
