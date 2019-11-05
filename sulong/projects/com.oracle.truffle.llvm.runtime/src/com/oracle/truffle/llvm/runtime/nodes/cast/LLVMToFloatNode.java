@@ -51,7 +51,7 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI32Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMToFloatNode extends LLVMExpressionNode {
+public abstract class LLVMToFloatNode extends LLVMCastNode {
 
     protected abstract float executeWith(long value);
 
@@ -176,6 +176,11 @@ public abstract class LLVMToFloatNode extends LLVMExpressionNode {
         @Specialization
         protected float doFloat(float from) {
             return from;
+        }
+
+        @Override
+        protected boolean isSignedCast() {
+            return false;
         }
     }
 

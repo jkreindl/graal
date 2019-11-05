@@ -44,7 +44,7 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI1Vector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMToI1Node extends LLVMExpressionNode {
+public abstract class LLVMToI1Node extends LLVMCastNode {
 
     @Specialization(guards = {"isForeign(from)"})
     protected boolean doManagedPointer(LLVMManagedPointer from,

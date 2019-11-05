@@ -49,7 +49,7 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI32Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMToI32Node extends LLVMExpressionNode {
+public abstract class LLVMToI32Node extends LLVMCastNode {
 
     @Specialization(guards = {"isForeign(from)"})
     protected int doManagedPointer(LLVMManagedPointer from,
@@ -180,6 +180,11 @@ public abstract class LLVMToI32Node extends LLVMExpressionNode {
 
         protected static boolean fitsIntoSignedInt(double from) {
             return from < MAX_INT_AS_DOUBLE;
+        }
+
+        @Override
+        protected boolean isSignedCast() {
+            return false;
         }
     }
 

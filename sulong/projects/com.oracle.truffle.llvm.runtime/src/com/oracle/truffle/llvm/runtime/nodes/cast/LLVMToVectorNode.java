@@ -48,7 +48,7 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMPointerVector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
 @NodeField(name = "vectorLength", type = int.class)
-public abstract class LLVMToVectorNode extends LLVMExpressionNode {
+public abstract class LLVMToVectorNode extends LLVMCastNode {
 
     protected static final int SHORTS_PER_INT = Integer.BYTES / Short.BYTES;
     protected static final int SHORTS_PER_LONG = Long.BYTES / Short.BYTES;

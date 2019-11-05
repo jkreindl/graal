@@ -47,7 +47,7 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI1Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMToI16Node extends LLVMExpressionNode {
+public abstract class LLVMToI16Node extends LLVMCastNode {
 
     @Specialization(guards = {"isForeign(from)"})
     protected short doManagedPointer(LLVMManagedPointer from,
@@ -152,6 +152,11 @@ public abstract class LLVMToI16Node extends LLVMExpressionNode {
         @Specialization
         protected short doLLVM80BitFloat(LLVM80BitFloat from) {
             return from.getShortValue();
+        }
+
+        @Override
+        protected boolean isSignedCast() {
+            return false;
         }
     }
 

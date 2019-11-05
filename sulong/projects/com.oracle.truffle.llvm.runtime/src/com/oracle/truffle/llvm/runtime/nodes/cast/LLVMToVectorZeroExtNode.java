@@ -42,7 +42,12 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 public abstract class LLVMToVectorZeroExtNode extends LLVMToVectorNode {
 
-    public abstract static class LLVMUnsignedCastToI1VectorNode extends LLVMToVectorNode {
+    @Override
+    protected boolean isSignedCast() {
+        return false;
+    }
+
+    public abstract static class LLVMUnsignedCastToI1VectorNode extends LLVMToVectorZeroExtNode {
 
         @Specialization
         protected LLVMI1Vector doI1Vector(LLVMI1Vector from) {
@@ -51,7 +56,7 @@ public abstract class LLVMToVectorZeroExtNode extends LLVMToVectorNode {
         }
     }
 
-    public abstract static class LLVMUnsignedCastToI8VectorNode extends LLVMToVectorNode {
+    public abstract static class LLVMUnsignedCastToI8VectorNode extends LLVMToVectorZeroExtNode {
 
         @Specialization
         @ExplodeLoop
@@ -71,7 +76,7 @@ public abstract class LLVMToVectorZeroExtNode extends LLVMToVectorNode {
         }
     }
 
-    public abstract static class LLVMUnsignedCastToI16VectorNode extends LLVMToVectorNode {
+    public abstract static class LLVMUnsignedCastToI16VectorNode extends LLVMToVectorZeroExtNode {
 
         @Specialization
         @ExplodeLoop
@@ -102,7 +107,7 @@ public abstract class LLVMToVectorZeroExtNode extends LLVMToVectorNode {
         }
     }
 
-    public abstract static class LLVMUnsignedCastToI32VectorNode extends LLVMToVectorNode {
+    public abstract static class LLVMUnsignedCastToI32VectorNode extends LLVMToVectorZeroExtNode {
 
         @Specialization
         @ExplodeLoop
@@ -144,7 +149,7 @@ public abstract class LLVMToVectorZeroExtNode extends LLVMToVectorNode {
         }
     }
 
-    public abstract static class LLVMUnsignedCastToI64VectorNode extends LLVMToVectorNode {
+    public abstract static class LLVMUnsignedCastToI64VectorNode extends LLVMToVectorZeroExtNode {
 
         @Specialization
         @ExplodeLoop
@@ -197,7 +202,7 @@ public abstract class LLVMToVectorZeroExtNode extends LLVMToVectorNode {
         }
     }
 
-    public abstract static class LLVMUnsignedCastToFloatVectorNode extends LLVMToVectorNode {
+    public abstract static class LLVMUnsignedCastToFloatVectorNode extends LLVMToVectorZeroExtNode {
 
         @Specialization
         @ExplodeLoop
@@ -261,7 +266,7 @@ public abstract class LLVMToVectorZeroExtNode extends LLVMToVectorNode {
         }
     }
 
-    public abstract static class LLVMUnsignedCastToDoubleVectorNode extends LLVMToVectorNode {
+    public abstract static class LLVMUnsignedCastToDoubleVectorNode extends LLVMToVectorZeroExtNode {
 
         @Specialization
         @ExplodeLoop

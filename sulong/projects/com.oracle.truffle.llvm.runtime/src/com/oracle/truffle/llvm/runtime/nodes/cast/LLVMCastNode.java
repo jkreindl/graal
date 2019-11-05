@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,59 +29,32 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes.cast;
 
-import com.oracle.truffle.api.dsl.NodeChild;
-import com.oracle.truffle.api.dsl.Specialization;
-import com.oracle.truffle.llvm.runtime.interop.access.LLVMInteropType;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
-import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
-import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
+import org.graalvm.collections.EconomicMap;
 
-@NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMToAddressNode extends LLVMCastNode {
-    public abstract Object executeWithTarget(Object from);
+public abstract class LLVMCastNode extends LLVMExpressionNode {
 
-    @Specialization
-    protected LLVMNativePointer doI1(boolean from) {
-        return LLVMNativePointer.create(from ? 1 : 0);
-    }
-
-    @Specialization
-    protected LLVMNativePointer doI8(byte from) {
-        return LLVMNativePointer.create(LLVMExpressionNode.I8_MASK & (long) from);
-    }
-
-    @Specialization
-    protected LLVMNativePointer doI16(short from) {
-        return LLVMNativePointer.create(LLVMExpressionNode.I16_MASK & (long) from);
-    }
-
-    @Specialization
-    protected LLVMNativePointer doI32(int from) {
-        return LLVMNativePointer.create(LLVMExpressionNode.I32_MASK & from);
-    }
-
-    @Specialization
-    protected LLVMNativePointer doI64(long from) {
-        return LLVMNativePointer.create(from);
-    }
-
-    @Specialization
-    protected LLVMPointer doLLVMPointer(LLVMPointer from) {
-        return from;
-    }
-
-    @Specialization
-    protected LLVMInteropType doInteropType(LLVMInteropType from) {
-        return from;
-    }
-
-    @Specialization
-    protected String doString(String from) {
-        return from;
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return super.hasTag(tag, LLVMTags.Cast.EXPRESSION_TAGS);
     }
 
     @Override
+    @TruffleBoundary
+    protected void collectIRNodeData(EconomicMap<String, Object> members) {
+        members.put(LLVMTags.Cast.EXTRA_DATA_IS_SIGNED_CAST, isSignedCast());
+    }
+
+    /**
+     * Returns whether this node sign-extends a smaller value. May also return true for
+     * non-extending bitcasts and truncation.
+     *
+     * @return if the cast is signed
+     */
     protected boolean isSignedCast() {
-        return false;
+        return true;
     }
 }

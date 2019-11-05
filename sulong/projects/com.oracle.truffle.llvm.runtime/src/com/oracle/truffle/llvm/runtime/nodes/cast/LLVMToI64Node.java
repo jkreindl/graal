@@ -48,7 +48,7 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI64Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMToI64Node extends LLVMExpressionNode {
+public abstract class LLVMToI64Node extends LLVMCastNode {
     private static final float MAX_LONG_AS_FLOAT = Long.MAX_VALUE;
     private static final double MAX_LONG_AS_DOUBLE = Long.MAX_VALUE;
 
@@ -174,6 +174,11 @@ public abstract class LLVMToI64Node extends LLVMExpressionNode {
         @Specialization
         protected long do80LLVMBitFloat(LLVM80BitFloat from) {
             return from.getLongValue();
+        }
+
+        @Override
+        protected boolean isSignedCast() {
+            return false;
         }
     }
 

@@ -46,7 +46,7 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI1Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMTo80BitFloatingNode extends LLVMExpressionNode {
+public abstract class LLVMTo80BitFloatingNode extends LLVMCastNode {
 
     protected abstract LLVM80BitFloat executeWith(long value);
 
@@ -174,6 +174,11 @@ public abstract class LLVMTo80BitFloatingNode extends LLVMExpressionNode {
         @Specialization
         protected LLVM80BitFloat doLLVM80BitFloatNode(LLVMIVarBitLarge from) {
             return LLVM80BitFloat.fromBytesBigEndian(from.getBytes());
+        }
+
+        @Override
+        protected boolean isSignedCast() {
+            return false;
         }
     }
 

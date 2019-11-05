@@ -46,7 +46,7 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
 @NodeField(type = int.class, name = "bits")
-public abstract class LLVMToVarINode extends LLVMExpressionNode {
+public abstract class LLVMToVarINode extends LLVMCastNode {
 
     public abstract int getBits();
 
@@ -142,6 +142,11 @@ public abstract class LLVMToVarINode extends LLVMExpressionNode {
         @Specialization
         protected LLVMIVarBit doIVarBit(LLVMIVarBitSmall from) {
             return LLVMIVarBit.create(getBits(), from.getCleanedValue(false), from.getBitSize(), false);
+        }
+
+        @Override
+        protected boolean isSignedCast() {
+            return false;
         }
     }
 

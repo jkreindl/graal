@@ -53,7 +53,7 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI64Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 
 @NodeChild(value = "fromNode", type = LLVMExpressionNode.class)
-public abstract class LLVMToDoubleNode extends LLVMExpressionNode {
+public abstract class LLVMToDoubleNode extends LLVMCastNode {
 
     protected abstract double executeWith(long value);
 
@@ -178,6 +178,11 @@ public abstract class LLVMToDoubleNode extends LLVMExpressionNode {
         @Specialization
         protected double doDouble(double from) {
             return from;
+        }
+
+        @Override
+        protected boolean isSignedCast() {
+            return false;
         }
     }
 
