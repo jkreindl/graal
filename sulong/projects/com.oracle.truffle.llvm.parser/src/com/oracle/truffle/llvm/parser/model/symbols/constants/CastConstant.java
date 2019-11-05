@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -30,18 +30,19 @@
 package com.oracle.truffle.llvm.parser.model.symbols.constants;
 
 import com.oracle.truffle.llvm.parser.model.SymbolTable;
-import com.oracle.truffle.llvm.parser.model.enums.CastOperator;
+import com.oracle.truffle.llvm.parser.model.enums.OperatorParser;
+import com.oracle.truffle.llvm.runtime.arithmetic.LLVMCastOperator;
 import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
 import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 
 public final class CastConstant extends AbstractConstant {
 
-    private final CastOperator operator;
+    private final LLVMCastOperator operator;
 
     private SymbolImpl value;
 
-    private CastConstant(Type type, CastOperator operator) {
+    private CastConstant(Type type, LLVMCastOperator operator) {
         super(type);
         this.operator = operator;
     }
@@ -51,7 +52,7 @@ public final class CastConstant extends AbstractConstant {
         visitor.visit(this);
     }
 
-    public CastOperator getOperator() {
+    public LLVMCastOperator getOperator() {
         return operator;
     }
 
@@ -67,7 +68,7 @@ public final class CastConstant extends AbstractConstant {
     }
 
     public static CastConstant fromSymbols(SymbolTable symbols, Type type, int opcode, int value) {
-        final CastConstant constant = new CastConstant(type, CastOperator.decode(opcode));
+        final CastConstant constant = new CastConstant(type, OperatorParser.parseCastOperator(opcode));
         constant.value = symbols.getForwardReferenced(value, constant);
         return constant;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,9 +27,9 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.model.enums;
+package com.oracle.truffle.llvm.runtime.arithmetic;
 
-public enum CastOperator {
+public enum LLVMCastOperator {
 
     TRUNCATE("trunc"),
     ZERO_EXTEND("zext"),
@@ -45,18 +45,9 @@ public enum CastOperator {
     BITCAST("bitcast"),
     ADDRESS_SPACE_CAST("addrspacecast");
 
-    private static final CastOperator[] VALUES = values();
-
-    public static CastOperator decode(int code) {
-        if (code >= 0 && code < VALUES.length) {
-            return VALUES[code];
-        }
-        return null;
-    }
-
     private final String irString;
 
-    CastOperator(String irString) {
+    LLVMCastOperator(String irString) {
         this.irString = irString;
     }
 

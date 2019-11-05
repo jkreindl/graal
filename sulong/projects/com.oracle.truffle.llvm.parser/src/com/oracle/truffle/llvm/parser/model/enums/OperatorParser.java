@@ -30,11 +30,12 @@
 package com.oracle.truffle.llvm.parser.model.enums;
 
 import com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticOperator;
+import com.oracle.truffle.llvm.runtime.arithmetic.LLVMCastOperator;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 
-public final class BinaryArithmeticParser {
+public final class OperatorParser {
 
-    private static final LLVMArithmeticOperator[] FLOATING_OPERATORS = new LLVMArithmeticOperator[]{
+    private static final LLVMArithmeticOperator[] FLOATING_BINARY_OPERATORS = new LLVMArithmeticOperator[]{
                     LLVMArithmeticOperator.FADD,
                     LLVMArithmeticOperator.FSUB,
                     LLVMArithmeticOperator.FMUL,
@@ -44,7 +45,7 @@ public final class BinaryArithmeticParser {
                     LLVMArithmeticOperator.FREM
     };
 
-    private static final LLVMArithmeticOperator[] INTEGER_OPERATORS = new LLVMArithmeticOperator[]{
+    private static final LLVMArithmeticOperator[] INTEGER_BINARY_OPERATORS = new LLVMArithmeticOperator[]{
                     LLVMArithmeticOperator.ADD,
                     LLVMArithmeticOperator.SUB,
                     LLVMArithmeticOperator.MUL,
@@ -60,11 +61,11 @@ public final class BinaryArithmeticParser {
                     LLVMArithmeticOperator.XOR
     };
 
-    public static LLVMArithmeticOperator parse(int opcode, boolean isFloatingPoint) {
+    public static LLVMArithmeticOperator parseArithmeticOperator(int opcode, boolean isFloatingPoint) {
         LLVMArithmeticOperator parsedOperator = null;
 
         if (opcode >= 0) {
-            LLVMArithmeticOperator[] validOperators = isFloatingPoint ? FLOATING_OPERATORS : INTEGER_OPERATORS;
+            LLVMArithmeticOperator[] validOperators = isFloatingPoint ? FLOATING_BINARY_OPERATORS : INTEGER_BINARY_OPERATORS;
             if (opcode < validOperators.length) {
                 parsedOperator = validOperators[opcode];
             }
@@ -75,5 +76,14 @@ public final class BinaryArithmeticParser {
         }
 
         throw new LLVMParserException("Not a valid opcode for " + (isFloatingPoint ? "floating point" : "integer") + " arithmetic: " + opcode);
+    }
+
+    private static final LLVMCastOperator[] CAST_OPERATORS = LLVMCastOperator.values();
+
+    public static LLVMCastOperator parseCastOperator(int code) {
+        if (code >= 0 && code < CAST_OPERATORS.length) {
+            return CAST_OPERATORS[code];
+        }
+        return null;
     }
 }

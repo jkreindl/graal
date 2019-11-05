@@ -31,17 +31,18 @@ package com.oracle.truffle.llvm.parser.model.symbols.instructions;
 
 import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 import com.oracle.truffle.llvm.parser.model.SymbolTable;
-import com.oracle.truffle.llvm.parser.model.enums.CastOperator;
+import com.oracle.truffle.llvm.parser.model.enums.OperatorParser;
+import com.oracle.truffle.llvm.runtime.arithmetic.LLVMCastOperator;
 import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
 import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class CastInstruction extends ValueInstruction {
 
-    private final CastOperator operator;
+    private final LLVMCastOperator operator;
 
     private SymbolImpl value;
 
-    private CastInstruction(Type type, CastOperator operator) {
+    private CastInstruction(Type type, LLVMCastOperator operator) {
         super(type);
         this.operator = operator;
     }
@@ -51,7 +52,7 @@ public final class CastInstruction extends ValueInstruction {
         visitor.visit(this);
     }
 
-    public CastOperator getOperator() {
+    public LLVMCastOperator getOperator() {
         return operator;
     }
 
@@ -67,7 +68,7 @@ public final class CastInstruction extends ValueInstruction {
     }
 
     public static CastInstruction fromSymbols(SymbolTable symbols, Type type, int opcode, int value) {
-        final CastInstruction inst = new CastInstruction(type, CastOperator.decode(opcode));
+        final CastInstruction inst = new CastInstruction(type, OperatorParser.parseCastOperator(opcode));
         inst.value = symbols.getForwardReferenced(value, inst);
         return inst;
     }

@@ -29,14 +29,14 @@
  */
 package com.oracle.truffle.llvm.parser.util;
 
-import com.oracle.truffle.llvm.parser.model.enums.CastOperator;
+import com.oracle.truffle.llvm.runtime.arithmetic.LLVMCastOperator;
 import com.oracle.truffle.llvm.runtime.NodeFactory;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class LLVMBitcodeTypeHelper {
 
-    public static LLVMExpressionNode createCast(NodeFactory nodeFactory, LLVMExpressionNode fromNode, Type targetType, Type fromType, CastOperator operator) {
+    public static LLVMExpressionNode createCast(NodeFactory nodeFactory, LLVMExpressionNode fromNode, Type targetType, Type fromType, LLVMCastOperator operator) {
         switch (operator) {
             case ZERO_EXTEND:
             case UNSIGNED_INT_TO_FP:
