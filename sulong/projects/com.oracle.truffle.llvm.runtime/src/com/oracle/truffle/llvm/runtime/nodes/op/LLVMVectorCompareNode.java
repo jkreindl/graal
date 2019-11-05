@@ -31,7 +31,9 @@ package com.oracle.truffle.llvm.runtime.nodes.op;
 
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.vector.LLVMDoubleVector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMFloatVector;
@@ -42,6 +44,7 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI64Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMPointerVector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMVector;
+import org.graalvm.collections.EconomicMap;
 
 @NodeChild(type = LLVMExpressionNode.class)
 @NodeChild(type = LLVMExpressionNode.class)
@@ -167,5 +170,19 @@ public abstract class LLVMVectorCompareNode extends LLVMExpressionNode {
             result[i] = compare.executeWithTarget(val1.getValue(i), val2.getValue(i));
         }
         return LLVMI1Vector.create(result);
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        if (compare.isFloatingPointComparison()) {
+            return super.hasTag(tag, LLVMTags.FCMP.EXPRESSION_TAGS);
+        } else {
+            return super.hasTag(tag, LLVMTags.ICMP.EXPRESSION_TAGS);
+        }
+    }
+
+    @Override
+    protected void collectIRNodeData(EconomicMap<String, Object> members) {
+        compare.collectIRNodeData(members);
     }
 }

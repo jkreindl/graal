@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -33,18 +33,18 @@ import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 import com.oracle.truffle.llvm.parser.model.SymbolTable;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.CompareInstruction;
 import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
-import com.oracle.truffle.llvm.runtime.CompareOperator;
+import com.oracle.truffle.llvm.runtime.LLVMCompareOperator;
 import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class CompareConstant extends AbstractConstant {
 
-    private final CompareOperator operator;
+    private final LLVMCompareOperator operator;
 
     private SymbolImpl lhs;
 
     private SymbolImpl rhs;
 
-    private CompareConstant(Type type, CompareOperator operator) {
+    private CompareConstant(Type type, LLVMCompareOperator operator) {
         super(type);
         this.operator = operator;
     }
@@ -58,7 +58,7 @@ public final class CompareConstant extends AbstractConstant {
         return lhs;
     }
 
-    public CompareOperator getOperator() {
+    public LLVMCompareOperator getOperator() {
         return operator;
     }
 

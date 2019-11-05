@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,32 +29,43 @@
  */
 package com.oracle.truffle.llvm.runtime;
 
-public enum CompareOperator {
-    FP_FALSE,
-    FP_ORDERED_EQUAL,
-    FP_ORDERED_GREATER_THAN,
-    FP_ORDERED_GREATER_OR_EQUAL,
-    FP_ORDERED_LESS_THAN,
-    FP_ORDERED_LESS_OR_EQUAL,
-    FP_ORDERED_NOT_EQUAL,
-    FP_ORDERED,
-    FP_UNORDERED,
-    FP_UNORDERED_EQUAL,
-    FP_UNORDERED_GREATER_THAN,
-    FP_UNORDERED_GREATER_OR_EQUAL,
-    FP_UNORDERED_LESS_THAN,
-    FP_UNORDERED_LESS_OR_EQUAL,
-    FP_UNORDERED_NOT_EQUAL,
-    FP_TRUE,
+public enum LLVMCompareOperator {
 
-    INT_EQUAL,
-    INT_NOT_EQUAL,
-    INT_UNSIGNED_GREATER_THAN,
-    INT_UNSIGNED_GREATER_OR_EQUAL,
-    INT_UNSIGNED_LESS_THAN,
-    INT_UNSIGNED_LESS_OR_EQUAL,
-    INT_SIGNED_GREATER_THAN,
-    INT_SIGNED_GREATER_OR_EQUAL,
-    INT_SIGNED_LESS_THAN,
-    INT_SIGNED_LESS_OR_EQUAL;
+    FP_FALSE("false"),
+    FP_ORDERED_EQUAL("oeq"),
+    FP_ORDERED_GREATER_THAN("ogt"),
+    FP_ORDERED_GREATER_OR_EQUAL("oge"),
+    FP_ORDERED_LESS_THAN("olt"),
+    FP_ORDERED_LESS_OR_EQUAL("ole"),
+    FP_ORDERED_NOT_EQUAL("one"),
+    FP_ORDERED("ord"),
+    FP_UNORDERED("uno"),
+    FP_UNORDERED_EQUAL("ueq"),
+    FP_UNORDERED_GREATER_THAN("ugt"),
+    FP_UNORDERED_GREATER_OR_EQUAL("uge"),
+    FP_UNORDERED_LESS_THAN("ult"),
+    FP_UNORDERED_LESS_OR_EQUAL("ule"),
+    FP_UNORDERED_NOT_EQUAL("une"),
+    FP_TRUE("true"),
+
+    INT_EQUAL("eq"),
+    INT_NOT_EQUAL("ne"),
+    INT_UNSIGNED_GREATER_THAN("ugt"),
+    INT_UNSIGNED_GREATER_OR_EQUAL("uge"),
+    INT_UNSIGNED_LESS_THAN("ult"),
+    INT_UNSIGNED_LESS_OR_EQUAL("ule"),
+    INT_SIGNED_GREATER_THAN("sgt"),
+    INT_SIGNED_GREATER_OR_EQUAL("sge"),
+    INT_SIGNED_LESS_THAN("slt"),
+    INT_SIGNED_LESS_OR_EQUAL("sle");
+
+    private final String irString;
+
+    LLVMCompareOperator(String irString) {
+        this.irString = irString;
+    }
+
+    public String getIrString() {
+        return irString;
+    }
 }

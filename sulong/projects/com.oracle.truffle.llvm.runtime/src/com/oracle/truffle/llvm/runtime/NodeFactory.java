@@ -112,7 +112,7 @@ public interface NodeFactory {
 
     LLVMStatementNode createFrameWrite(Type llvmType, LLVMExpressionNode result, FrameSlot slot);
 
-    LLVMExpressionNode createComparison(CompareOperator operator, Type type, LLVMExpressionNode lhs, LLVMExpressionNode rhs);
+    LLVMExpressionNode createComparison(LLVMCompareOperator operator, Type type, LLVMExpressionNode lhs, LLVMExpressionNode rhs);
 
     LLVMExpressionNode createSignedCast(LLVMExpressionNode fromNode, Type targetType);
 

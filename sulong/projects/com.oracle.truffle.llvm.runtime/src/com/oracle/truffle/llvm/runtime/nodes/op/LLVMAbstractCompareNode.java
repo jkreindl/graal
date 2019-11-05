@@ -30,10 +30,37 @@
 package com.oracle.truffle.llvm.runtime.nodes.op;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.LLVMCompareOperator;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
+import org.graalvm.collections.EconomicMap;
 
 public abstract class LLVMAbstractCompareNode extends LLVMExpressionNode {
+
     public abstract boolean executeWithTarget(Object a, Object b);
 
     public abstract boolean executeGenericBoolean(VirtualFrame frame);
+
+    public abstract LLVMCompareOperator getOperator();
+
+    public abstract boolean isFloatingPointComparison();
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        if (isFloatingPointComparison()) {
+            return super.hasTag(tag, LLVMTags.FCMP.EXPRESSION_TAGS);
+        } else {
+            return super.hasTag(tag, LLVMTags.ICMP.EXPRESSION_TAGS);
+        }
+    }
+
+    @Override
+    protected void collectIRNodeData(EconomicMap<String, Object> members) {
+        if (isFloatingPointComparison()) {
+            members.put(LLVMTags.FCMP.EXTRA_DATA_KIND, getOperator().getIrString());
+        } else {
+            members.put(LLVMTags.ICMP.EXTRA_DATA_KIND, getOperator().getIrString());
+        }
+    }
 }

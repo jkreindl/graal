@@ -35,6 +35,7 @@ import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
 import com.oracle.truffle.api.library.CachedLibrary;
+import com.oracle.truffle.llvm.runtime.LLVMCompareOperator;
 import com.oracle.truffle.llvm.runtime.library.internal.LLVMNativeLibrary;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
@@ -51,6 +52,16 @@ public abstract class LLVMAddressEqualsNode extends LLVMAbstractCompareNode {
     boolean doCompare(Object a, Object b,
                     @Cached LLVMPointerEqualsNode equals) {
         return equals.execute(a, b);
+    }
+
+    @Override
+    public boolean isFloatingPointComparison() {
+        return false;
+    }
+
+    @Override
+    public LLVMCompareOperator getOperator() {
+        return LLVMCompareOperator.INT_EQUAL;
     }
 
     @GenerateUncached

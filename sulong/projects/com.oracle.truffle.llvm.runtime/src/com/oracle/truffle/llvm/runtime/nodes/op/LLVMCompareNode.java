@@ -33,6 +33,7 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.dsl.TypeSystemReference;
+import com.oracle.truffle.llvm.runtime.LLVMCompareOperator;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
 import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
@@ -45,7 +46,14 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 @TypeSystemReference(LLVMTypesLongPointer.class)
 public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
 
-    public abstract static class LLVMEqNode extends LLVMCompareNode {
+    private abstract static class LLVMIntegerCompareNode extends LLVMCompareNode {
+        @Override
+        public boolean isFloatingPointComparison() {
+            return false;
+        }
+    }
+
+    public abstract static class LLVMEqNode extends LLVMIntegerCompareNode {
         @Specialization
         protected boolean eq(boolean val1, boolean val2) {
             return val1 == val2;
@@ -81,9 +89,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean eq(LLVMIVarBit val1, LLVMIVarBit val2) {
             return val1.isEqual(val2);
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.INT_EQUAL;
+        }
     }
 
-    public abstract static class LLVMNeNode extends LLVMCompareNode {
+    public abstract static class LLVMNeNode extends LLVMIntegerCompareNode {
         @Specialization
         protected boolean nq(boolean val1, boolean val2) {
             return val1 != val2;
@@ -119,9 +132,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean nq(LLVMIVarBit val1, LLVMIVarBit val2) {
             return !val1.isEqual(val2);
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.INT_NOT_EQUAL;
+        }
     }
 
-    public abstract static class LLVMSignedLtNode extends LLVMCompareNode {
+    public abstract static class LLVMSignedLtNode extends LLVMIntegerCompareNode {
         @Specialization
         protected boolean slt(short val1, short val2) {
             return val1 < val2;
@@ -146,9 +164,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean slt(byte val1, byte val2) {
             return val1 < val2;
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.INT_SIGNED_LESS_THAN;
+        }
     }
 
-    public abstract static class LLVMSignedLeNode extends LLVMCompareNode {
+    public abstract static class LLVMSignedLeNode extends LLVMIntegerCompareNode {
         @Specialization
         protected boolean sle(short val1, short val2) {
             return val1 <= val2;
@@ -173,9 +196,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean sle(byte val1, byte val2) {
             return val1 <= val2;
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.INT_SIGNED_LESS_OR_EQUAL;
+        }
     }
 
-    public abstract static class LLVMUnsignedLtNode extends LLVMCompareNode {
+    public abstract static class LLVMUnsignedLtNode extends LLVMIntegerCompareNode {
         @Specialization
         protected boolean ult(short val1, short val2) {
             return Integer.compareUnsigned(val1, val2) < 0;
@@ -200,9 +228,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean ult(byte val1, byte val2) {
             return Integer.compareUnsigned(val1, val2) < 0;
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.INT_UNSIGNED_LESS_THAN;
+        }
     }
 
-    public abstract static class LLVMUnsignedLeNode extends LLVMCompareNode {
+    public abstract static class LLVMUnsignedLeNode extends LLVMIntegerCompareNode {
         @Specialization
         protected boolean ule(short val1, short val2) {
             return Integer.compareUnsigned(val1, val2) <= 0;
@@ -227,9 +260,21 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean ule(byte val1, byte val2) {
             return Integer.compareUnsigned(val1, val2) <= 0;
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.INT_UNSIGNED_LESS_OR_EQUAL;
+        }
     }
 
-    public abstract static class LLVMOrderedLtNode extends LLVMCompareNode {
+    private abstract static class LLVMFloatingCompareNode extends LLVMCompareNode {
+        @Override
+        public boolean isFloatingPointComparison() {
+            return true;
+        }
+    }
+
+    public abstract static class LLVMOrderedLtNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean olt(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return LLVM80BitFloat.areOrdered(val1, val2) && LLVM80BitFloat.compare(val1, val2) < 0;
@@ -253,9 +298,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
             assert !(val1 < val2) || areOrdered(val1, val2);
             return val1 < val2;
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_ORDERED_LESS_THAN;
+        }
     }
 
-    public abstract static class LLVMOrderedGtNode extends LLVMCompareNode {
+    public abstract static class LLVMOrderedGtNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean ogt(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return LLVM80BitFloat.areOrdered(val1, val2) && LLVM80BitFloat.compare(val1, val2) > 0;
@@ -279,9 +329,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
             assert !(val1 > val2) || areOrdered(val1, val2);
             return val1 > val2;
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_ORDERED_GREATER_THAN;
+        }
     }
 
-    public abstract static class LLVMOrderedGeNode extends LLVMCompareNode {
+    public abstract static class LLVMOrderedGeNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean oge(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return LLVM80BitFloat.areOrdered(val1, val2) && LLVM80BitFloat.compare(val1, val2) >= 0;
@@ -305,9 +360,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
             assert !(val1 >= val2) || areOrdered(val1, val2);
             return val1 >= val2;
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_ORDERED_GREATER_OR_EQUAL;
+        }
     }
 
-    public abstract static class LLVMOrderedLeNode extends LLVMCompareNode {
+    public abstract static class LLVMOrderedLeNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean ole(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return LLVM80BitFloat.areOrdered(val1, val2) && LLVM80BitFloat.compare(val1, val2) <= 0;
@@ -331,9 +391,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
             assert !(val1 <= val2) || areOrdered(val1, val2);
             return val1 <= val2;
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_ORDERED_LESS_OR_EQUAL;
+        }
     }
 
-    public abstract static class LLVMOrderedEqNode extends LLVMCompareNode {
+    public abstract static class LLVMOrderedEqNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean oeq(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return LLVM80BitFloat.areOrdered(val1, val2) && LLVM80BitFloat.compare(val1, val2) == 0;
@@ -357,9 +422,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
             assert !(val1 == val2) || areOrdered(val1, val2);
             return val1 == val2;
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_ORDERED_EQUAL;
+        }
     }
 
-    public abstract static class LLVMOrderedNeNode extends LLVMCompareNode {
+    public abstract static class LLVMOrderedNeNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean one(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return LLVM80BitFloat.areOrdered(val1, val2) && LLVM80BitFloat.compare(val1, val2) != 0;
@@ -390,9 +460,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
                 return false;
             }
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_ORDERED_NOT_EQUAL;
+        }
     }
 
-    public abstract static class LLVMOrderedNode extends LLVMCompareNode {
+    public abstract static class LLVMOrderedNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean ord(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return LLVM80BitFloat.areOrdered(val1, val2);
@@ -407,9 +482,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean ord(float val1, float val2) {
             return areOrdered(val1, val2);
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_ORDERED;
+        }
     }
 
-    public abstract static class LLVMUnorderedLtNode extends LLVMCompareNode {
+    public abstract static class LLVMUnorderedLtNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean ult(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return !LLVM80BitFloat.areOrdered(val1, val2) || LLVM80BitFloat.compare(val1, val2) < 0;
@@ -424,9 +504,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean ult(float val1, float val2) {
             return !(val1 >= val2);
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_UNORDERED_LESS_THAN;
+        }
     }
 
-    public abstract static class LLVMUnorderedLeNode extends LLVMCompareNode {
+    public abstract static class LLVMUnorderedLeNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean ule(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return !LLVM80BitFloat.areOrdered(val1, val2) || LLVM80BitFloat.compare(val1, val2) <= 0;
@@ -441,9 +526,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean ule(float val1, float val2) {
             return !(val1 > val2);
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_UNORDERED_LESS_OR_EQUAL;
+        }
     }
 
-    public abstract static class LLVMUnorderedGtNode extends LLVMCompareNode {
+    public abstract static class LLVMUnorderedGtNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean ugt(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return !LLVM80BitFloat.areOrdered(val1, val2) || LLVM80BitFloat.compare(val1, val2) > 0;
@@ -458,9 +548,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean ugt(float val1, float val2) {
             return !(val1 <= val2);
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_UNORDERED_GREATER_THAN;
+        }
     }
 
-    public abstract static class LLVMUnorderedGeNode extends LLVMCompareNode {
+    public abstract static class LLVMUnorderedGeNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean uge(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return !LLVM80BitFloat.areOrdered(val1, val2) || LLVM80BitFloat.compare(val1, val2) >= 0;
@@ -475,9 +570,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean uge(float val1, float val2) {
             return !(val1 < val2);
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_UNORDERED_GREATER_OR_EQUAL;
+        }
     }
 
-    public abstract static class LLVMUnorderedEqNode extends LLVMCompareNode {
+    public abstract static class LLVMUnorderedEqNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean ueq(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return !LLVM80BitFloat.areOrdered(val1, val2) || LLVM80BitFloat.compare(val1, val2) == 0;
@@ -492,9 +592,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean ueq(float val1, float val2) {
             return !areOrdered(val1, val2) || val1 == val2;
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_UNORDERED_EQUAL;
+        }
     }
 
-    public abstract static class LLVMUnorderedNeNode extends LLVMCompareNode {
+    public abstract static class LLVMUnorderedNeNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean une(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return !LLVM80BitFloat.areOrdered(val1, val2) || LLVM80BitFloat.compare(val1, val2) != 0;
@@ -517,9 +622,14 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         private static boolean floatCompare(float val1, float val2) {
             return !(val1 == val2);
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_UNORDERED_NOT_EQUAL;
+        }
     }
 
-    public abstract static class LLVMUnorderedNode extends LLVMCompareNode {
+    public abstract static class LLVMUnorderedNode extends LLVMFloatingCompareNode {
         @Specialization
         protected boolean uno(LLVM80BitFloat val1, LLVM80BitFloat val2) {
             return !LLVM80BitFloat.areOrdered(val1, val2);
@@ -534,21 +644,36 @@ public abstract class LLVMCompareNode extends LLVMAbstractCompareNode {
         protected boolean uno(float val1, float val2) {
             return !areOrdered(val1, val2);
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_UNORDERED;
+        }
     }
 
-    public abstract static class LLVMTrueCmpNode extends LLVMCompareNode {
+    public abstract static class LLVMTrueCmpNode extends LLVMFloatingCompareNode {
         @Specialization
         @SuppressWarnings("unused")
         protected boolean op(Object val1, Object val2) {
             return true;
         }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_TRUE;
+        }
     }
 
-    public abstract static class LLVMFalseCmpNode extends LLVMCompareNode {
+    public abstract static class LLVMFalseCmpNode extends LLVMFloatingCompareNode {
         @Specialization
         @SuppressWarnings("unused")
         protected boolean op(Object val1, Object val2) {
             return false;
+        }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            return LLVMCompareOperator.FP_FALSE;
         }
     }
 

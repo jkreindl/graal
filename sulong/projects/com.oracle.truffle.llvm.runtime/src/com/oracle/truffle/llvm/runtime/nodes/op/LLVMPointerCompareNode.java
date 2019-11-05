@@ -29,12 +29,14 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes.op;
 
+import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
 import com.oracle.truffle.api.library.CachedLibrary;
+import com.oracle.truffle.llvm.runtime.LLVMCompareOperator;
 import com.oracle.truffle.llvm.runtime.library.internal.LLVMNativeLibrary;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
@@ -80,6 +82,16 @@ public abstract class LLVMPointerCompareNode extends LLVMAbstractCompareNode {
         return managedCompare.execute(a, libA, b, libB, op);
     }
 
+    @Override
+    public boolean isFloatingPointComparison() {
+        return false;
+    }
+
+    @Override
+    public LLVMCompareOperator getOperator() {
+        return op.getOperator();
+    }
+
     public static LLVMAbstractCompareNode create(Kind kind, LLVMExpressionNode l, LLVMExpressionNode r) {
         switch (kind) {
             case SLT:
@@ -89,6 +101,11 @@ public abstract class LLVMPointerCompareNode extends LLVMAbstractCompareNode {
                     public boolean compare(long a, long b) {
                         return a < b;
                     }
+
+                    @Override
+                    LLVMCompareOperator getOperator() {
+                        return LLVMCompareOperator.INT_SIGNED_LESS_THAN;
+                    }
                 }, l, r);
             case SLE:
                 return LLVMPointerCompareNodeGen.create(new NativePointerCompare() {
@@ -96,6 +113,11 @@ public abstract class LLVMPointerCompareNode extends LLVMAbstractCompareNode {
                     @Override
                     public boolean compare(long a, long b) {
                         return a <= b;
+                    }
+
+                    @Override
+                    LLVMCompareOperator getOperator() {
+                        return LLVMCompareOperator.INT_SIGNED_LESS_OR_EQUAL;
                     }
                 }, l, r);
             case ULE:
@@ -105,6 +127,11 @@ public abstract class LLVMPointerCompareNode extends LLVMAbstractCompareNode {
                     public boolean compare(long a, long b) {
                         return Long.compareUnsigned(a, b) <= 0;
                     }
+
+                    @Override
+                    LLVMCompareOperator getOperator() {
+                        return LLVMCompareOperator.INT_UNSIGNED_LESS_OR_EQUAL;
+                    }
                 }, l, r);
             case ULT:
                 return LLVMPointerCompareNodeGen.create(new NativePointerCompare() {
@@ -112,6 +139,11 @@ public abstract class LLVMPointerCompareNode extends LLVMAbstractCompareNode {
                     @Override
                     public boolean compare(long a, long b) {
                         return Long.compareUnsigned(a, b) < 0;
+                    }
+
+                    @Override
+                    LLVMCompareOperator getOperator() {
+                        return LLVMCompareOperator.INT_UNSIGNED_LESS_THAN;
                     }
                 }, l, r);
             case EQ:
@@ -135,6 +167,8 @@ public abstract class LLVMPointerCompareNode extends LLVMAbstractCompareNode {
 
     protected abstract static class NativePointerCompare {
         abstract boolean compare(long a, long b);
+
+        abstract LLVMCompareOperator getOperator();
     }
 
     /**
@@ -220,6 +254,45 @@ public abstract class LLVMPointerCompareNode extends LLVMAbstractCompareNode {
         @Override
         public boolean executeGenericBoolean(VirtualFrame frame) {
             return !booleanExpression.executeGenericBoolean(frame);
+        }
+
+        @Override
+        public LLVMCompareOperator getOperator() {
+            final LLVMCompareOperator operator = booleanExpression.getOperator();
+            switch (operator) {
+                case FP_FALSE:
+                    return LLVMCompareOperator.FP_TRUE;
+                case FP_TRUE:
+                    return LLVMCompareOperator.FP_FALSE;
+                case INT_EQUAL:
+                    return LLVMCompareOperator.INT_NOT_EQUAL;
+                case INT_NOT_EQUAL:
+                    return LLVMCompareOperator.INT_EQUAL;
+                case INT_UNSIGNED_GREATER_THAN:
+                    return LLVMCompareOperator.INT_UNSIGNED_LESS_OR_EQUAL;
+                case INT_UNSIGNED_GREATER_OR_EQUAL:
+                    return LLVMCompareOperator.INT_UNSIGNED_LESS_THAN;
+                case INT_UNSIGNED_LESS_THAN:
+                    return LLVMCompareOperator.INT_UNSIGNED_GREATER_OR_EQUAL;
+                case INT_UNSIGNED_LESS_OR_EQUAL:
+                    return LLVMCompareOperator.INT_UNSIGNED_GREATER_THAN;
+                case INT_SIGNED_GREATER_THAN:
+                    return LLVMCompareOperator.INT_SIGNED_LESS_OR_EQUAL;
+                case INT_SIGNED_GREATER_OR_EQUAL:
+                    return LLVMCompareOperator.INT_SIGNED_LESS_THAN;
+                case INT_SIGNED_LESS_THAN:
+                    return LLVMCompareOperator.INT_SIGNED_GREATER_OR_EQUAL;
+                case INT_SIGNED_LESS_OR_EQUAL:
+                    return LLVMCompareOperator.INT_SIGNED_GREATER_THAN;
+                default:
+                    CompilerDirectives.transferToInterpreter();
+                    throw new IllegalStateException("Unsupported comparison kind for negation: " + operator);
+            }
+        }
+
+        @Override
+        public boolean isFloatingPointComparison() {
+            return booleanExpression.isFloatingPointComparison();
         }
     }
 }

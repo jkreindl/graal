@@ -32,31 +32,52 @@ package com.oracle.truffle.llvm.parser.model.symbols.instructions;
 import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 import com.oracle.truffle.llvm.parser.model.SymbolTable;
 import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
-import com.oracle.truffle.llvm.runtime.CompareOperator;
+import com.oracle.truffle.llvm.runtime.LLVMCompareOperator;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
 import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.runtime.types.VectorType;
 
 public final class CompareInstruction extends ValueInstruction {
+
     private static final long INTEGER_OPERATOR_FLAG = 32L;
 
-    private static final CompareOperator[] FP_COMPARISONS = {CompareOperator.FP_FALSE, CompareOperator.FP_ORDERED_EQUAL, CompareOperator.FP_ORDERED_GREATER_THAN,
-                    CompareOperator.FP_ORDERED_GREATER_OR_EQUAL, CompareOperator.FP_ORDERED_LESS_THAN, CompareOperator.FP_ORDERED_LESS_OR_EQUAL, CompareOperator.FP_ORDERED_NOT_EQUAL,
-                    CompareOperator.FP_ORDERED, CompareOperator.FP_UNORDERED, CompareOperator.FP_UNORDERED_EQUAL, CompareOperator.FP_UNORDERED_GREATER_THAN,
-                    CompareOperator.FP_UNORDERED_GREATER_OR_EQUAL, CompareOperator.FP_UNORDERED_LESS_THAN, CompareOperator.FP_UNORDERED_LESS_OR_EQUAL, CompareOperator.FP_UNORDERED_NOT_EQUAL,
-                    CompareOperator.FP_TRUE};
+    private static final LLVMCompareOperator[] FP_COMPARISONS = {//
+                    LLVMCompareOperator.FP_FALSE, //
+                    LLVMCompareOperator.FP_ORDERED_EQUAL, //
+                    LLVMCompareOperator.FP_ORDERED_GREATER_THAN, //
+                    LLVMCompareOperator.FP_ORDERED_GREATER_OR_EQUAL, //
+                    LLVMCompareOperator.FP_ORDERED_LESS_THAN, //
+                    LLVMCompareOperator.FP_ORDERED_LESS_OR_EQUAL, //
+                    LLVMCompareOperator.FP_ORDERED_NOT_EQUAL, //
+                    LLVMCompareOperator.FP_ORDERED, //
+                    LLVMCompareOperator.FP_UNORDERED, //
+                    LLVMCompareOperator.FP_UNORDERED_EQUAL, //
+                    LLVMCompareOperator.FP_UNORDERED_GREATER_THAN, //
+                    LLVMCompareOperator.FP_UNORDERED_GREATER_OR_EQUAL, //
+                    LLVMCompareOperator.FP_UNORDERED_LESS_THAN, //
+                    LLVMCompareOperator.FP_UNORDERED_LESS_OR_EQUAL, //
+                    LLVMCompareOperator.FP_UNORDERED_NOT_EQUAL, //
+                    LLVMCompareOperator.FP_TRUE};
 
-    private static final CompareOperator[] INT_COMPARISONS = {CompareOperator.INT_EQUAL, CompareOperator.INT_NOT_EQUAL, CompareOperator.INT_UNSIGNED_GREATER_THAN,
-                    CompareOperator.INT_UNSIGNED_GREATER_OR_EQUAL, CompareOperator.INT_UNSIGNED_LESS_THAN, CompareOperator.INT_UNSIGNED_LESS_OR_EQUAL, CompareOperator.INT_SIGNED_GREATER_THAN,
-                    CompareOperator.INT_SIGNED_GREATER_OR_EQUAL, CompareOperator.INT_SIGNED_LESS_THAN, CompareOperator.INT_SIGNED_LESS_OR_EQUAL};
+    private static final LLVMCompareOperator[] INT_COMPARISONS = {//
+                    LLVMCompareOperator.INT_EQUAL, //
+                    LLVMCompareOperator.INT_NOT_EQUAL, //
+                    LLVMCompareOperator.INT_UNSIGNED_GREATER_THAN, //
+                    LLVMCompareOperator.INT_UNSIGNED_GREATER_OR_EQUAL, //
+                    LLVMCompareOperator.INT_UNSIGNED_LESS_THAN, //
+                    LLVMCompareOperator.INT_UNSIGNED_LESS_OR_EQUAL, //
+                    LLVMCompareOperator.INT_SIGNED_GREATER_THAN, //
+                    LLVMCompareOperator.INT_SIGNED_GREATER_OR_EQUAL, //
+                    LLVMCompareOperator.INT_SIGNED_LESS_THAN, //
+                    LLVMCompareOperator.INT_SIGNED_LESS_OR_EQUAL};
 
-    private final CompareOperator operator;
+    private final LLVMCompareOperator operator;
 
     private SymbolImpl lhs;
 
     private SymbolImpl rhs;
 
-    private CompareInstruction(Type type, CompareOperator operator) {
+    private CompareInstruction(Type type, LLVMCompareOperator operator) {
         super(calculateResultType(type));
         this.operator = operator;
     }
@@ -78,7 +99,7 @@ public final class CompareInstruction extends ValueInstruction {
         return lhs;
     }
 
-    public CompareOperator getOperator() {
+    public LLVMCompareOperator getOperator() {
         return operator;
     }
 
@@ -103,7 +124,7 @@ public final class CompareInstruction extends ValueInstruction {
         return cmpInst;
     }
 
-    public static CompareOperator decodeCompareOperator(long opcode) {
+    public static LLVMCompareOperator decodeCompareOperator(long opcode) {
         if (opcode >= 0 && opcode < FP_COMPARISONS.length) {
             return FP_COMPARISONS[(int) opcode];
         } else {

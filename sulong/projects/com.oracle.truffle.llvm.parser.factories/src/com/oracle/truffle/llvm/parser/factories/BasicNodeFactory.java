@@ -41,7 +41,7 @@ import com.oracle.truffle.llvm.parser.model.attributes.Attribute.KnownAttribute;
 import com.oracle.truffle.llvm.parser.model.attributes.AttributesGroup;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDeclaration;
 import com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticOperator;
-import com.oracle.truffle.llvm.runtime.CompareOperator;
+import com.oracle.truffle.llvm.runtime.LLVMCompareOperator;
 import com.oracle.truffle.llvm.runtime.GetStackSpaceFactory;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.LLVMContext.ExternalLibrary;
@@ -807,7 +807,7 @@ public class BasicNodeFactory implements NodeFactory {
     }
 
     @Override
-    public LLVMExpressionNode createComparison(CompareOperator operator, Type type, LLVMExpressionNode lhs, LLVMExpressionNode rhs) {
+    public LLVMExpressionNode createComparison(LLVMCompareOperator operator, Type type, LLVMExpressionNode lhs, LLVMExpressionNode rhs) {
         if (type instanceof VectorType) {
             VectorType vectorType = ((VectorType) type);
             LLVMAbstractCompareNode comparison = createScalarComparison(operator, vectorType.getElementType(), null, null);
@@ -817,7 +817,7 @@ public class BasicNodeFactory implements NodeFactory {
         }
     }
 
-    protected LLVMAbstractCompareNode createScalarComparison(CompareOperator operator, Type type, LLVMExpressionNode lhs, LLVMExpressionNode rhs) {
+    protected LLVMAbstractCompareNode createScalarComparison(LLVMCompareOperator operator, Type type, LLVMExpressionNode lhs, LLVMExpressionNode rhs) {
         assert !(type instanceof VectorType);
         if (usePointerComparison(type)) {
             return createPointerComparison(operator, lhs, rhs);
@@ -826,7 +826,7 @@ public class BasicNodeFactory implements NodeFactory {
         }
     }
 
-    private static LLVMAbstractCompareNode createPointerComparison(CompareOperator operator, LLVMExpressionNode lhs, LLVMExpressionNode rhs) {
+    private static LLVMAbstractCompareNode createPointerComparison(LLVMCompareOperator operator, LLVMExpressionNode lhs, LLVMExpressionNode rhs) {
         switch (operator) {
             case INT_EQUAL:
                 return LLVMPointerCompareNode.create(LLVMPointerCompareNode.Kind.EQ, lhs, rhs);
@@ -849,11 +849,11 @@ public class BasicNodeFactory implements NodeFactory {
             case INT_SIGNED_LESS_OR_EQUAL:
                 return LLVMPointerCompareNode.create(LLVMPointerCompareNode.Kind.SLE, lhs, rhs);
             default:
-                throw new AssertionError(operator);
+                throw new AssertionError("Not a pointer compare operator: " + operator);
         }
     }
 
-    private static LLVMAbstractCompareNode createPrimitiveComparison(CompareOperator operator, LLVMExpressionNode lhs, LLVMExpressionNode rhs) {
+    private static LLVMAbstractCompareNode createPrimitiveComparison(LLVMCompareOperator operator, LLVMExpressionNode lhs, LLVMExpressionNode rhs) {
         switch (operator) {
             case FP_FALSE:
                 return LLVMFalseCmpNodeGen.create(lhs, rhs);
