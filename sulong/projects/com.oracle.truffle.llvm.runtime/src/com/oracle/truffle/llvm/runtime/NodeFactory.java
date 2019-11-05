@@ -48,6 +48,7 @@ import com.oracle.truffle.llvm.runtime.memory.VarargsAreaStackAllocationNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
+import com.oracle.truffle.llvm.runtime.nodes.intrinsics.llvm.LLVMBuiltin;
 import com.oracle.truffle.llvm.runtime.types.AggregateType;
 import com.oracle.truffle.llvm.runtime.types.ArrayType;
 import com.oracle.truffle.llvm.runtime.types.FunctionType;
@@ -188,6 +189,8 @@ public interface NodeFactory {
                     LLVMExpressionNode newNode);
 
     LLVMExpressionNode createLLVMBuiltin(Symbol target, LLVMExpressionNode[] args, Type[] argsTypes, int callerArgumentCount);
+
+    LLVMBuiltin wrapAsBuiltin(LLVMExpressionNode node);
 
     LLVMStatementNode createPhi(LLVMExpressionNode[] from, FrameSlot[] to, Type[] types);
 

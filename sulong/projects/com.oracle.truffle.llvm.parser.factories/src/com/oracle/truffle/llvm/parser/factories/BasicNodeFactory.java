@@ -158,6 +158,7 @@ import com.oracle.truffle.llvm.runtime.nodes.intrinsics.c.LLVMCMathsIntrinsicsFa
 import com.oracle.truffle.llvm.runtime.nodes.intrinsics.interop.LLVMTruffleGetArgCountNodeGen;
 import com.oracle.truffle.llvm.runtime.nodes.intrinsics.interop.LLVMTruffleGetArgNodeGen;
 import com.oracle.truffle.llvm.runtime.nodes.intrinsics.llvm.LLVMAssumeNodeGen;
+import com.oracle.truffle.llvm.runtime.nodes.intrinsics.llvm.LLVMBuiltin;
 import com.oracle.truffle.llvm.runtime.nodes.intrinsics.llvm.LLVMByteSwapFactory.LLVMByteSwapI16NodeGen;
 import com.oracle.truffle.llvm.runtime.nodes.intrinsics.llvm.LLVMByteSwapFactory.LLVMByteSwapI16VectorNodeGen;
 import com.oracle.truffle.llvm.runtime.nodes.intrinsics.llvm.LLVMByteSwapFactory.LLVMByteSwapI32NodeGen;
@@ -1666,6 +1667,11 @@ public class BasicNodeFactory implements NodeFactory {
             }
         }
         return null;
+    }
+
+    @Override
+    public LLVMBuiltin wrapAsBuiltin(LLVMExpressionNode node) {
+        return new LLVMBuiltin.ExpressionWrapper(node);
     }
 
     private LLVMExpressionNode createMemsetIntrinsic(LLVMExpressionNode[] args) {

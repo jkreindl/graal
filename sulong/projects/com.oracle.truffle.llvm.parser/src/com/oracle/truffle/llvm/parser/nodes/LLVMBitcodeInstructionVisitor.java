@@ -45,6 +45,7 @@ import com.oracle.truffle.llvm.parser.model.attributes.Attribute;
 import com.oracle.truffle.llvm.parser.model.attributes.AttributesGroup;
 import com.oracle.truffle.llvm.parser.model.enums.AsmDialect;
 import com.oracle.truffle.llvm.parser.model.enums.ReadModifyWriteOperator;
+import com.oracle.truffle.llvm.parser.model.functions.FunctionDeclaration;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.InlineAsmConstant;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.NullConstant;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.integer.IntegerConstant;
@@ -102,6 +103,7 @@ import com.oracle.truffle.llvm.runtime.nodes.api.LLVMInstrumentableNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNodeSourceDescriptor;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMVoidStatementNodeGen;
+import com.oracle.truffle.llvm.runtime.nodes.intrinsics.llvm.LLVMBuiltin;
 import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
 import com.oracle.truffle.llvm.runtime.types.AggregateType;
 import com.oracle.truffle.llvm.runtime.types.ArrayType;
@@ -236,9 +238,16 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
     }
 
     private LLVMExpressionNode tryGenerateBuiltinNode(SymbolImpl target, LLVMExpressionNode[] argNodes, Type[] argTypes, Instruction callInstruction, SourceInstrumentationStrategy intention) {
-        final LLVMExpressionNode llvmBuiltin = nodeFactory.createLLVMBuiltin(target, argNodes, argTypes, argCount);
+        LLVMExpressionNode llvmBuiltin = nodeFactory.createLLVMBuiltin(target, argNodes, argTypes, argCount);
         if (llvmBuiltin != null) {
+            if (!(llvmBuiltin instanceof LLVMBuiltin)) {
+                // TODO (jk) this is quite inefficient, a lot of nodes could instead just implement
+                // LLVMBuiltin
+                llvmBuiltin = nodeFactory.wrapAsBuiltin(llvmBuiltin);
+            }
             assignSourceLocation(llvmBuiltin, callInstruction, intention);
+            ((LLVMBuiltin) llvmBuiltin).setBuiltinName(((FunctionDeclaration) target).getName());
+            ((LLVMBuiltin) llvmBuiltin).setBuiltinType(((FunctionDeclaration) target).getType());
         }
         return llvmBuiltin;
     }
