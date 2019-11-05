@@ -29,12 +29,16 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes.func;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.StandardTags;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.types.FunctionType;
+import com.oracle.truffle.llvm.runtime.types.VoidType;
+import org.graalvm.collections.EconomicMap;
 
 public final class LLVMCallNode extends LLVMExpressionNode {
 
@@ -82,8 +86,17 @@ public final class LLVMCallNode extends LLVMExpressionNode {
     public boolean hasTag(Class<? extends Tag> tag) {
         if (tag == StandardTags.CallTag.class) {
             return isSourceCall && getSourceLocation() != null;
+        } else if (dispatchNode.type.getReturnType() instanceof VoidType) {
+            return super.hasTag(tag, LLVMTags.Call.VOID_CALL_TAGS);
         } else {
-            return super.hasTag(tag);
+            return super.hasTag(tag, LLVMTags.Call.VALUE_CALL_TAGS);
         }
+    }
+
+    @Override
+    @TruffleBoundary
+    protected void collectIRNodeData(EconomicMap<String, Object> members) {
+        // don't count the stack-pointer as argument
+        members.put(LLVMTags.Call.EXTRA_DATA_ARGS_COUNT, argumentNodes.length - 1);
     }
 }
