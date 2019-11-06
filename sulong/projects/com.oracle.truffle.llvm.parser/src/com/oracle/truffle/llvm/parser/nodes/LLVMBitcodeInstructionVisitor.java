@@ -95,6 +95,8 @@ import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.except.LLVMUserException;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack;
 import com.oracle.truffle.llvm.runtime.memory.LLVMStack.UniquesRegion;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
@@ -112,6 +114,7 @@ import com.oracle.truffle.llvm.runtime.types.PointerType;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
 import com.oracle.truffle.llvm.runtime.types.StructureType;
 import com.oracle.truffle.llvm.runtime.types.Type;
+import org.graalvm.collections.EconomicMap;
 
 public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
 
@@ -604,6 +607,15 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         if (offset != 0) {
             final LLVMExpressionNode oneLiteralNode = nodeFactory.createLiteral(1, PrimitiveType.I32);
             targetAddress = nodeFactory.createTypedElementPointer(targetAddress, oneLiteralNode, offset, extract.getType());
+
+            // there is no extractvalue in instrumentation, it's always lowered to source -> load or
+            // if index != 0 source -> gep -> load
+            targetAddress.enableIRTags(new PointerType(resultType));
+            final EconomicMap<String, Object> nodeObjectMembers = EconomicMap.create(4);
+            nodeObjectMembers.put(LLVMTags.GetElementPtr.EXTRA_DATA_INDEX_TYPES, new Object[]{PrimitiveType.I32, PrimitiveType.I32});
+            nodeObjectMembers.put(LLVMTags.GetElementPtr.EXTRA_DATA_INDEX_VALUES, new Object[]{0, targetIndex});
+            nodeObjectMembers.put(LLVMTags.GetElementPtr.EXTRA_DATA_IS_INBOUND, false);
+            targetAddress.getOrCreateSourceDescriptor().setNodeObject(LLVMNodeObject.create(nodeObjectMembers));
         }
 
         final LLVMExpressionNode result = nodeFactory.createExtractValue(resultType, targetAddress);
