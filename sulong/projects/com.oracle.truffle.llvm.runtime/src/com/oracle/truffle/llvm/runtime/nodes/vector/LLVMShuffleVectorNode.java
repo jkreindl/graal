@@ -32,8 +32,10 @@ package com.oracle.truffle.llvm.runtime.nodes.vector;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.NodeField;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.profiles.ConditionProfile;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
@@ -55,6 +57,11 @@ public abstract class LLVMShuffleVectorNode extends LLVMExpressionNode {
     protected final ConditionProfile conditionProfile = ConditionProfile.createCountingProfile();
 
     protected abstract int getVectorLength();
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return super.hasTag(tag, LLVMTags.ShuffleVector.EXPRESSION_TAGS);
+    }
 
     public abstract static class LLVMShuffleI1VectorNode extends LLVMShuffleVectorNode {
         @Specialization
