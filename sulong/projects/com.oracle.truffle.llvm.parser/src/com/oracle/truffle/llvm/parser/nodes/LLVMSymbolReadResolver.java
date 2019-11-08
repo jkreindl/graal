@@ -73,6 +73,7 @@ import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.global.LLVMGlobal;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTypeInteropWrapper;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
@@ -472,7 +473,7 @@ public final class LLVMSymbolReadResolver {
             final SymbolImpl indexSymbol = indices.get(i);
 
             final Type indexType = indexSymbol.getType();
-            indexTypes[i] = indexType;
+            indexTypes[i] = LLVMTypeInteropWrapper.create(indexType, dataLayout);
 
             final Long indexInteger = evaluateLongIntegerConstant(indexSymbol);
             if (indexInteger == null) {
