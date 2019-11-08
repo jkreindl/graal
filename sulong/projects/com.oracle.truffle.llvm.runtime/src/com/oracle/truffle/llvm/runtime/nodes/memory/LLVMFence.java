@@ -31,6 +31,8 @@ package com.oracle.truffle.llvm.runtime.nodes.memory;
 
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 
@@ -39,5 +41,10 @@ public abstract class LLVMFence extends LLVMStatementNode {
     @Specialization
     protected void doOp(@Cached("getLLVMMemory()") LLVMMemory memory) {
         memory.fullFence();
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return super.hasTag(tag, LLVMTags.Fence.STATEMENT_TAGS);
     }
 }
