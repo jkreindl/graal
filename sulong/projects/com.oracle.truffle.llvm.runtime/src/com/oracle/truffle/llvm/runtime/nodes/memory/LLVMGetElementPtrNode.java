@@ -32,6 +32,8 @@ package com.oracle.truffle.llvm.runtime.nodes.memory;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.NodeField;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.interop.LLVMNegatedForeignObject;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
@@ -89,6 +91,11 @@ public abstract class LLVMGetElementPtrNode extends LLVMExpressionNode {
     @Specialization(guards = "isNegated(val.getObject(), addr.getObject())")
     protected LLVMPointer pointerDiffRev(LLVMManagedPointer addr, LLVMManagedPointer val) {
         return LLVMNativePointer.create(val.getOffset() + addr.getOffset());
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return super.hasTag(tag, LLVMTags.GetElementPtr.EXPRESSION_TAGS);
     }
 
     @Specialization

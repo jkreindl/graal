@@ -624,7 +624,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
 
     @Override
     public void visit(GetElementPointerInstruction gep) {
-        final LLVMExpressionNode targetAddress = symbols.resolveElementPointer(gep.getBasePointer(), gep.getIndices());
+        final LLVMExpressionNode targetAddress = symbols.resolveElementPointer(gep.getBasePointer(), gep.getIndices(), gep.isInbounds());
         createFrameWrite(targetAddress, gep);
     }
 

@@ -81,6 +81,11 @@ public final class LLVMNodeSourceDescriptor {
         return false;
     }
 
+    public void setNodeObject(LLVMNodeObject nodeObject) {
+        CompilerAsserts.neverPartOfCompilation("NodeObject must not be modified after parsing");
+        this.nodeObject = nodeObject;
+    }
+
     public LLVMNodeObject getNodeObject() {
         return nodeObject != null ? nodeObject : LLVMNodeObject.EMPTY;
     }

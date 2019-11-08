@@ -71,6 +71,8 @@ import com.oracle.truffle.llvm.runtime.NodeFactory;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.global.LLVMGlobal;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
@@ -87,6 +89,7 @@ import com.oracle.truffle.llvm.runtime.types.VariableBitWidthType;
 import com.oracle.truffle.llvm.runtime.types.VectorType;
 import com.oracle.truffle.llvm.runtime.types.VoidType;
 import com.oracle.truffle.llvm.runtime.types.visitors.TypeVisitor;
+import org.graalvm.collections.EconomicMap;
 
 public final class LLVMSymbolReadResolver {
 
@@ -310,7 +313,7 @@ public final class LLVMSymbolReadResolver {
 
         @Override
         public void visit(GetElementPointerConstant constant) {
-            resolvedNode = resolveElementPointer(constant.getBasePointer(), constant.getIndices());
+            resolvedNode = resolveElementPointer(constant.getBasePointer(), constant.getIndices(), constant.isInbounds());
         }
 
         @Override
@@ -459,17 +462,23 @@ public final class LLVMSymbolReadResolver {
         }
     }
 
-    public LLVMExpressionNode resolveElementPointer(SymbolImpl base, List<SymbolImpl> indices) {
+    public LLVMExpressionNode resolveElementPointer(SymbolImpl base, List<SymbolImpl> indices, boolean isInbounds) {
         LLVMExpressionNode currentAddress = resolve(base);
         Type currentType = base.getType();
 
+        final Object[] indexTypes = new Object[indices.size()];
+        final Object[] indexValues = new Object[indices.size()];
         for (int i = 0, indicesSize = indices.size(); i < indicesSize; i++) {
             final SymbolImpl indexSymbol = indices.get(i);
+
             final Type indexType = indexSymbol.getType();
+            indexTypes[i] = indexType;
 
             final Long indexInteger = evaluateLongIntegerConstant(indexSymbol);
             if (indexInteger == null) {
                 // the index is determined at runtime
+                indexValues[i] = LLVMTags.GetElementPtr.INDEX_DYNAMIC_VALUE;
+
                 if (currentType instanceof StructureType) {
                     // according to http://llvm.org/docs/LangRef.html#getelementptr-instruction
                     throw new LLVMParserException("Indices on structs must be constant integers!");
@@ -479,8 +488,11 @@ public final class LLVMSymbolReadResolver {
                 currentType = aggregate.getElementType(1);
                 final LLVMExpressionNode indexNode = resolve(indexSymbol);
                 currentAddress = nodeFactory.createTypedElementPointer(currentAddress, indexNode, indexedTypeLength, currentType);
+
             } else {
                 // the index is a constant integer
+                indexValues[i] = indexInteger;
+
                 AggregateType aggregate = (AggregateType) currentType;
                 final long addressOffset = aggregate.getOffsetOf(indexInteger, dataLayout);
                 currentType = aggregate.getElementType(indexInteger);
@@ -500,6 +512,12 @@ public final class LLVMSymbolReadResolver {
                 }
             }
         }
+
+        final EconomicMap<String, Object> nodeObjectMembers = EconomicMap.create(3);
+        nodeObjectMembers.put(LLVMTags.GetElementPtr.EXTRA_DATA_INDEX_TYPES, indexTypes);
+        nodeObjectMembers.put(LLVMTags.GetElementPtr.EXTRA_DATA_INDEX_VALUES, indexValues);
+        nodeObjectMembers.put(LLVMTags.GetElementPtr.EXTRA_DATA_IS_INBOUND, isInbounds);
+        currentAddress.getOrCreateSourceDescriptor().setNodeObject(LLVMNodeObject.create(nodeObjectMembers));
 
         return currentAddress;
     }
