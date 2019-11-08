@@ -30,6 +30,8 @@
 package com.oracle.truffle.llvm.runtime.nodes.api;
 
 import com.oracle.truffle.api.dsl.NodeChild;
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 
 @NodeChild(value = "address", type = LLVMExpressionNode.class)
 @NodeChild(value = "value", type = LLVMExpressionNode.class)
@@ -38,4 +40,9 @@ public abstract class LLVMStoreNode extends LLVMStatementNode {
     public static final LLVMStoreNode[] NO_STORES = {};
 
     public abstract void executeWithTarget(Object address, Object value);
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return super.hasTag(tag, LLVMTags.Store.STATEMENT_TAGS);
+    }
 }
