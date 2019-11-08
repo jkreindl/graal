@@ -29,11 +29,19 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes.base;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.api.source.Source;
+import com.oracle.truffle.api.source.SourceSection;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMKeysObject;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMNodeObject;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 
 public class LLVMFrameNuller extends LLVMStatementNode {
+
     private final FrameSlot frameSlot;
 
     public LLVMFrameNuller(FrameSlot frameSlot) {
@@ -43,5 +51,34 @@ public class LLVMFrameNuller extends LLVMStatementNode {
     @Override
     public void execute(VirtualFrame frame) {
         LLVMFrameNullerUtil.nullFrameSlot(frame, frameSlot, false);
+    }
+
+    private static final SourceSection SOURCE_SECTION;
+
+    static {
+        final Source source = Source.newBuilder("llvm", "LLVM Internal", "<llvm internal>").mimeType("text/plain").build();
+        SOURCE_SECTION = source.createUnavailableSection();
+    }
+
+    @Override
+    public SourceSection getSourceSection() {
+        return SOURCE_SECTION;
+    }
+
+    @Override
+    public boolean isInstrumentable() {
+        return true;
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return tag == LLVMTags.SSALifetimeEnd.class;
+    }
+
+    @Override
+    @TruffleBoundary
+    public Object getNodeObject() {
+        final String slotName = String.valueOf(frameSlot.getIdentifier());
+        return LLVMNodeObject.create(LLVMTags.SSALifetimeEnd.EXTRA_DATA_SLOTS, new LLVMKeysObject(new String[]{slotName}));
     }
 }
