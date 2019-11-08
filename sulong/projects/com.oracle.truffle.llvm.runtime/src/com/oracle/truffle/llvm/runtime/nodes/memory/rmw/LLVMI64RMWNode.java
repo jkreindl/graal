@@ -32,6 +32,7 @@ package com.oracle.truffle.llvm.runtime.nodes.memory.rmw;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.llvm.runtime.arithmetic.LLVMRMWOperator;
 import com.oracle.truffle.llvm.runtime.nodes.memory.load.LLVMI64LoadNode;
 import com.oracle.truffle.llvm.runtime.nodes.memory.store.LLVMI64StoreNode;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemory;
@@ -44,7 +45,7 @@ import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 
 @NodeChild(type = LLVMExpressionNode.class, value = "pointerNode")
 @NodeChild(type = LLVMExpressionNode.class, value = "valueNode")
-public abstract class LLVMI64RMWNode extends LLVMExpressionNode {
+public abstract class LLVMI64RMWNode extends LLVMRMWNode {
 
     protected static LLVMI64LoadNode createRead() {
         return LLVMI64LoadNodeGen.create(null);
@@ -72,6 +73,11 @@ public abstract class LLVMI64RMWNode extends LLVMExpressionNode {
                 return result;
             }
         }
+
+        @Override
+        protected LLVMRMWOperator getOperator() {
+            return LLVMRMWOperator.XCHG;
+        }
     }
 
     public abstract static class LLVMI64RMWAddNode extends LLVMI64RMWNode {
@@ -92,6 +98,11 @@ public abstract class LLVMI64RMWNode extends LLVMExpressionNode {
                 write.executeWithTarget(address, result + value);
                 return result;
             }
+        }
+
+        @Override
+        protected LLVMRMWOperator getOperator() {
+            return LLVMRMWOperator.ADD;
         }
     }
 
@@ -114,6 +125,11 @@ public abstract class LLVMI64RMWNode extends LLVMExpressionNode {
                 return result;
             }
         }
+
+        @Override
+        protected LLVMRMWOperator getOperator() {
+            return LLVMRMWOperator.SUB;
+        }
     }
 
     public abstract static class LLVMI64RMWAndNode extends LLVMI64RMWNode {
@@ -134,6 +150,11 @@ public abstract class LLVMI64RMWNode extends LLVMExpressionNode {
                 write.executeWithTarget(address, result & value);
                 return result;
             }
+        }
+
+        @Override
+        protected LLVMRMWOperator getOperator() {
+            return LLVMRMWOperator.AND;
         }
     }
 
@@ -156,6 +177,11 @@ public abstract class LLVMI64RMWNode extends LLVMExpressionNode {
                 return result;
             }
         }
+
+        @Override
+        protected LLVMRMWOperator getOperator() {
+            return LLVMRMWOperator.NAND;
+        }
     }
 
     public abstract static class LLVMI64RMWOrNode extends LLVMI64RMWNode {
@@ -177,6 +203,11 @@ public abstract class LLVMI64RMWNode extends LLVMExpressionNode {
                 return result;
             }
         }
+
+        @Override
+        protected LLVMRMWOperator getOperator() {
+            return LLVMRMWOperator.OR;
+        }
     }
 
     public abstract static class LLVMI64RMWXorNode extends LLVMI64RMWNode {
@@ -197,6 +228,11 @@ public abstract class LLVMI64RMWNode extends LLVMExpressionNode {
                 write.executeWithTarget(address, result ^ value);
                 return result;
             }
+        }
+
+        @Override
+        protected LLVMRMWOperator getOperator() {
+            return LLVMRMWOperator.XOR;
         }
     }
 }
