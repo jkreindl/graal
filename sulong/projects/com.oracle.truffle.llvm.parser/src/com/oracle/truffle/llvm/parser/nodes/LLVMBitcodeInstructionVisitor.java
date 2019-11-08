@@ -44,7 +44,6 @@ import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 import com.oracle.truffle.llvm.parser.model.attributes.Attribute;
 import com.oracle.truffle.llvm.parser.model.attributes.AttributesGroup;
 import com.oracle.truffle.llvm.parser.model.enums.AsmDialect;
-import com.oracle.truffle.llvm.parser.model.enums.ReadModifyWriteOperator;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDeclaration;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.InlineAsmConstant;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.NullConstant;
@@ -91,6 +90,7 @@ import com.oracle.truffle.llvm.runtime.CommonNodeFactory;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.LLVMContext.ExternalLibrary;
 import com.oracle.truffle.llvm.runtime.NodeFactory;
+import com.oracle.truffle.llvm.runtime.arithmetic.LLVMRMWOperator;
 import com.oracle.truffle.llvm.runtime.datalayout.DataLayout;
 import com.oracle.truffle.llvm.runtime.debug.scope.LLVMSourceLocation;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
@@ -757,7 +757,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         createFrameWrite(result, rmw);
     }
 
-    private LLVMExpressionNode createReadModifyWrite(ReadModifyWriteOperator op, LLVMExpressionNode pointerNode, LLVMExpressionNode valueNode, Type type) {
+    private LLVMExpressionNode createReadModifyWrite(LLVMRMWOperator op, LLVMExpressionNode pointerNode, LLVMExpressionNode valueNode, Type type) {
         switch (op) {
             case SUB:
                 return nodeFactory.createRMWSub(pointerNode, valueNode, type);

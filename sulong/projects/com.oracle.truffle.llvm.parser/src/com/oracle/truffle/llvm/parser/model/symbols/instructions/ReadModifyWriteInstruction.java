@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -31,15 +31,16 @@ package com.oracle.truffle.llvm.parser.model.symbols.instructions;
 
 import com.oracle.truffle.llvm.parser.model.SymbolTable;
 import com.oracle.truffle.llvm.parser.model.enums.AtomicOrdering;
-import com.oracle.truffle.llvm.parser.model.enums.ReadModifyWriteOperator;
+import com.oracle.truffle.llvm.parser.model.enums.OperatorParser;
 import com.oracle.truffle.llvm.parser.model.enums.SynchronizationScope;
 import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
+import com.oracle.truffle.llvm.runtime.arithmetic.LLVMRMWOperator;
 import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 
 public final class ReadModifyWriteInstruction extends ValueInstruction {
 
-    private final ReadModifyWriteOperator operator;
+    private final LLVMRMWOperator operator;
 
     private final AtomicOrdering atomicOrdering;
     private final boolean isVolatile;
@@ -48,7 +49,7 @@ public final class ReadModifyWriteInstruction extends ValueInstruction {
     private SymbolImpl ptr;
     private SymbolImpl value;
 
-    private ReadModifyWriteInstruction(Type type, ReadModifyWriteOperator operator, boolean isVolatile, AtomicOrdering atomicOrdering, SynchronizationScope synchronizationScope) {
+    private ReadModifyWriteInstruction(Type type, LLVMRMWOperator operator, boolean isVolatile, AtomicOrdering atomicOrdering, SynchronizationScope synchronizationScope) {
         super(type);
         this.operator = operator;
         this.atomicOrdering = atomicOrdering;
@@ -69,7 +70,7 @@ public final class ReadModifyWriteInstruction extends ValueInstruction {
         return value;
     }
 
-    public ReadModifyWriteOperator getOperator() {
+    public LLVMRMWOperator getOperator() {
         return operator;
     }
 
@@ -96,7 +97,7 @@ public final class ReadModifyWriteInstruction extends ValueInstruction {
     }
 
     public static ReadModifyWriteInstruction fromSymbols(SymbolTable symbols, Type type, int ptr, int value, int opcode, boolean isVolatile, long atomicOrdering, long synchronizationScope) {
-        final ReadModifyWriteOperator operator = ReadModifyWriteOperator.decode(opcode);
+        final LLVMRMWOperator operator = OperatorParser.parseRMWOperator(opcode);
         final ReadModifyWriteInstruction inst = new ReadModifyWriteInstruction(type, operator, isVolatile, AtomicOrdering.decode(atomicOrdering), SynchronizationScope.decode(synchronizationScope));
         inst.ptr = symbols.getForwardReferenced(ptr, inst);
         inst.value = symbols.getForwardReferenced(value, inst);

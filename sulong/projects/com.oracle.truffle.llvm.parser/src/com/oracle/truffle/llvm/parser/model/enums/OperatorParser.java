@@ -31,6 +31,7 @@ package com.oracle.truffle.llvm.parser.model.enums;
 
 import com.oracle.truffle.llvm.runtime.arithmetic.LLVMArithmeticOperator;
 import com.oracle.truffle.llvm.runtime.arithmetic.LLVMCastOperator;
+import com.oracle.truffle.llvm.runtime.arithmetic.LLVMRMWOperator;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 
 public final class OperatorParser {
@@ -83,6 +84,15 @@ public final class OperatorParser {
     public static LLVMCastOperator parseCastOperator(int code) {
         if (code >= 0 && code < CAST_OPERATORS.length) {
             return CAST_OPERATORS[code];
+        }
+        return null;
+    }
+
+    private static final LLVMRMWOperator[] RMW_OPERATORS = LLVMRMWOperator.values();
+
+    public static LLVMRMWOperator parseRMWOperator(int code) {
+        if (code >= 0 && code < RMW_OPERATORS.length) {
+            return RMW_OPERATORS[code];
         }
         return null;
     }

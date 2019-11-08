@@ -27,9 +27,9 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.model.enums;
+package com.oracle.truffle.llvm.runtime.arithmetic;
 
-public enum ReadModifyWriteOperator {
+public enum LLVMRMWOperator {
 
     XCHG("xchg"),
     ADD("add"),
@@ -45,18 +45,9 @@ public enum ReadModifyWriteOperator {
     FADD("fadd"),
     FSUB("fsub");
 
-    private static final ReadModifyWriteOperator[] VALUES = values();
-
-    public static ReadModifyWriteOperator decode(int opcode) {
-        if (opcode >= 0 && opcode < VALUES.length) {
-            return VALUES[opcode];
-        }
-        return null;
-    }
-
     private final String irString;
 
-    ReadModifyWriteOperator(String irString) {
+    LLVMRMWOperator(String irString) {
         this.irString = irString;
     }
 
