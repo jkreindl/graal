@@ -145,6 +145,8 @@ public class LazyToTruffleConverterImpl implements LazyToTruffleConverter {
                         uniquesRegion.build(),
                         nullableBeforeBlock, nullableAfterBlock, copyArgumentsToFrameArray, location, frame);
 
+        body.enableIRTags(VoidType.INSTANCE);
+
         RootNode rootNode = runtime.getNodeFactory().createFunctionStartNode(body, frame, method.getName(), method.getSourceName(),
                         method.getParameters().size(), source, location);
         method.onAfterParse();

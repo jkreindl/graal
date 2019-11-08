@@ -30,16 +30,21 @@
 package com.oracle.truffle.llvm.runtime.nodes.control;
 
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.StandardTags;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
+import com.oracle.truffle.api.nodes.RootNode;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.memory.LLVMUniquesRegionAllocNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 import com.oracle.truffle.llvm.runtime.nodes.base.LLVMFrameNullerUtil;
+import com.oracle.truffle.llvm.runtime.nodes.func.LLVMFunctionStartNode;
+import org.graalvm.collections.EconomicMap;
 
 public final class LLVMFunctionRootNode extends LLVMExpressionNode {
 
@@ -91,7 +96,19 @@ public final class LLVMFunctionRootNode extends LLVMExpressionNode {
         } else if (tag == StandardTags.RootTag.class) {
             return true;
         } else {
-            return super.hasTag(tag);
+            return super.hasTag(tag, LLVMTags.Function.FUNCTION_TAGS);
+        }
+    }
+
+    @Override
+    @TruffleBoundary
+    protected void collectIRNodeData(EconomicMap<String, Object> members) {
+        final RootNode root = getRootNode();
+        if (root instanceof LLVMFunctionStartNode) {
+            members.put(LLVMTags.Function.EXTRA_DATA_LLVM_NAME, ((LLVMFunctionStartNode) root).getBcName());
+            members.put(LLVMTags.Function.EXTRA_DATA_SOURCE_NAME, ((LLVMFunctionStartNode) root).getOriginalName());
+        } else {
+            members.put(LLVMTags.Function.EXTRA_DATA_LLVM_NAME, root != null ? root.getName() : "<anonymous>");
         }
     }
 }
