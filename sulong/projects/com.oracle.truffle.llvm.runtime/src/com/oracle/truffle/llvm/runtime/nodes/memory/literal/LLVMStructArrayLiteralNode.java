@@ -37,11 +37,12 @@ import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.UnexpectedResultException;
 import com.oracle.truffle.llvm.runtime.memory.LLVMMemMoveNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
+import com.oracle.truffle.llvm.runtime.nodes.literals.LLVMLiteralNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMNativePointer;
 
 @NodeChild(value = "address", type = LLVMExpressionNode.class)
-public abstract class LLVMStructArrayLiteralNode extends LLVMExpressionNode {
+public abstract class LLVMStructArrayLiteralNode extends LLVMLiteralNode {
 
     @Children private final LLVMExpressionNode[] values;
     private final long stride;

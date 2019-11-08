@@ -36,10 +36,11 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStoreNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
+import com.oracle.truffle.llvm.runtime.nodes.literals.LLVMLiteralNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
 
 @NodeChild(type = LLVMExpressionNode.class)
-public abstract class StructLiteralNode extends LLVMExpressionNode {
+public abstract class StructLiteralNode extends LLVMLiteralNode {
 
     @CompilationFinal(dimensions = 1) private final int[] offsets;
     @Children private final LLVMStoreNode[] elementWriteNodes;

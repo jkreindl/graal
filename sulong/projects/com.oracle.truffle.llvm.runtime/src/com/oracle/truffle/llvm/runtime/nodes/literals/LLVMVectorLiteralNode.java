@@ -53,9 +53,9 @@ import com.oracle.truffle.llvm.runtime.vector.LLVMI64Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMI8Vector;
 import com.oracle.truffle.llvm.runtime.vector.LLVMPointerVector;
 
-public class LLVMVectorLiteralNode {
+public abstract class LLVMVectorLiteralNode extends LLVMLiteralNode {
 
-    public abstract static class LLVMI1VectorLiteralNode extends LLVMExpressionNode {
+    public abstract static class LLVMI1VectorLiteralNode extends LLVMVectorLiteralNode {
 
         @Children private final LLVMExpressionNode[] values;
 
@@ -74,7 +74,7 @@ public class LLVMVectorLiteralNode {
         }
     }
 
-    public abstract static class LLVMI8VectorLiteralNode extends LLVMExpressionNode {
+    public abstract static class LLVMI8VectorLiteralNode extends LLVMVectorLiteralNode {
 
         @Children private final LLVMExpressionNode[] values;
 
@@ -93,7 +93,7 @@ public class LLVMVectorLiteralNode {
         }
     }
 
-    public abstract static class LLVMI16VectorLiteralNode extends LLVMExpressionNode {
+    public abstract static class LLVMI16VectorLiteralNode extends LLVMVectorLiteralNode {
 
         @Children private final LLVMExpressionNode[] values;
 
@@ -112,7 +112,7 @@ public class LLVMVectorLiteralNode {
         }
     }
 
-    public abstract static class LLVMI32VectorLiteralNode extends LLVMExpressionNode {
+    public abstract static class LLVMI32VectorLiteralNode extends LLVMVectorLiteralNode {
 
         @Children private final LLVMExpressionNode[] values;
 
@@ -131,7 +131,7 @@ public class LLVMVectorLiteralNode {
         }
     }
 
-    public abstract static class LLVMI64VectorLiteralNode extends LLVMExpressionNode {
+    public abstract static class LLVMI64VectorLiteralNode extends LLVMVectorLiteralNode {
 
         @Children private final LLVMExpressionNode[] values;
 
@@ -167,7 +167,7 @@ public class LLVMVectorLiteralNode {
         }
     }
 
-    public abstract static class LLVMPointerVectorLiteralNode extends LLVMExpressionNode {
+    public abstract static class LLVMPointerVectorLiteralNode extends LLVMVectorLiteralNode {
 
         @Children private final LLVMExpressionNode[] values;
 
@@ -212,7 +212,7 @@ public class LLVMVectorLiteralNode {
         }
     }
 
-    public abstract static class LLVMFloatVectorLiteralNode extends LLVMExpressionNode {
+    public abstract static class LLVMFloatVectorLiteralNode extends LLVMVectorLiteralNode {
 
         @Children private final LLVMExpressionNode[] values;
 
@@ -231,7 +231,7 @@ public class LLVMVectorLiteralNode {
         }
     }
 
-    public abstract static class LLVMDoubleVectorLiteralNode extends LLVMExpressionNode {
+    public abstract static class LLVMDoubleVectorLiteralNode extends LLVMVectorLiteralNode {
 
         @Children private final LLVMExpressionNode[] values;
 

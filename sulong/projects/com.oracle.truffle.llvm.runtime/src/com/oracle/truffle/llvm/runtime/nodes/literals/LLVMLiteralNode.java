@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2019, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,41 +27,16 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.runtime.nodes.others;
+package com.oracle.truffle.llvm.runtime.nodes.literals;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
-import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.Tag;
-import com.oracle.truffle.llvm.runtime.global.LLVMGlobal;
 import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
-import org.graalvm.collections.EconomicMap;
 
-public final class LLVMAccessGlobalVariableStorageNode extends LLVMExpressionNode {
-
-    protected final LLVMGlobal descriptor;
-
-    public LLVMAccessGlobalVariableStorageNode(LLVMGlobal descriptor) {
-        this.descriptor = descriptor;
-    }
-
-    public LLVMGlobal getDescriptor() {
-        return descriptor;
-    }
-
-    @Override
-    public Object executeGeneric(VirtualFrame frame) {
-        return descriptor.getTarget();
-    }
+public abstract class LLVMLiteralNode extends LLVMExpressionNode {
 
     @Override
     public boolean hasTag(Class<? extends Tag> tag) {
-        return super.hasTag(tag, LLVMTags.GlobalRead.EXPRESSION_TAGS);
-    }
-
-    @Override
-    @TruffleBoundary
-    protected void collectIRNodeData(EconomicMap<String, Object> members) {
-        members.put(LLVMTags.GlobalRead.EXTRA_DATA_GLOBAL_NAME_LLVM, descriptor.getName());
+        return super.hasTag(tag, LLVMTags.Literal.EXPRESSION_TAGS);
     }
 }
