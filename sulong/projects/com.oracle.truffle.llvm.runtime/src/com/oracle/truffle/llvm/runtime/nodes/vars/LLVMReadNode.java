@@ -29,6 +29,7 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes.vars;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
@@ -37,12 +38,15 @@ import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.FrameSlotTypeException;
 import com.oracle.truffle.api.frame.FrameUtil;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.interop.LLVMTypedForeignObject;
 import com.oracle.truffle.llvm.runtime.interop.access.LLVMInteropType;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMNode;
 import com.oracle.truffle.llvm.runtime.nodes.vars.LLVMReadNodeFactory.ForeignAttachInteropTypeNodeGen;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMManagedPointer;
+import org.graalvm.collections.EconomicMap;
 
 public abstract class LLVMReadNode extends LLVMExpressionNode {
 
@@ -50,6 +54,17 @@ public abstract class LLVMReadNode extends LLVMExpressionNode {
 
     public LLVMReadNode(FrameSlot slot) {
         this.slot = slot;
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return super.hasTag(tag, LLVMTags.SSARead.EXPRESSION_TAGS);
+    }
+
+    @Override
+    @TruffleBoundary
+    protected void collectIRNodeData(EconomicMap<String, Object> members) {
+        members.put(LLVMTags.SSARead.EXTRA_DATA_SSA_SOURCE, String.valueOf(slot.getIdentifier()));
     }
 
     public abstract static class LLVMI1ReadNode extends LLVMReadNode {

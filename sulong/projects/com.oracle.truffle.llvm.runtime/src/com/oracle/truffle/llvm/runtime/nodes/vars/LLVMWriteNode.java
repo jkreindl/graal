@@ -30,12 +30,15 @@
 package com.oracle.truffle.llvm.runtime.nodes.vars;
 
 import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.NodeUtil;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.base.LLVMBasicBlockNode;
 import com.oracle.truffle.llvm.runtime.nodes.func.LLVMFunctionStartNode;
 import com.oracle.truffle.llvm.runtime.LLVMIVarBit;
@@ -43,6 +46,7 @@ import com.oracle.truffle.llvm.runtime.floating.LLVM80BitFloat;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 import com.oracle.truffle.llvm.runtime.vector.LLVMVector;
+import org.graalvm.collections.EconomicMap;
 
 @NodeChild(value = "valueNode", type = LLVMExpressionNode.class)
 public abstract class LLVMWriteNode extends LLVMStatementNode {
@@ -66,6 +70,21 @@ public abstract class LLVMWriteNode extends LLVMStatementNode {
         } else {
             return String.format("assignment of %s in basic block %s in function %s", slot.getIdentifier(), basicBlock.getBlockName(), functionStartNode.getBcName());
         }
+    }
+
+    public FrameSlot getSlot() {
+        return slot;
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return super.hasTag(tag, LLVMTags.SSAWrite.EXPRESSION_TAGS);
+    }
+
+    @Override
+    @TruffleBoundary
+    protected void collectIRNodeData(EconomicMap<String, Object> members) {
+        members.put(LLVMTags.SSAWrite.EXTRA_DATA_SSA_TARGET, String.valueOf(slot.getIdentifier()));
     }
 
     public abstract static class LLVMWriteI1Node extends LLVMWriteNode {

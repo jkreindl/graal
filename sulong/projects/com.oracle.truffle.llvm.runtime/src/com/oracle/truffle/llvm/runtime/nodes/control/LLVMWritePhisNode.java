@@ -29,11 +29,16 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes.control;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMKeysObject;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.vars.LLVMWriteNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
+import org.graalvm.collections.EconomicMap;
 
 public final class LLVMWritePhisNode extends LLVMStatementNode {
 
@@ -41,10 +46,13 @@ public final class LLVMWritePhisNode extends LLVMStatementNode {
     @Children private final LLVMWriteNode[] writes;
 
     public LLVMWritePhisNode(LLVMExpressionNode[] from, LLVMWriteNode[] writes) {
+        assert from != null;
+        assert writes != null;
         assert from.length > 0 && writes.length > 0;
+        assert writes.length == from.length;
+
         this.from = from;
         this.writes = writes;
-        assert from.length == writes.length;
     }
 
     @Override
@@ -73,5 +81,21 @@ public final class LLVMWritePhisNode extends LLVMStatementNode {
         for (int i = 0; i < writes.length; i++) {
             writes[i].executeWithTarget(frame, values[i]);
         }
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return super.hasTag(tag, LLVMTags.Phi.EXPRESSION_TAGS);
+    }
+
+    @Override
+    @TruffleBoundary
+    protected void collectIRNodeData(EconomicMap<String, Object> members) {
+        final String[] targets = new String[writes.length];
+        for (int i = 0; i < writes.length; i++) {
+            final Object slotIdentifier = writes[i].getSlot().getIdentifier();
+            targets[i] = String.valueOf(slotIdentifier);
+        }
+        members.put(LLVMTags.Phi.EXTRA_DATA_TARGETS, new LLVMKeysObject(targets));
     }
 }
