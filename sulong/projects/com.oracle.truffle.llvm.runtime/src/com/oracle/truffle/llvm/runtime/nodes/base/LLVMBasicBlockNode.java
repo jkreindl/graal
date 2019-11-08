@@ -32,18 +32,22 @@ package com.oracle.truffle.llvm.runtime.nodes.base;
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
 import com.oracle.truffle.api.instrumentation.ProbeNode;
+import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ControlFlowException;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeUtil;
 import com.oracle.truffle.api.profiles.BranchProfile;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMControlFlowNode;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMStatementNode;
 import com.oracle.truffle.llvm.runtime.nodes.func.LLVMFunctionStartNode;
 import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
+import org.graalvm.collections.EconomicMap;
 
 /**
  * This node represents a basic block in LLVM. The node contains both sequential statements which do
@@ -123,6 +127,18 @@ public abstract class LLVMBasicBlockNode extends LLVMStatementNode {
     public String toString() {
         CompilerAsserts.neverPartOfCompilation();
         return String.format("basic block %s", getBlockId());
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return super.hasTag(tag, LLVMTags.Block.BLOCK_TAGS);
+    }
+
+    @Override
+    @TruffleBoundary
+    protected void collectIRNodeData(EconomicMap<String, Object> members) {
+        members.put(LLVMTags.Block.EXTRA_DATA_BLOCK_ID, blockId);
+        members.put(LLVMTags.Block.EXTRA_DATA_BLOCK_NAME, blockName);
     }
 
     private static final class InitializedBlock extends LLVMBasicBlockNode {
