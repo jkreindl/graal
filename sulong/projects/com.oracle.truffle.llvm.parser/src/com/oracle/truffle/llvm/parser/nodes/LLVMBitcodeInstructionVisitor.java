@@ -114,6 +114,7 @@ import com.oracle.truffle.llvm.runtime.types.PointerType;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
 import com.oracle.truffle.llvm.runtime.types.StructureType;
 import com.oracle.truffle.llvm.runtime.types.Type;
+import com.oracle.truffle.llvm.runtime.types.VoidType;
 import org.graalvm.collections.EconomicMap;
 
 public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
@@ -359,6 +360,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         final LLVMStatementNode debugTrap = CommonNodeFactory.createDebugTrap();
         assignSourceLocation(debugTrap, inst, SourceInstrumentationStrategy.FORCED);
         addInstruction(debugTrap);
+        debugTrap.enableIRTags(VoidType.INSTANCE);
     }
 
     @Override
@@ -389,6 +391,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
                 final InlineAsmConstant inlineAsmConstant = (InlineAsmConstant) target;
                 node = createInlineAssemblerNode(inlineAsmConstant, args, argsType, call.getType());
                 assignSourceLocation(node, call);
+                node.enableIRTags(VoidType.INSTANCE);
 
             } else {
                 final LLVMExpressionNode function = symbols.resolve(target);
@@ -399,6 +402,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
                 // If it did not provide a source location, the debugger may not be able to show the
                 // node on the call stack or offer stepping into the call.
                 assignSourceLocation(node, call, SourceInstrumentationStrategy.FORCED);
+                node.enableIRTags(VoidType.INSTANCE);
             }
         }
 
@@ -743,6 +747,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
 
         final LLVMStatementNode node = nodeFactory.createStore(pointerNode, valueNode, type);
         assignSourceLocation(node, store, intention);
+        node.enableIRTags(VoidType.INSTANCE);
         addInstruction(node);
     }
 
@@ -789,6 +794,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         final LLVMStatementNode node = nodeFactory.createFence();
         assignSourceLocation(node, fence);
         addInstruction(node);
+        node.enableIRTags(VoidType.INSTANCE);
     }
 
     @Override
@@ -890,6 +896,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
     private void createFrameWrite(LLVMExpressionNode valueNode, ValueInstruction sourceInstruction, SourceInstrumentationStrategy intention) {
         final LLVMStatementNode writeNode = nodeFactory.createFrameWrite(sourceInstruction.getType(), valueNode, getSlot(sourceInstruction));
         assignSourceLocation(writeNode, sourceInstruction, intention);
+        valueNode.enableIRTags(sourceInstruction.getType());
         addInstruction(writeNode);
     }
 
@@ -951,6 +958,7 @@ public final class LLVMBitcodeInstructionVisitor implements SymbolVisitor {
         assert this.controlFlowNode == null;
         this.controlFlowNode = controlFlowNode;
         assignSourceLocation(controlFlowNode, sourceInstruction, intention);
+        controlFlowNode.enableIRTags(VoidType.INSTANCE);
     }
 
     private LLVMExpressionNode capsuleAddressByValue(LLVMExpressionNode child, Type type, AttributesGroup paramAttr) {

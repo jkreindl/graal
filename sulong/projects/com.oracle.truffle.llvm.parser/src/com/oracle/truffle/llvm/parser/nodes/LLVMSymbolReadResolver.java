@@ -529,6 +529,11 @@ public final class LLVMSymbolReadResolver {
         }
         resolvedNode = null;
         symbol.accept(visitor);
+
+        if (resolvedNode != null) {
+            resolvedNode.enableIRTags(symbol.getType());
+        }
+
         return resolvedNode;
     }
 }
