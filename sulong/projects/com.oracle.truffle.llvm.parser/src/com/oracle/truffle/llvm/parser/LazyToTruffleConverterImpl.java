@@ -35,6 +35,7 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
 
+import com.oracle.truffle.llvm.runtime.types.VoidType;
 import org.graalvm.options.OptionValues;
 
 import com.oracle.truffle.api.CompilerAsserts;
@@ -192,15 +193,21 @@ public class LazyToTruffleConverterImpl implements LazyToTruffleConverter {
         }
         for (FunctionParameter parameter : parameters) {
             LLVMExpressionNode parameterNode = runtime.getNodeFactory().createFunctionArgNode(argIndex++, parameter.getType());
+            parameterNode.enableIRTags(parameter.getType());
+
             FrameSlot slot = frame.findFrameSlot(parameter.getName());
+
+            LLVMStatementNode init;
             if (isStructByValue(parameter)) {
                 Type type = ((PointerType) parameter.getType()).getPointeeType();
-                formalParamInits.add(
-                                runtime.getNodeFactory().createFrameWrite(parameter.getType(),
-                                                runtime.getNodeFactory().createCopyStructByValue(type, GetStackSpaceFactory.createAllocaFactory(), parameterNode), slot));
+                init = runtime.getNodeFactory().createFrameWrite(parameter.getType(), runtime.getNodeFactory().createCopyStructByValue(type, GetStackSpaceFactory.createAllocaFactory(), parameterNode),
+                                slot);
             } else {
-                formalParamInits.add(runtime.getNodeFactory().createFrameWrite(parameter.getType(), parameterNode, slot));
+                init = runtime.getNodeFactory().createFrameWrite(parameter.getType(), parameterNode, slot);
             }
+
+            init.enableIRTags(VoidType.INSTANCE);
+            formalParamInits.add(init);
         }
         return formalParamInits;
     }

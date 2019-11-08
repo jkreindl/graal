@@ -29,11 +29,15 @@
  */
 package com.oracle.truffle.llvm.runtime.nodes.func;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.NodeField;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.instrumentation.Tag;
+import com.oracle.truffle.llvm.runtime.instrumentation.LLVMTags;
 import com.oracle.truffle.llvm.runtime.nodes.api.LLVMExpressionNode;
 import com.oracle.truffle.llvm.runtime.pointer.LLVMPointer;
+import org.graalvm.collections.EconomicMap;
 
 @NodeField(name = "index", type = int.class)
 public abstract class LLVMArgNode extends LLVMExpressionNode {
@@ -56,5 +60,17 @@ public abstract class LLVMArgNode extends LLVMExpressionNode {
     @Specialization(guards = "!isPointer(frame)")
     protected Object doObject(VirtualFrame frame) {
         return frame.getArguments()[getIndex()];
+    }
+
+    @Override
+    public boolean hasTag(Class<? extends Tag> tag) {
+        return super.hasTag(tag, LLVMTags.ReadCallArg.EXPRESSION_TAGS);
+    }
+
+    @Override
+    @TruffleBoundary
+    protected void collectIRNodeData(EconomicMap<String, Object> members) {
+        // the first index is the implicit stackpointer
+        members.put(LLVMTags.ReadCallArg.EXTRA_DATA_ARG_INDEX, getIndex() - 1);
     }
 }
