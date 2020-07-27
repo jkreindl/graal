@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,8 +29,9 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
+import com.oracle.truffle.llvm.parser.model.IRScope;
+import com.oracle.truffle.llvm.parser.bitcode.blocks.LLVMBitcodeRecord;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class MDNode extends MDAggregateNode {
 
@@ -43,7 +44,7 @@ public final class MDNode extends MDAggregateNode {
         visitor.visit(this);
     }
 
-    public static MDNode create38(RecordBuffer buffer, MetadataValueList md) {
+    public static MDNode create38(LLVMBitcodeRecord buffer, MetadataValueList md) {
         final MDNode node = new MDNode(buffer.size());
         for (int i = 0; i < buffer.size(); i++) {
             node.set(i, md.getNullable(buffer.read(), node));
@@ -51,11 +52,11 @@ public final class MDNode extends MDAggregateNode {
         return node;
     }
 
-    public static MDNode create32(long[] record, Metadata md) {
+    public static MDNode create32(long[] record, Type[] types, IRScope scope) {
         final int size = record.length / 2;
         final MDNode node = new MDNode(size);
         for (int i = 0; i < size; i++) {
-            node.set(i, ParseUtil.resolveReference(record, i, node, md));
+            node.set(i, ParseUtil.resolveReference(record, i, node, types, scope));
         }
         return node;
     }

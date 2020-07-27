@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,55 +27,61 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.listeners;
-
-import java.util.List;
+package com.oracle.truffle.llvm.parser.bitcode.blocks;
 
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.llvm.parser.metadata.debuginfo.DebugInfoModuleProcessor;
 import com.oracle.truffle.llvm.parser.model.IRScope;
 import com.oracle.truffle.llvm.parser.model.ModelModule;
 import com.oracle.truffle.llvm.parser.model.symbols.globals.GlobalValueSymbol;
-import com.oracle.truffle.llvm.parser.scanner.Block;
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
 import com.oracle.truffle.llvm.parser.text.LLSourceBuilder;
 import com.oracle.truffle.llvm.parser.util.SymbolNameMangling;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.types.symbols.LLVMIdentifier;
 
-public final class BCFileRoot implements ParserListener {
+import java.util.List;
+
+final class BCImplicitRootBlock extends BCBlockParser {
 
     private final ModelModule module;
     private final StringTable stringTable;
     private final IRScope scope;
     private final LLSourceBuilder llSource;
+    private final LLVMContext context;
 
-    public BCFileRoot(ModelModule module, Source bcSource) {
+    BCImplicitRootBlock(ModelModule module, Source bcSource, LLVMContext context) {
         this.module = module;
+        this.context = context;
         this.stringTable = new StringTable();
         this.scope = new IRScope();
         this.llSource = LLSourceBuilder.create(bcSource);
     }
 
     @Override
-    public ParserListener enter(Block block) {
-        switch (block) {
-            case MODULE:
-                return new Module(module, stringTable, scope, llSource);
-
-            case STRTAB:
-                return stringTable;
-
-            default:
-                return ParserListener.DEFAULT;
-        }
+    void parseRecord(LLVMBitcodeRecord record) {
+        throw new IllegalStateException("Record outside of top-level block");
     }
 
-    public void exit(LLVMContext context) {
+    @Override
+    void onExit() {
         int globalIndex = setMissingNames(module.getGlobalVariables(), 0);
         setMissingNames(module.getAliases(), globalIndex);
         SymbolNameMangling.demangleGlobals(module);
         DebugInfoModuleProcessor.processModule(module, scope.getMetadata(), context);
+    }
+
+    @Override
+    BCBlockParser getParserForSubblock(BCBlockScanner.ScannerData scannerData, int blockId) {
+        switch (blockId) {
+            case BCModuleBlock.BLOCK_ID:
+                return new BCModuleBlock(module, stringTable, scope, llSource);
+
+            case BCStrTabBlock.BLOCK_ID:
+                return new BCStrTabBlock(stringTable);
+
+            default:
+                return super.getParserForSubblock(scannerData, blockId);
+        }
     }
 
     private static int setMissingNames(List<? extends GlobalValueSymbol> globals, int startIndex) {
@@ -86,9 +92,5 @@ public final class BCFileRoot implements ParserListener {
             }
         }
         return globalIndex;
-    }
-
-    @Override
-    public void record(RecordBuffer buffer) {
     }
 }

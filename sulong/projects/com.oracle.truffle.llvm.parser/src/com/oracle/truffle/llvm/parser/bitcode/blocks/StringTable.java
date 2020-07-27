@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,45 +27,45 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.listeners;
+package com.oracle.truffle.llvm.parser.bitcode.blocks;
 
 import com.oracle.truffle.llvm.parser.model.ValueSymbol;
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
 
 import java.util.ArrayList;
-import java.util.List;
 
-final class StringTable implements ParserListener {
+/**
+ * Represents the String table, which contains the names of functions and globals as a single long
+ * string. As the module block precedes the string table, these are commonly forward referenced.
+ */
+final class StringTable {
 
-    private static final long BYTE_MASK = 0xffL;
+    private final ArrayList<NameRequest> requests;
 
-    private final List<NameRequest> requests = new ArrayList<>();
-
-    private String table = null;
+    private String entries;
 
     StringTable() {
+        this.entries = null;
+        this.requests = new ArrayList<>();
     }
 
-    @Override
-    public void record(RecordBuffer buffer) {
-        byte[] bytes = new byte[buffer.size() * Long.BYTES];
-        int curByte = 0;
-        while (buffer.remaining() > 0) {
-            long l = buffer.read();
-            for (int j = 0; j < Long.BYTES; j++) {
-                bytes[curByte++] = (byte) (l & BYTE_MASK);
-                l >>>= Byte.SIZE;
-            }
-        }
-        table = new String(bytes);
-    }
+    void fillTable(String newEntries) {
+        assert newEntries != null;
+        this.entries = newEntries;
 
-    @Override
-    public void exit() {
         for (NameRequest request : requests) {
-            request.resolve();
+            request.resolve(this);
         }
+
         requests.clear();
+        requests.trimToSize();
+    }
+
+    private String get(int offset, int size) {
+        if (offset + size < entries.length()) {
+            return entries.substring(offset, offset + size);
+        } else {
+            return "";
+        }
     }
 
     void requestName(int offset, int length, ValueSymbol target) {
@@ -73,35 +73,27 @@ final class StringTable implements ParserListener {
             return;
         }
         // the STRTAB block's content may be forward referenced
-        if (table != null) {
+        if (entries != null) {
             target.setName(get(offset, length));
         } else {
             requests.add(new NameRequest(offset, length, target));
         }
     }
 
-    private String get(int offset, int size) {
-        if (offset + size < table.length()) {
-            return table.substring(offset, offset + size);
-        } else {
-            return "";
-        }
-    }
+    private static final class NameRequest {
 
-    private final class NameRequest {
-
-        private final int offset;
-        private final int length;
         private final ValueSymbol target;
+        private final int nameOffset;
+        private final int nameLength;
 
-        private NameRequest(int offset, int length, ValueSymbol target) {
-            this.offset = offset;
-            this.length = length;
+        private NameRequest(int nameOffset, int nameLength, ValueSymbol target) {
+            this.nameOffset = nameOffset;
+            this.nameLength = nameLength;
             this.target = target;
         }
 
-        void resolve() {
-            target.setName(get(offset, length));
+        void resolve(StringTable table) {
+            target.setName(table.get(nameOffset, nameLength));
         }
     }
 }

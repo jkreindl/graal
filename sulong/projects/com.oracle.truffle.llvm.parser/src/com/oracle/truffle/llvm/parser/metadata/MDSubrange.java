@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,10 +29,11 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
+import com.oracle.truffle.llvm.parser.model.IRScope;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.integer.IntegerConstant;
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
+import com.oracle.truffle.llvm.parser.bitcode.blocks.LLVMBitcodeRecord;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class MDSubrange implements MDBaseNode {
 
@@ -71,7 +72,7 @@ public final class MDSubrange implements MDBaseNode {
     // private static final int ARGINDEX_COUNT = 1;
     // private static final int ARGINDEX_STARTFROM = 2;
 
-    public static MDSubrange createNewFormat(RecordBuffer buffer, MetadataValueList md) {
+    public static MDSubrange createNewFormat(LLVMBitcodeRecord buffer, MetadataValueList md) {
         long version = (buffer.read() >> VERSION_SHIFT) & VERSION_MASK;
         long count = buffer.read();
         long startFrom = ParseUtil.unrotateSign(buffer.read());
@@ -91,9 +92,9 @@ public final class MDSubrange implements MDBaseNode {
     private static final int ARGINDEX_32_LOWERBOUND = 1;
     private static final int ARGINDEX_32_UPPERBOUND = 2;
 
-    public static MDSubrange createOldFormat(long[] args, Metadata md) {
-        final long lowerBound = ParseUtil.asLong(args, ARGINDEX_32_LOWERBOUND, md);
-        final long upperBound = ParseUtil.asLong(args, ARGINDEX_32_UPPERBOUND, md);
+    public static MDSubrange createOldFormat(long[] args, Type[] types, IRScope scope) {
+        final long lowerBound = ParseUtil.asLong(args, ARGINDEX_32_LOWERBOUND, types, scope);
+        final long upperBound = ParseUtil.asLong(args, ARGINDEX_32_UPPERBOUND, types, scope);
         final long size = upperBound - lowerBound + 1;
         final MDSubrange subrange = new MDSubrange(lowerBound);
         subrange.count = MDValue.create(new IntegerConstant(PrimitiveType.I64, size));

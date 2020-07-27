@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,39 +27,54 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.scanner;
+package com.oracle.truffle.llvm.parser.bitcode.blocks;
 
-enum Primitive {
-    CHAR6(true, 6),
+import com.oracle.truffle.llvm.parser.model.attributes.AttributesCodeEntry;
+import com.oracle.truffle.llvm.parser.model.attributes.AttributesGroup;
 
-    ABBREVIATED_RECORD_OPERANDS(false, 5),
-    SUBBLOCK_ID(false, 8),
-    SUBBLOCK_ID_SIZE(false, 4),
-    UNABBREVIATED_RECORD_ID(false, 6),
-    UNABBREVIATED_RECORD_OPERAND(false, 6),
-    UNABBREVIATED_RECORD_OPS(false, 6),
+import java.util.ArrayList;
+import java.util.List;
 
-    USER_OPERAND_ARRAY_LENGTH(false, 6),
-    USER_OPERAND_BLOB_LENGTH(false, 6),
-    USER_OPERAND_DATA(false, 5),
-    USER_OPERAND_LITERAL(false, 8),
-    USER_OPERAND_TYPE(true, 3),
-    USER_OPERAND_LITERALBIT(true, 1);
+/**
+ * Collection of Parameter Attributes.
+ */
+final class ParameterAttributes {
 
-    private final boolean isFixed;
+    // stores attributes defined in PARAMATTR_GRP_CODE_ENTRY
+    private final List<AttributesGroup> attributes;
 
-    private final int bits;
+    // store code entries defined in PARAMATTR_CODE_ENTRY
+    private final ArrayList<AttributesCodeEntry> parameterCodeEntry;
 
-    Primitive(boolean isFixed, int bits) {
-        this.isFixed = isFixed;
-        this.bits = bits;
+    ParameterAttributes() {
+        this.parameterCodeEntry = new ArrayList<>();
+        this.attributes = new ArrayList<>();
     }
 
-    public int getBits() {
-        return bits;
+    void addAttributes(AttributesGroup newAttributes) {
+        attributes.add(newAttributes);
     }
 
-    public boolean isFixed() {
-        return isFixed;
+    void addCodeEntry(AttributesCodeEntry newEntry) {
+        assert newEntry != null;
+        parameterCodeEntry.add(newEntry);
+    }
+
+    List<AttributesGroup> getAttributes() {
+        return attributes;
+    }
+
+    /**
+     * Get ParsedAttributeGroup by Bitcode index.
+     *
+     * @param idx index as it was defined in the LLVM-Bitcode, means starting with 1
+     * @return found attributeGroup, or otherwise an empty List
+     */
+    AttributesCodeEntry getCodeEntry(long idx) {
+        if (idx <= 0 || parameterCodeEntry.size() < idx) {
+            return AttributesCodeEntry.EMPTY;
+        }
+
+        return parameterCodeEntry.get(Math.toIntExact(idx - 1));
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,7 +29,8 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
+import com.oracle.truffle.llvm.parser.model.IRScope;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class MDSubprogram extends MDNamedLocation implements MDBaseNode {
 
@@ -255,29 +256,29 @@ public final class MDSubprogram extends MDNamedLocation implements MDBaseNode {
     private static final int ARGINDEX_32_DECLARATION = 18;
     private static final int ARGINDEX_32_SCOPELINE = 20;
 
-    public static MDSubprogram create32(long[] args, Metadata md) {
-        final long line = ParseUtil.asInt(args, ARGINDEX_32_LINE, md);
-        final boolean localToCompileUnit = ParseUtil.asBoolean(args, ARGINDEX_32_LOCALTOUNIT, md);
-        final boolean definedInCompileUnit = ParseUtil.asBoolean(args, ARGINDEX_32_DEFINEDINCOMPILEUNIT, md);
-        final long virtuality = ParseUtil.asInt(args, ARGINDEX_32_VIRTUALITY, md);
-        final long virtualIndex = ParseUtil.asInt(args, ARGINDEX_32_VIRTUALINDEX, md);
-        final long flags = ParseUtil.asInt(args, ARGINDEX_32_FLAGS, md);
-        final boolean optimized = ParseUtil.asBoolean(args, ARGINDEX_3_OPTIMIZED, md);
-        final long scopeLine = ParseUtil.asLong(args, ARGINDEX_32_SCOPELINE, md);
+    public static MDSubprogram create32(long[] args, Type[] types, IRScope scope) {
+        final long line = ParseUtil.asInt(args, ARGINDEX_32_LINE, types, scope);
+        final boolean localToCompileUnit = ParseUtil.asBoolean(args, ARGINDEX_32_LOCALTOUNIT, types, scope);
+        final boolean definedInCompileUnit = ParseUtil.asBoolean(args, ARGINDEX_32_DEFINEDINCOMPILEUNIT, types, scope);
+        final long virtuality = ParseUtil.asInt(args, ARGINDEX_32_VIRTUALITY, types, scope);
+        final long virtualIndex = ParseUtil.asInt(args, ARGINDEX_32_VIRTUALINDEX, types, scope);
+        final long flags = ParseUtil.asInt(args, ARGINDEX_32_FLAGS, types, scope);
+        final boolean optimized = ParseUtil.asBoolean(args, ARGINDEX_3_OPTIMIZED, types, scope);
+        final long scopeLine = ParseUtil.asLong(args, ARGINDEX_32_SCOPELINE, types, scope);
 
         final MDSubprogram subprogram = new MDSubprogram(line, localToCompileUnit, definedInCompileUnit, scopeLine, virtuality, virtualIndex, flags, optimized);
 
-        subprogram.setScope(ParseUtil.resolveReference(args, ARGINDEX_32_SCOPE, subprogram, md));
-        subprogram.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, subprogram, md));
-        subprogram.displayName = ParseUtil.resolveReference(args, ARGINDEX_32_DISPLAYNAME, subprogram, md);
-        subprogram.linkageName = ParseUtil.resolveReference(args, ARGINDEX_32_LINKAGENAME, subprogram, md);
-        subprogram.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, subprogram, md));
-        subprogram.type = ParseUtil.resolveReference(args, ARGINDEX_32_TYPE, subprogram, md);
-        subprogram.containingType = ParseUtil.resolveReference(args, ARGINDEX_32_CONTAININGTYPE, subprogram, md);
-        subprogram.templateParams = ParseUtil.resolveReference(args, ARGINDEX_32_TEMPLATEPARAMS, subprogram, md);
-        subprogram.declaration = ParseUtil.resolveReference(args, ARGINDEX_32_DECLARATION, subprogram, md);
+        subprogram.setScope(ParseUtil.resolveReference(args, ARGINDEX_32_SCOPE, subprogram, types, scope));
+        subprogram.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, subprogram, types, scope));
+        subprogram.displayName = ParseUtil.resolveReference(args, ARGINDEX_32_DISPLAYNAME, subprogram, types, scope);
+        subprogram.linkageName = ParseUtil.resolveReference(args, ARGINDEX_32_LINKAGENAME, subprogram, types, scope);
+        subprogram.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, subprogram, types, scope));
+        subprogram.type = ParseUtil.resolveReference(args, ARGINDEX_32_TYPE, subprogram, types, scope);
+        subprogram.containingType = ParseUtil.resolveReference(args, ARGINDEX_32_CONTAININGTYPE, subprogram, types, scope);
+        subprogram.templateParams = ParseUtil.resolveReference(args, ARGINDEX_32_TEMPLATEPARAMS, subprogram, types, scope);
+        subprogram.declaration = ParseUtil.resolveReference(args, ARGINDEX_32_DECLARATION, subprogram, types, scope);
 
-        subprogram.function = ParseUtil.resolveSymbol(args, ARGINDEX_32_FN, md);
+        subprogram.function = ParseUtil.resolveSymbol(args, ARGINDEX_32_FN, types, scope);
 
         return subprogram;
 

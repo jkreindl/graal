@@ -27,7 +27,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.scanner;
+package com.oracle.truffle.llvm.parser.bitcode.blocks;
 
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import org.graalvm.polyglot.io.ByteSequence;
@@ -115,5 +115,9 @@ public final class BitStream {
 
     public long size() {
         return bitstream.length() * (long) Byte.SIZE;
+    }
+
+    public ByteSequence readBlob(long startOffset, long endOffset) {
+        return bitstream.subSequence(Math.toIntExact(startOffset), Math.toIntExact(endOffset));
     }
 }

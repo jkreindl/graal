@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,8 +29,9 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
+import com.oracle.truffle.llvm.parser.model.IRScope;
 import com.oracle.truffle.llvm.parser.records.DwTagRecord;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class MDDerivedType extends MDType implements MDBaseNode {
 
@@ -122,21 +123,21 @@ public final class MDDerivedType extends MDType implements MDBaseNode {
     private static final int ARGINDEX_32_FLAGS = 8;
     private static final int ARGINDEX_32_BASETYPE = 9;
 
-    public static MDDerivedType create32(long[] args, Metadata md) {
-        final long tag = DwTagRecord.decode(ParseUtil.asLong(args, ARGINDEX_32_TAG, md)).code();
-        final long line = ParseUtil.asInt(args, ARGINDEX_32_LINE, md);
-        final long size = ParseUtil.asLong(args, ARGINDEX_32_SIZE, md);
-        final long align = ParseUtil.asLong(args, ARGINDEX_32_ALIGN, md);
-        final long offset = ParseUtil.asLong(args, ARGINDEX_32_OFFSET, md);
-        final long flags = ParseUtil.asLong(args, ARGINDEX_32_FLAGS, md);
+    public static MDDerivedType create32(long[] args, Type[] types, IRScope scope) {
+        final long tag = DwTagRecord.decode(ParseUtil.asLong(args, ARGINDEX_32_TAG, types, scope)).code();
+        final long line = ParseUtil.asInt(args, ARGINDEX_32_LINE, types, scope);
+        final long size = ParseUtil.asLong(args, ARGINDEX_32_SIZE, types, scope);
+        final long align = ParseUtil.asLong(args, ARGINDEX_32_ALIGN, types, scope);
+        final long offset = ParseUtil.asLong(args, ARGINDEX_32_OFFSET, types, scope);
+        final long flags = ParseUtil.asLong(args, ARGINDEX_32_FLAGS, types, scope);
 
         final MDDerivedType derivedType = new MDDerivedType(tag, line, size, align, offset, flags);
 
-        derivedType.scope = ParseUtil.resolveReference(args, ARGINDEX_32_SCOPE, derivedType, md);
-        derivedType.baseType = ParseUtil.resolveReference(args, ARGINDEX_32_BASETYPE, derivedType, md);
+        derivedType.scope = ParseUtil.resolveReference(args, ARGINDEX_32_SCOPE, derivedType, types, scope);
+        derivedType.baseType = ParseUtil.resolveReference(args, ARGINDEX_32_BASETYPE, derivedType, types, scope);
 
-        derivedType.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, derivedType, md));
-        derivedType.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, derivedType, md));
+        derivedType.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, derivedType, types, scope));
+        derivedType.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, derivedType, types, scope));
 
         return derivedType;
     }

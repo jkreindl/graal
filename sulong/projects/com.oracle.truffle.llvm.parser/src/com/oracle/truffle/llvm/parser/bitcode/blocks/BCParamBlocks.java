@@ -27,19 +27,21 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.listeners;
-
-import java.util.ArrayList;
-import java.util.List;
+package com.oracle.truffle.llvm.parser.bitcode.blocks;
 
 import com.oracle.truffle.llvm.parser.model.attributes.Attribute;
 import com.oracle.truffle.llvm.parser.model.attributes.AttributesCodeEntry;
 import com.oracle.truffle.llvm.parser.model.attributes.AttributesGroup;
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.types.Type;
 
-public class ParameterAttributes implements ParserListener {
+import java.util.ArrayList;
+import java.util.List;
+
+final class BCParamBlocks extends BCBlockParser {
+
+    static final int BLOCK_ID_PARAMATTR = 9;
+    static final int BLOCK_ID_PARAMATTR_GROUP = 10;
 
     // https://github.com/llvm-mirror/llvm/blob/release_38/include/llvm/Bitcode/LLVMBitCodes.h#L110
     private static final int PARAMATTR_CODE_ENTRY_OLD = 1;
@@ -54,46 +56,33 @@ public class ParameterAttributes implements ParserListener {
     private static final int BYVAL_ATTRIBUTE_KIND = 5;
     private static final int TYPED_BYVAL_ATTRIBUTE_KIND = 6;
 
-    // stores attributes defined in PARAMATTR_GRP_CODE_ENTRY
-    private final List<AttributesGroup> attributes = new ArrayList<>();
+    private final Type[] types;
 
-    // store code entries defined in PARAMATTR_CODE_ENTRY
-    private final List<AttributesCodeEntry> parameterCodeEntry = new ArrayList<>();
+    private final ParameterAttributes parameterAttributes;
 
-    private final Types types;
-
-    public ParameterAttributes(Types types) {
+    BCParamBlocks(Type[] types, ParameterAttributes parameterAttributes) {
         this.types = types;
-    }
+        this.parameterAttributes = parameterAttributes;
 
-    /**
-     * Get ParsedAttributeGroup by Bitcode index.
-     *
-     * @param idx index as it was defined in the LLVM-Bitcode, means starting with 1
-     * @return found attributeGroup, or otherwise an empty List
-     */
-    public AttributesCodeEntry getCodeEntry(long idx) {
-        if (idx <= 0 || parameterCodeEntry.size() < idx) {
-            return AttributesCodeEntry.EMPTY;
-        }
+        assert parameterAttributes != null;
 
-        return parameterCodeEntry.get((int) (idx - 1));
+        // a param_attr block may occur before the type block, so types being null is a valid
+        // scenario
     }
 
     @Override
-    public void record(RecordBuffer buffer) {
-        int id = buffer.getId();
-        switch (id) {
+    void parseRecord(LLVMBitcodeRecord record) {
+        switch (record.getId()) {
             case PARAMATTR_CODE_ENTRY_OLD:
-                decodeOldCodeEntry(buffer);
+                decodeOldCodeEntry(record);
                 break;
 
             case PARAMATTR_CODE_ENTRY:
-                decodeCodeEntry(buffer);
+                decodeCodeEntry(record);
                 break;
 
             case PARAMATTR_GRP_CODE_ENTRY:
-                decodeGroupCodeEntry(buffer);
+                decodeGroupCodeEntry(record);
                 break;
 
             default:
@@ -101,20 +90,20 @@ public class ParameterAttributes implements ParserListener {
         }
     }
 
-    private void decodeOldCodeEntry(RecordBuffer buffer) {
+    private void decodeOldCodeEntry(LLVMBitcodeRecord record) {
         final List<AttributesGroup> attrGroup = new ArrayList<>();
 
-        for (int i = 0; i < buffer.size(); i += 2) {
-            attrGroup.add(decodeOldGroupCodeEntry(buffer.read(), buffer.read()));
+        for (int i = 0; i < record.size(); i += 2) {
+            attrGroup.add(decodeOldGroupCodeEntry(record.read(), record.read()));
         }
 
-        parameterCodeEntry.add(new AttributesCodeEntry(attrGroup));
+        parameterAttributes.addCodeEntry(new AttributesCodeEntry(attrGroup));
     }
 
     private static AttributesGroup decodeOldGroupCodeEntry(long paramIdx, long attr) {
         AttributesGroup group = new AttributesGroup(-1, paramIdx);
 
-        if ((attr & (1L << 0)) != 0) {
+        if ((attr & 1L) != 0) {
             group.addAttribute(new Attribute.KnownAttribute(Attribute.Kind.ZEROEXT));
         }
         if ((attr & (1L << 1)) != 0) {
@@ -189,12 +178,12 @@ public class ParameterAttributes implements ParserListener {
         return group;
     }
 
-    private void decodeCodeEntry(RecordBuffer buffer) {
+    private void decodeCodeEntry(LLVMBitcodeRecord record) {
         final List<AttributesGroup> attrGroup = new ArrayList<>();
 
-        while (buffer.remaining() > 0) {
-            long groupId = buffer.read();
-            for (AttributesGroup attr : attributes) {
+        while (record.remaining() > 0) {
+            long groupId = record.read();
+            for (AttributesGroup attr : parameterAttributes.getAttributes()) {
                 if (attr.getGroupId() == groupId) {
                     attrGroup.add(attr);
                     break;
@@ -202,50 +191,50 @@ public class ParameterAttributes implements ParserListener {
             }
         }
 
-        if (attrGroup.size() != buffer.size()) {
+        if (attrGroup.size() != record.size()) {
             throw new LLVMParserException("Mismatching number of defined and found attributes in AttributesGroup");
         }
 
-        parameterCodeEntry.add(new AttributesCodeEntry(attrGroup));
+        parameterAttributes.addCodeEntry(new AttributesCodeEntry(attrGroup));
     }
 
-    private void decodeGroupCodeEntry(RecordBuffer buffer) {
-        final long groupId = buffer.read();
-        final long paramIdx = buffer.read();
+    private void decodeGroupCodeEntry(LLVMBitcodeRecord record) {
+        final long groupId = record.read();
+        final long paramIdx = record.read();
 
-        AttributesGroup group = new AttributesGroup(groupId, paramIdx);
-        attributes.add(group);
+        final AttributesGroup group = new AttributesGroup(groupId, paramIdx);
+        parameterAttributes.addAttributes(group);
 
-        while (buffer.remaining() > 0) {
-            int type = buffer.readInt();
+        while (record.remaining() > 0) {
+            int type = record.readInt();
             switch (type) {
                 case WELL_KNOWN_ATTRIBUTE_KIND: {
-                    Attribute.Kind attr = Attribute.Kind.decode(buffer.read());
+                    Attribute.Kind attr = Attribute.Kind.decode(record.read());
                     group.addAttribute(new Attribute.KnownAttribute(attr));
                     break;
                 }
 
                 case WELL_KNOWN_INTEGER_ATTRIBUTE_KIND: {
-                    Attribute.Kind attr = Attribute.Kind.decode(buffer.read());
-                    group.addAttribute(new Attribute.KnownIntegerValueAttribute(attr, buffer.read()));
+                    Attribute.Kind attr = Attribute.Kind.decode(record.read());
+                    group.addAttribute(new Attribute.KnownIntegerValueAttribute(attr, record.read()));
                     break;
                 }
 
                 case STRING_ATTRIBUTE_KIND: {
-                    String strAttr = readString(buffer);
+                    String strAttr = readString(record);
                     group.addAttribute(new Attribute.StringAttribute(strAttr));
                     break;
                 }
 
                 case STRING_VALUE_ATTRIBUTE_KIND: {
-                    String strAttr = readString(buffer);
-                    String strVal = readString(buffer);
+                    String strAttr = readString(record);
+                    String strVal = readString(record);
                     group.addAttribute(new Attribute.StringValueAttribute(strAttr, strVal));
                     break;
                 }
 
                 case BYVAL_ATTRIBUTE_KIND: {
-                    Attribute.Kind attr = Attribute.Kind.decode(buffer.read());
+                    Attribute.Kind attr = Attribute.Kind.decode(record.read());
                     if (attr == Attribute.Kind.BYVAL) {
                         group.addAttribute(new Attribute.KnownAttribute(Attribute.Kind.BYVAL));
                     }
@@ -253,9 +242,9 @@ public class ParameterAttributes implements ParserListener {
                 }
 
                 case TYPED_BYVAL_ATTRIBUTE_KIND: {
-                    Attribute.Kind attr = Attribute.Kind.decode(buffer.read());
+                    Attribute.Kind attr = Attribute.Kind.decode(record.read());
                     if (attr == Attribute.Kind.BYVAL) {
-                        final Type valueType = types.get(buffer.read());
+                        final Type valueType = types[record.readInt()];
                         group.addAttribute(new Attribute.KnownTypedAttribute(Attribute.Kind.BYVAL, valueType));
                     }
                     break;
@@ -267,10 +256,10 @@ public class ParameterAttributes implements ParserListener {
         }
     }
 
-    private static String readString(RecordBuffer buffer) {
+    private static String readString(LLVMBitcodeRecord record) {
         StringBuilder sb = new StringBuilder();
         while (true) {
-            long value = buffer.read();
+            long value = record.read();
             if (value == 0) {
                 break;
             }

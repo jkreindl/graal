@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,11 +29,13 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
+import com.oracle.truffle.llvm.parser.model.IRScope;
+import com.oracle.truffle.llvm.parser.model.SymbolTable;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.NullConstant;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.UndefinedConstant;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.integer.BigIntegerConstant;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.integer.IntegerConstant;
+import com.oracle.truffle.llvm.parser.bitcode.blocks.LLVMBitcodeRecord;
 import com.oracle.truffle.llvm.runtime.types.MetaType;
 import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.runtime.types.VoidType;
@@ -41,15 +43,15 @@ import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 
 public final class ParseUtil {
 
-    public static boolean isInteger(long[] args, int index, Metadata md) {
+    public static boolean isInteger(long[] args, int index, Type[] types, SymbolTable symbolTable) {
         final int typeIndex = index << 1;
-        final Type type = md.getTypeById(args[typeIndex]);
+        final Type type = types[LLVMBitcodeRecord.toUnsignedIntExact(args[typeIndex])];
         if (type == MetaType.METADATA || VoidType.INSTANCE.equals(type)) {
             return false;
         }
 
         final int valueIndex = typeIndex + 1;
-        final SymbolImpl value = md.getScope().getSymbols().getOrNull((int) args[valueIndex]);
+        final SymbolImpl value = symbolTable.getOrNull(LLVMBitcodeRecord.toUnsignedIntExact(args[valueIndex]));
 
         return value instanceof IntegerConstant || value instanceof BigIntegerConstant || value instanceof NullConstant || value instanceof UndefinedConstant;
     }
@@ -57,19 +59,19 @@ public final class ParseUtil {
     // LLVM uses the same behaviour
     private static final long DEFAULT_NUMBER = 0L;
 
-    public static long asLong(long[] args, int index, Metadata md) {
+    public static long asLong(long[] args, int index, Type[] types, IRScope scope) {
         final int typeIndex = index << 1;
         if (typeIndex >= args.length) {
             return DEFAULT_NUMBER;
         }
 
-        final Type type = md.getTypeById(args[typeIndex]);
+        final Type type = types[LLVMBitcodeRecord.toUnsignedIntExact(args[typeIndex])];
         if (type == MetaType.METADATA || VoidType.INSTANCE.equals(type)) {
             return DEFAULT_NUMBER;
         }
 
         final int valueIndex = typeIndex + 1;
-        final SymbolImpl value = md.getScope().getSymbols().getOrNull((int) args[valueIndex]);
+        final SymbolImpl value = scope.getSymbols().getOrNull(LLVMBitcodeRecord.toUnsignedIntExact(args[valueIndex]));
 
         if (value instanceof IntegerConstant) {
             return ((IntegerConstant) value).getValue();
@@ -85,45 +87,45 @@ public final class ParseUtil {
         }
     }
 
-    public static int asInt(long[] args, int index, Metadata md) {
-        return (int) asLong(args, index, md);
+    public static int asInt(long[] args, int index, Type[] types, IRScope scope) {
+        return (int) asLong(args, index, types, scope);
     }
 
-    static boolean asBoolean(long[] args, int index, Metadata md) {
-        return asLong(args, index, md) != 0L;
+    static boolean asBoolean(long[] args, int index, Type[] types, IRScope scope) {
+        return asLong(args, index, types, scope) != 0L;
     }
 
-    static MDBaseNode resolveReference(long[] args, int index, MDBaseNode dependent, Metadata md) {
+    static MDBaseNode resolveReference(long[] args, int index, MDBaseNode dependent, Type[] types, IRScope scope) {
         final int typeIndex = index << 1;
         if (typeIndex >= args.length) {
             return MDVoidNode.INSTANCE;
         }
 
         final int valueIndex = typeIndex + 1;
-        final Type type = md.getTypeById(args[typeIndex]);
+        final Type type = types[LLVMBitcodeRecord.toUnsignedIntExact(args[typeIndex])];
         final long value = args[valueIndex];
         if (type == MetaType.METADATA) {
-            return md.getScope().getMetadata().getNonNullable(value, dependent);
+            return scope.getMetadata().getNonNullable(value, dependent);
 
         } else if (type != VoidType.INSTANCE) {
-            return MDValue.create(value, md.getScope());
+            return MDValue.create(value, scope.getSymbols());
 
         } else {
             return MDVoidNode.INSTANCE;
         }
     }
 
-    static MDBaseNode resolveSymbol(long[] args, int index, Metadata md) {
+    static MDBaseNode resolveSymbol(long[] args, int index, Type[] types, IRScope scope) {
         final int typeIndex = index << 1;
         if (typeIndex >= args.length) {
             return MDVoidNode.INSTANCE;
         }
 
         final int valueIndex = typeIndex + 1;
-        final Type type = md.getTypeById(args[typeIndex]);
+        final Type type = types[LLVMBitcodeRecord.toUnsignedIntExact(args[typeIndex])];
         final long value = (int) args[valueIndex];
         if (type != MetaType.METADATA && !VoidType.INSTANCE.equals(type)) {
-            return MDValue.create(value, md.getScope());
+            return MDValue.create(value, scope.getSymbols());
         } else {
             return MDVoidNode.INSTANCE;
         }

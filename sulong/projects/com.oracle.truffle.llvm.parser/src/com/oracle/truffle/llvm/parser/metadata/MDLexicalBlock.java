@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,7 +29,8 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
+import com.oracle.truffle.llvm.parser.model.IRScope;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class MDLexicalBlock extends MDNamedLocation {
 
@@ -70,14 +71,14 @@ public final class MDLexicalBlock extends MDNamedLocation {
     private static final int ARGINDEX_32_COLUMN = 3;
     private static final int ARGINDEX_32_FILE = 4;
 
-    public static MDLexicalBlock create32(long[] args, Metadata md) {
-        final long line = ParseUtil.asInt(args, ARGINDEX_32_LINE, md);
-        final long column = ParseUtil.asInt(args, ARGINDEX_32_COLUMN, md);
+    public static MDLexicalBlock create32(long[] args, Type[] types, IRScope scope) {
+        final long line = ParseUtil.asInt(args, ARGINDEX_32_LINE, types, scope);
+        final long column = ParseUtil.asInt(args, ARGINDEX_32_COLUMN, types, scope);
         // asInt32(args[5); // Unique ID to identify blocks from a template function
 
         final MDLexicalBlock block = new MDLexicalBlock(line, column);
-        block.setScope(ParseUtil.resolveReference(args, ARGINDEX_32_SCOPE, block, md));
-        block.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, block, md));
+        block.setScope(ParseUtil.resolveReference(args, ARGINDEX_32_SCOPE, block, types, scope));
+        block.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, block, types, scope));
         return block;
     }
 }

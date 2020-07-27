@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,7 +29,8 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
+import com.oracle.truffle.llvm.parser.model.IRScope;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class MDEnumerator extends MDName implements MDBaseNode {
 
@@ -67,10 +68,10 @@ public final class MDEnumerator extends MDName implements MDBaseNode {
     private static final int ARGINDEX_32_NAME = 1;
     private static final int ARGINDEX_32_VALUE = 2;
 
-    public static MDEnumerator create32(long[] args, Metadata md) {
-        final long value = ParseUtil.asLong(args, ARGINDEX_32_VALUE, md);
+    public static MDEnumerator create32(long[] args, Type[] types, IRScope scope) {
+        final long value = ParseUtil.asLong(args, ARGINDEX_32_VALUE, types, scope);
         final MDEnumerator enumerator = new MDEnumerator(value);
-        enumerator.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, enumerator, md));
+        enumerator.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, enumerator, types, scope));
         return enumerator;
     }
 }

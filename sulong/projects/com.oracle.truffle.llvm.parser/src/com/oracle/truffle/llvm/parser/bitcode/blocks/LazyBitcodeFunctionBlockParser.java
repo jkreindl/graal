@@ -27,71 +27,81 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.model.functions;
+package com.oracle.truffle.llvm.parser.bitcode.blocks;
 
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.llvm.parser.LLVMParserRuntime;
-import com.oracle.truffle.llvm.parser.listeners.Function;
-import com.oracle.truffle.llvm.parser.listeners.FunctionMDOnly;
-import com.oracle.truffle.llvm.parser.listeners.MetadataSubprogramOnly.MDSubprogramParsedException;
-import com.oracle.truffle.llvm.parser.listeners.ParameterAttributes;
-import com.oracle.truffle.llvm.parser.listeners.Types;
 import com.oracle.truffle.llvm.parser.metadata.debuginfo.DebugInfoFunctionProcessor;
 import com.oracle.truffle.llvm.parser.model.IRScope;
-import com.oracle.truffle.llvm.parser.scanner.LLVMScanner;
+import com.oracle.truffle.llvm.parser.model.functions.FunctionDefinition;
 import com.oracle.truffle.llvm.parser.text.LLSourceBuilder;
 import com.oracle.truffle.llvm.runtime.options.SulongEngineOption;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
-public final class LazyFunctionParser {
+/**
+ * Parser for the body of a bitcode function. Function bodies are only parsed after the module scope
+ * has been parsed fully and may be parsed asynchronously.
+ */
+public final class LazyBitcodeFunctionBlockParser {
 
-    private final LLVMScanner.LazyScanner scanner;
-    public final IRScope scope;
-    private final Types types;
-    private final FunctionDefinition function;
-    private final int mode;
-    private final ParameterAttributes paramAttributes;
     private final LLSourceBuilder llSource;
+    private final FunctionDefinition function;
+    private final IRScope moduleScope;
+    private final BCFunctionBlock fullBlockParser;
+    private final ParseLinkageName.LinkageNameFunctionParser subprogramNameParser;
+    private final BCBlockScanner.ScannerData scannerData;
 
     private boolean isParsed;
 
-    public LazyFunctionParser(LLVMScanner.LazyScanner scanner, IRScope scope, Types types, FunctionDefinition function, int mode, ParameterAttributes paramAttributes, LLSourceBuilder llSource) {
-        this.scanner = scanner;
-        this.scope = scope;
-        this.types = types;
-        this.function = function;
-        this.mode = mode;
-        this.paramAttributes = paramAttributes;
+    LazyBitcodeFunctionBlockParser(BCBlockScanner.ScannerData scannerData, LLSourceBuilder llSource, FunctionDefinition function, IRScope moduleScope, Type[] types, int mode,
+                    ParameterAttributes paramAttributes) {
         this.llSource = llSource;
+        this.function = function;
+        this.moduleScope = moduleScope;
+        this.fullBlockParser = new BCFunctionBlock(function, moduleScope, types, mode, paramAttributes);
+        this.subprogramNameParser = new ParseLinkageName.LinkageNameFunctionParser(function, moduleScope);
+        this.scannerData = scannerData;
         this.isParsed = false;
+
+        assert function != null;
+        assert moduleScope != null;
     }
 
+    /**
+     * Parses the entire function block.
+     *
+     * @param diProcessor processor for function-local debug information
+     * @param bitcodeSource the bitcode file containing the function to parse
+     * @param runtime parser context
+     */
     public void parse(DebugInfoFunctionProcessor diProcessor, Source bitcodeSource, LLVMParserRuntime runtime) {
-        if (!isParsed) {
-            synchronized (scope) {
-                Function parser = new Function(scope, types, function, mode, paramAttributes);
-                parser.setupScope();
-                scanner.scanBlock(parser);
-                diProcessor.process(parser.getFunction(), parser.getScope(), bitcodeSource, runtime.getContext());
+        synchronized (moduleScope) {
+            if (!isParsed) {
+                BCBlockScanner.scanBlock(scannerData, BCFunctionBlock.BLOCK_ID, fullBlockParser);
+                diProcessor.process(function, moduleScope, bitcodeSource, runtime.getContext());
                 if (runtime.getContext().getEnv().getOptions().get(SulongEngineOption.LL_DEBUG)) {
-                    llSource.applySourceLocations(parser.getFunction(), runtime);
+                    llSource.applySourceLocations(function, runtime);
                 }
                 isParsed = true;
             }
         }
     }
 
+    /**
+     * Attaches the source-level name of this function to its entry in the bitcode scope.
+     *
+     * @param runtime parser context
+     */
     public void parseLinkageName(LLVMParserRuntime runtime) {
-        synchronized (scope) {
-            FunctionMDOnly parser = new FunctionMDOnly(scope, types, function);
+        synchronized (moduleScope) {
             try {
-                parser.setupScope();
-                scanner.scanBlock(parser);
-            } catch (MDSubprogramParsedException e) {
+                BCBlockScanner.scanBlock(scannerData, BCFunctionBlock.BLOCK_ID, subprogramNameParser);
+            } catch (ParseLinkageName.ParsedLinkageName e) {
                 /*
                  * If linkageName/displayName is found, an exception is thrown (such that
                  * parsing/searching does not have to be continued).
                  */
-                final String displayName = e.displayName;
+                final String displayName = e.originalName;
                 final String linkageName = e.linkageName;
 
                 if (linkageName != null && runtime.getFileScope().getFunction(displayName) == null) {

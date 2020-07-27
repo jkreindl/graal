@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,28 +27,45 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.listeners;
+package com.oracle.truffle.llvm.parser.bitcode.blocks;
 
-import com.oracle.truffle.llvm.parser.scanner.Block;
-import com.oracle.truffle.llvm.parser.scanner.LLVMScanner;
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
-import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
+import com.oracle.truffle.llvm.parser.model.IRScope;
 
-public interface ParserListener {
+final class BCValueSymTabBlock extends BCBlockParser {
 
-    default ParserListener enter(@SuppressWarnings("unused") Block block) {
-        return this;
+    static final int BLOCK_ID = 14;
+
+    private static final int VALUE_SYMTAB_ENTRY = 1;
+    private static final int VALUE_SYMTAB_BASIC_BLOCK_ENTRY = 2;
+    private static final int VALUE_SYMTAB_FUNCTION_ENTRY = 3;
+    // private static final int VALUE_SYMTAB_COMBINED_FNENTRY = 4;
+
+    private final IRScope container;
+
+    BCValueSymTabBlock(IRScope container) {
+        this.container = container;
+        assert container != null;
     }
 
-    default void skip(Block block, @SuppressWarnings("unused") LLVMScanner.LazyScanner lazyScanner) {
-        throw new LLVMParserException("Block not supported for lazy parsing: " + block);
+    @Override
+    void parseRecord(LLVMBitcodeRecord record) {
+        int index = record.readInt();
+        switch (record.getId()) {
+            case VALUE_SYMTAB_ENTRY:
+                container.nameSymbol(index, record.readString());
+                break;
+
+            case VALUE_SYMTAB_BASIC_BLOCK_ENTRY:
+                container.nameBlock(index, record.readString());
+                break;
+
+            case VALUE_SYMTAB_FUNCTION_ENTRY:
+                record.skip(); // ignored
+                container.nameSymbol(index, record.readString());
+                break;
+
+            default:
+                break;
+        }
     }
-
-    default void exit() {
-    }
-
-    void record(RecordBuffer recordBuffer);
-
-    ParserListener DEFAULT = (buffer) -> {
-    };
 }

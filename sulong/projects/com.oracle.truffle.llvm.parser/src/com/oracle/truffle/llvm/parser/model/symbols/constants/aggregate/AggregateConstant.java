@@ -31,7 +31,7 @@ package com.oracle.truffle.llvm.parser.model.symbols.constants.aggregate;
 
 import com.oracle.truffle.llvm.parser.model.SymbolTable;
 import com.oracle.truffle.llvm.parser.model.symbols.globals.GlobalValueSymbol;
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
+import com.oracle.truffle.llvm.parser.bitcode.blocks.LLVMBitcodeRecord;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.AbstractConstant;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.Constant;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.floatingpoint.FloatingPointConstant;
@@ -85,7 +85,7 @@ public abstract class AggregateConstant extends AbstractConstant {
         return sb.toString();
     }
 
-    public static AggregateConstant createFromData(Type type, RecordBuffer buffer) {
+    public static AggregateConstant createFromData(Type type, LLVMBitcodeRecord buffer) {
         final AggregateConstant aggregateConstant;
         final Type elementType;
         if (type instanceof ArrayType) {
@@ -115,7 +115,7 @@ public abstract class AggregateConstant extends AbstractConstant {
         return aggregateConstant;
     }
 
-    public static AggregateConstant createFromValues(SymbolTable symbols, Type type, RecordBuffer buffer) {
+    public static AggregateConstant createFromValues(SymbolTable symbols, Type type, LLVMBitcodeRecord buffer) {
         final AggregateConstant aggregateConstant;
         int length = buffer.remaining();
         if (type instanceof ArrayType) {

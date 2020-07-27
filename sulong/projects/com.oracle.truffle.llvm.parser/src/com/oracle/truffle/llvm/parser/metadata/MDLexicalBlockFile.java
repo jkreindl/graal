@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,7 +29,8 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
+import com.oracle.truffle.llvm.parser.model.IRScope;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class MDLexicalBlockFile implements MDBaseNode {
 
@@ -85,10 +86,10 @@ public final class MDLexicalBlockFile implements MDBaseNode {
         return file;
     }
 
-    public static MDLexicalBlockFile create32(long[] args, Metadata md) {
+    public static MDLexicalBlockFile create32(long[] args, Type[] types, IRScope scope) {
         final MDLexicalBlockFile file = new MDLexicalBlockFile(-1L);
-        file.scope = ParseUtil.resolveReference(args, ARGINDEX_SCOPE, file, md);
-        file.file = ParseUtil.resolveReference(args, ARGINDEX_FILE, file, md);
+        file.scope = ParseUtil.resolveReference(args, ARGINDEX_SCOPE, file, types, scope);
+        file.file = ParseUtil.resolveReference(args, ARGINDEX_FILE, file, types, scope);
         return file;
     }
 }

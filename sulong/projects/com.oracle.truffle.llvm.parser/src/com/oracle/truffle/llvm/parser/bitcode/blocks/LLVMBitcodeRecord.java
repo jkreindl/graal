@@ -27,14 +27,17 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.scanner;
+package com.oracle.truffle.llvm.parser.bitcode.blocks;
 
 import java.util.Arrays;
 
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.types.Type;
 
-public final class RecordBuffer {
+/**
+ * Container class for records of blocks in LLVM Bitcode files.
+ */
+public final class LLVMBitcodeRecord {
 
     private static final int INITIAL_BUFFER_SIZE = 8;
 
@@ -43,16 +46,33 @@ public final class RecordBuffer {
     private int size = 0;
     private int index = 1;
 
+    /**
+     * Append a new value to this record without doing a size check.
+     * 
+     * @param op the new value
+     */
     void addOpNoCheck(long op) {
         assert size < opBuffer.length;
         opBuffer[size++] = op;
     }
 
+    /**
+     * Append a new value to this record. The record's storage capacity is increased as needed.
+     * 
+     * @param op the new value
+     */
     void addOp(long op) {
         ensureFits(1);
         addOpNoCheck(op);
     }
 
+    /**
+     * Increase the storage capacity of this record to ensure it can store a provided number of
+     * records without internal resizing.
+     * 
+     * @param numOfAdditionalOps total number of values this record should be able to store without
+     *            requiring resizing
+     */
     void ensureFits(long numOfAdditionalOps) {
         if (size >= opBuffer.length - numOfAdditionalOps) {
             int newLength = opBuffer.length;
@@ -63,10 +83,13 @@ public final class RecordBuffer {
         }
     }
 
-    long[] getOps() {
+    public long[] getOps() {
         return Arrays.copyOfRange(opBuffer, 1, size);
     }
 
+    /**
+     * Drop the contents of this container so that a new record can be parsed.
+     */
     void invalidate() {
         size = 0;
         index = 1;
@@ -76,7 +99,7 @@ public final class RecordBuffer {
         return opBuffer[pos + 1];
     }
 
-    public int getId() {
+    int getId() {
         if (size <= 0) {
             throw new LLVMParserException("Record Id not set!");
         }
@@ -108,7 +131,7 @@ public final class RecordBuffer {
         return toUnsignedIntExact(read);
     }
 
-    private static int toUnsignedIntExact(long read) {
+    public static int toUnsignedIntExact(long read) {
         if (Type.fitsIntoUnsignedInt(read)) {
             return Type.toUnsignedInt(read);
         }

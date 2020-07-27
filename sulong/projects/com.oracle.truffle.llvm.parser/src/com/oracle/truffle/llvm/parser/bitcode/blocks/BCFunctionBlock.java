@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
+ * Copyright (c) 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,11 +27,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.listeners;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+package com.oracle.truffle.llvm.parser.bitcode.blocks;
 
 import com.oracle.truffle.llvm.parser.metadata.MDBaseNode;
 import com.oracle.truffle.llvm.parser.metadata.MDKind;
@@ -76,21 +72,23 @@ import com.oracle.truffle.llvm.parser.model.symbols.instructions.ValueInstructio
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.VoidCallInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.VoidInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.VoidInvokeInstruction;
-import com.oracle.truffle.llvm.parser.scanner.Block;
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.types.AggregateType;
 import com.oracle.truffle.llvm.runtime.types.ArrayType;
 import com.oracle.truffle.llvm.runtime.types.FunctionType;
 import com.oracle.truffle.llvm.runtime.types.PointerType;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
-import com.oracle.truffle.llvm.runtime.types.PrimitiveType.PrimitiveKind;
 import com.oracle.truffle.llvm.runtime.types.StructureType;
 import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.runtime.types.VectorType;
 import com.oracle.truffle.llvm.runtime.types.VoidType;
 
-public final class Function implements ParserListener {
+import java.util.ArrayList;
+import java.util.Arrays;
+
+final class BCFunctionBlock extends BCBlockParser {
+
+    static final int BLOCK_ID = 12;
 
     private static final int INSTRUCTION_DECLAREBLOCKS = 1;
     private static final int INSTRUCTION_BINOP = 2;
@@ -141,32 +139,28 @@ public final class Function implements ParserListener {
     private static final int INSTRUCTION_UNOP = 56;
 
     private final FunctionDefinition function;
-
-    private final Types types;
-
+    private final IRScope scope;
+    private final Type[] types;
     private final int mode;
-
-    private InstructionBlock instructionBlock = null;
-
-    private boolean isLastBlockTerminated = true;
-
-    private MDLocation lastLocation = null;
-
-    private final List<Integer> implicitIndices = new ArrayList<>();
-
     private final ParameterAttributes paramAttributes;
 
-    private final IRScope scope;
+    private final ArrayList<Integer> implicitIndices = new ArrayList<>();
 
-    public Function(IRScope scope, Types types, FunctionDefinition function, int mode, ParameterAttributes paramAttributes) {
+    private InstructionBlock instructionBlock = null;
+    private boolean isLastBlockTerminated = true;
+    private MDLocation lastLocation = null;
+
+    BCFunctionBlock(FunctionDefinition function, IRScope scope, Type[] types, int mode, ParameterAttributes paramAttributes) {
+        this.function = function;
         this.scope = scope;
         this.types = types;
-        this.function = function;
         this.mode = mode;
         this.paramAttributes = paramAttributes;
     }
 
-    public void setupScope() {
+    @Override
+    void onEnter() {
+        implicitIndices.clear();
         scope.startLocalScope(function);
         final FunctionType functionType = function.getType();
         for (int i = 0; i < functionType.getNumberOfArguments(); i++) {
@@ -176,38 +170,7 @@ public final class Function implements ParserListener {
     }
 
     @Override
-    public ParserListener enter(Block block) {
-        switch (block) {
-            case CONSTANTS:
-                return new Constants(types, scope);
-
-            case VALUE_SYMTAB:
-                return new ValueSymbolTable(scope);
-
-            case METADATA:
-            case METADATA_ATTACHMENT:
-            case METADATA_KIND:
-                return new Metadata(types, scope);
-
-            default:
-                return ParserListener.DEFAULT;
-        }
-    }
-
-    @Override
-    public void exit() {
-        if (function.hasAttachedMetadata()) {
-            MDBaseNode md = function.getMetadataAttachment(MDKind.DBG_NAME);
-            if (md instanceof MDSubprogram) {
-                ((MDSubprogram) md).setFunction(MDValue.create(function));
-            }
-        }
-        scope.exitLocalScope();
-    }
-
-    @SuppressWarnings("fallthrough")
-    @Override
-    public void record(RecordBuffer buffer) {
+    void parseRecord(LLVMBitcodeRecord buffer) {
         int opCode = buffer.getId();
 
         // debug locations can occur after terminating instructions, we process them before we
@@ -390,6 +353,36 @@ public final class Function implements ParserListener {
         }
     }
 
+    @Override
+    void onExit() {
+        if (function.hasAttachedMetadata()) {
+            MDBaseNode md = function.getMetadataAttachment(MDKind.DBG_NAME);
+            if (md instanceof MDSubprogram) {
+                ((MDSubprogram) md).setFunction(MDValue.create(function));
+            }
+        }
+        scope.exitLocalScope();
+    }
+
+    @Override
+    BCBlockParser getParserForSubblock(BCBlockScanner.ScannerData scannerData, int blockId) {
+        switch (blockId) {
+            case BCConstantsBlock.BLOCK_ID:
+                return new BCConstantsBlock(types, scope);
+
+            case BCValueSymTabBlock.BLOCK_ID:
+                return new BCValueSymTabBlock(scope);
+
+            case BCMetadataBlock.BLOCK_ID_METADATA:
+            case BCMetadataBlock.BLOCK_ID_METADATA_ATTACHMENT:
+            case BCMetadataBlock.BLOCK_ID_METADATA_KIND:
+                return new BCMetadataBlock(scope, types);
+
+            default:
+                return super.getParserForSubblock(scannerData, blockId);
+        }
+    }
+
     private void emit(ValueInstruction instruction) {
         instructionBlock.append(instruction);
         scope.addSymbol(instruction, instruction.getType());
@@ -403,7 +396,7 @@ public final class Function implements ParserListener {
 
     private static final int INVOKE_HASEXPLICITFUNCTIONTYPE_SHIFT = 13;
 
-    private void createInvoke(RecordBuffer buffer) {
+    private void createInvoke(LLVMBitcodeRecord buffer) {
         AttributesCodeEntry paramAttr = paramAttributes.getCodeEntry(buffer.read());
         long ccInfo = buffer.read();
 
@@ -412,7 +405,7 @@ public final class Function implements ParserListener {
 
         FunctionType functionType = null;
         if (((ccInfo >> INVOKE_HASEXPLICITFUNCTIONTYPE_SHIFT) & 1) != 0) {
-            functionType = Types.castToFunction(readType(buffer));
+            functionType = BCTypeBlock.castToFunction(readType(buffer));
         }
 
         int target = readIndex(buffer);
@@ -420,7 +413,7 @@ public final class Function implements ParserListener {
 
         if (functionType == null) {
             if (calleeType instanceof PointerType) {
-                functionType = Types.castToFunction(((PointerType) calleeType).getPointeeType());
+                functionType = BCTypeBlock.castToFunction(((PointerType) calleeType).getPointeeType());
             } else if (calleeType instanceof FunctionType) {
                 functionType = (FunctionType) calleeType;
             } else {
@@ -451,13 +444,13 @@ public final class Function implements ParserListener {
         isLastBlockTerminated = true;
     }
 
-    private void createResume(RecordBuffer buffer) {
+    private void createResume(LLVMBitcodeRecord buffer) {
         int val = readIndexSkipType(buffer);
         emit(ResumeInstruction.fromSymbols(scope.getSymbols(), val));
         isLastBlockTerminated = true;
     }
 
-    private void createLandingpad(RecordBuffer buffer) {
+    private void createLandingpad(LLVMBitcodeRecord buffer) {
         Type type = readType(buffer);
         boolean isCleanup = buffer.readBoolean();
         int numClauses = buffer.readInt();
@@ -470,7 +463,7 @@ public final class Function implements ParserListener {
         emit(LandingpadInstruction.generate(scope.getSymbols(), type, isCleanup, clauseKinds, clauseTypes));
     }
 
-    private void createLandingpadOld(RecordBuffer buffer) {
+    private void createLandingpadOld(LLVMBitcodeRecord buffer) {
         final Type type = readType(buffer);
         readIndexSkipType(buffer);  // personality function
 
@@ -488,7 +481,7 @@ public final class Function implements ParserListener {
     private static final int CALL_HAS_FMF_SHIFT = 17;
     private static final int CALL_HAS_EXPLICITTYPE_SHIFT = 15;
 
-    private void createFunctionCall(RecordBuffer buffer) {
+    private void createFunctionCall(LLVMBitcodeRecord buffer) {
         final AttributesCodeEntry paramAttr = paramAttributes.getCodeEntry(buffer.read());
         final long ccinfo = buffer.read();
 
@@ -498,7 +491,7 @@ public final class Function implements ParserListener {
 
         FunctionType functionType = null;
         if (((ccinfo >> CALL_HAS_EXPLICITTYPE_SHIFT) & 1) != 0) {
-            functionType = Types.castToFunction(readType(buffer));
+            functionType = BCTypeBlock.castToFunction(readType(buffer));
         }
 
         int callee = readIndex(buffer);
@@ -508,7 +501,7 @@ public final class Function implements ParserListener {
             if (calleeType instanceof FunctionType) {
                 functionType = (FunctionType) calleeType;
             } else {
-                functionType = Types.castToFunction(Types.castToPointer(calleeType).getPointeeType());
+                functionType = BCTypeBlock.castToFunction(BCTypeBlock.castToPointer(calleeType).getPointeeType());
             }
         }
 
@@ -536,7 +529,7 @@ public final class Function implements ParserListener {
     private static final long SWITCH_CASERANGE_SHIFT = 16;
     private static final long SWITCH_CASERANGE_FLAG = 0x4B5;
 
-    private void createSwitch(RecordBuffer buffer) {
+    private void createSwitch(LLVMBitcodeRecord buffer) {
         long first = buffer.read();
         if ((first >> SWITCH_CASERANGE_SHIFT) == SWITCH_CASERANGE_FLAG) {
             // "special" format that likely isn't produced by LLVM at all
@@ -582,7 +575,7 @@ public final class Function implements ParserListener {
     private static final long ALLOCA_SWIFTERRORMASK = 1L << 7;
     private static final long ALLOCA_FLAGSMASK = ALLOCA_INMASK | ALLOCA_EXPLICITTYPEMASK | ALLOCA_SWIFTERRORMASK;
 
-    private void createAlloca(RecordBuffer buffer) {
+    private void createAlloca(LLVMBitcodeRecord buffer) {
         long typeRecord = buffer.read();
         buffer.read(); // type of count
         int count = getIndexAbsolute(buffer.read());
@@ -590,7 +583,7 @@ public final class Function implements ParserListener {
 
         int align = getAlign(alignRecord & ~ALLOCA_FLAGSMASK);
 
-        Type type = types.get(typeRecord);
+        Type type = types[LLVMBitcodeRecord.toUnsignedIntExact(typeRecord)];
         if ((alignRecord & ALLOCA_EXPLICITTYPEMASK) != 0L) {
             type = new PointerType(type);
         } else if (!(type instanceof PointerType)) {
@@ -601,14 +594,14 @@ public final class Function implements ParserListener {
 
     private static final int LOAD_ARGS_EXPECTED_AFTER_TYPE = 3;
 
-    private void createLoad(RecordBuffer buffer) {
+    private void createLoad(LLVMBitcodeRecord buffer) {
         int src = readIndex(buffer);
         Type srcType = readValueType(buffer, src);
         Type opType;
         if (buffer.remaining() == LOAD_ARGS_EXPECTED_AFTER_TYPE) {
             opType = readType(buffer);
         } else {
-            opType = Types.castToPointer(srcType).getPointeeType();
+            opType = BCTypeBlock.castToPointer(srcType).getPointeeType();
         }
         buffer.read(); // skip alignment
         boolean isVolatile = buffer.readBoolean();
@@ -618,14 +611,14 @@ public final class Function implements ParserListener {
 
     private static final int LOADATOMIC_ARGS_EXPECTED_AFTER_TYPE = 5;
 
-    private void createLoadAtomic(RecordBuffer buffer) {
+    private void createLoadAtomic(LLVMBitcodeRecord buffer) {
         int src = readIndex(buffer);
         Type srcType = readValueType(buffer, src);
         Type opType;
         if (buffer.remaining() == LOADATOMIC_ARGS_EXPECTED_AFTER_TYPE) {
             opType = readType(buffer);
         } else {
-            opType = Types.castToPointer(srcType).getPointeeType();
+            opType = BCTypeBlock.castToPointer(srcType).getPointeeType();
         }
         buffer.read(); // skip alignment
         boolean isVolatile = buffer.readBoolean();
@@ -635,7 +628,7 @@ public final class Function implements ParserListener {
         emit(LoadInstruction.fromSymbols(scope.getSymbols(), opType, src, isVolatile, atomicOrdering, synchronizationScope));
     }
 
-    private void createCompareExchange(RecordBuffer buffer, int record) {
+    private void createCompareExchange(LLVMBitcodeRecord buffer, int record) {
         int ptr = readIndex(buffer);
         Type ptrType = readValueType(buffer, ptr);
         int cmp = record == INSTRUCTION_CMPXCHG ? readIndexSkipType(buffer) : readIndex(buffer);
@@ -647,7 +640,7 @@ public final class Function implements ParserListener {
         final boolean addExtractValue = buffer.remaining() == 0;
         final boolean isWeak = addExtractValue || buffer.readBoolean();
 
-        final AggregateType type = findCmpxchgResultType(Types.castToPointer(ptrType).getPointeeType());
+        final AggregateType type = findCmpxchgResultType(BCTypeBlock.castToPointer(ptrType).getPointeeType());
         CompareExchangeInstruction inst;
         emit(inst = CompareExchangeInstruction.fromSymbols(scope.getSymbols(), type, ptr, cmp, replace, isVolatile, successOrdering, synchronizationScope, failureOrdering, isWeak));
 
@@ -681,7 +674,7 @@ public final class Function implements ParserListener {
         return StructureType.createUnnamed(true, elementType, PrimitiveType.I1);
     }
 
-    private void parseDebugLocation(RecordBuffer buffer) {
+    private void parseDebugLocation(LLVMBitcodeRecord buffer) {
         // if e.g. the previous instruction was @llvm.debug.declare this will be the location of the
         // declaration of the variable in the source file
         lastLocation = MDLocation.createFromFunctionArgs(buffer, scope.getMetadata());
@@ -692,7 +685,7 @@ public final class Function implements ParserListener {
         instructionBlock.getInstruction(lastInstructionIndex).setDebugLocation(lastLocation);
     }
 
-    private void createAtomicStore(RecordBuffer buffer) {
+    private void createAtomicStore(LLVMBitcodeRecord buffer) {
         int destination = readIndexSkipType(buffer);
         int source = readIndexSkipType(buffer);
         int align = getAlign(buffer.read());
@@ -703,7 +696,7 @@ public final class Function implements ParserListener {
         emit(StoreInstruction.fromSymbols(scope.getSymbols(), destination, source, align, isVolatile, atomicOrdering, synchronizationScope));
     }
 
-    private void createAtomicReadModifyWrite(RecordBuffer buffer) {
+    private void createAtomicReadModifyWrite(LLVMBitcodeRecord buffer) {
         int ptr = readIndex(buffer);
         Type ptrType = readValueType(buffer, ptr);
         int value = readIndex(buffer);
@@ -712,26 +705,26 @@ public final class Function implements ParserListener {
         long atomicOrdering = buffer.read();
         long synchronizationScope = buffer.read();
 
-        final Type type = Types.castToPointer(ptrType).getPointeeType();
+        final Type type = BCTypeBlock.castToPointer(ptrType).getPointeeType();
 
         emit(ReadModifyWriteInstruction.fromSymbols(scope.getSymbols(), type, ptr, value, opcode, isVolatile, atomicOrdering, synchronizationScope));
     }
 
-    private void createFence(RecordBuffer buffer) {
+    private void createFence(LLVMBitcodeRecord buffer) {
         long atomicOrdering = buffer.read();
         long synchronizationScope = buffer.read();
 
         emit(FenceInstruction.generate(atomicOrdering, synchronizationScope));
     }
 
-    private void createVaArg(RecordBuffer buffer) {
+    private void createVaArg(LLVMBitcodeRecord buffer) {
         readType(buffer);
         int source = readIndex(buffer);
         Type type = readType(buffer);
         emit(VaArgInstruction.fromSymbols(scope.getSymbols(), type, source));
     }
 
-    private void createBinaryOperation(RecordBuffer buffer) {
+    private void createBinaryOperation(LLVMBitcodeRecord buffer) {
         int lhs = readIndex(buffer);
         Type type = readValueType(buffer, lhs);
         int rhs = readIndex(buffer);
@@ -741,7 +734,7 @@ public final class Function implements ParserListener {
         emit(BinaryOperationInstruction.fromSymbols(scope.getSymbols(), type, opcode, flags, lhs, rhs));
     }
 
-    private void createUnaryOperation(RecordBuffer buffer) {
+    private void createUnaryOperation(LLVMBitcodeRecord buffer) {
         int operand = readIndex(buffer);
         Type type = readValueType(buffer, operand);
         int opcode = buffer.readInt();
@@ -750,7 +743,7 @@ public final class Function implements ParserListener {
         emit(UnaryOperationInstruction.fromSymbols(scope.getSymbols(), type, opcode, flags, operand));
     }
 
-    private void createBranch(RecordBuffer buffer) {
+    private void createBranch(LLVMBitcodeRecord buffer) {
         if (buffer.size() == 1) {
             emit(BranchInstruction.fromTarget(function.getBlock(buffer.read())));
 
@@ -764,43 +757,43 @@ public final class Function implements ParserListener {
         isLastBlockTerminated = true;
     }
 
-    private void createCast(RecordBuffer buffer) {
+    private void createCast(LLVMBitcodeRecord buffer) {
         int value = readIndexSkipType(buffer);
         Type type = readType(buffer);
         int opcode = buffer.readInt();
         emit(CastInstruction.fromSymbols(scope.getSymbols(), type, opcode, value));
     }
 
-    private void createCompare2(RecordBuffer buffer) {
+    private void createCompare2(LLVMBitcodeRecord buffer) {
         int lhs = readIndex(buffer);
         Type operandType = readValueType(buffer, lhs);
         int rhs = readIndex(buffer);
         int opcode = buffer.readInt();
 
-        Type type = operandType instanceof VectorType ? new VectorType(PrimitiveType.I1, Types.castToVector(operandType).getNumberOfElementsInt()) : PrimitiveType.I1;
+        Type type = operandType instanceof VectorType ? new VectorType(PrimitiveType.I1, BCTypeBlock.castToVector(operandType).getNumberOfElementsInt()) : PrimitiveType.I1;
         emit(CompareInstruction.fromSymbols(scope.getSymbols(), type, opcode, lhs, rhs));
     }
 
-    private void createExtractElement(RecordBuffer buffer) {
+    private void createExtractElement(LLVMBitcodeRecord buffer) {
         int vector = readIndex(buffer);
         Type vectorType = readValueType(buffer, vector);
         int index = readIndex(buffer);
 
-        Type elementType = Types.castToVector(vectorType).getElementType();
+        Type elementType = BCTypeBlock.castToVector(vectorType).getElementType();
         emit(ExtractElementInstruction.fromSymbols(scope.getSymbols(), elementType, vector, index));
     }
 
-    private void createExtractValue(RecordBuffer buffer) {
+    private void createExtractValue(LLVMBitcodeRecord buffer) {
         int aggregate = readIndex(buffer);
         Type aggregateType = readValueType(buffer, aggregate);
         int index = buffer.readInt();
         buffer.checkEnd("Multiple indices for extractvalue are not yet supported!");
 
-        Type elementType = Types.castToAggregate(aggregateType).getElementType(index);
+        Type elementType = BCTypeBlock.castToAggregate(aggregateType).getElementType(index);
         emit(ExtractValueInstruction.fromSymbols(scope.getSymbols(), elementType, aggregate, index));
     }
 
-    private void createGetElementPointer(RecordBuffer buffer) {
+    private void createGetElementPointer(LLVMBitcodeRecord buffer) {
         boolean isInbounds = buffer.readBoolean();
         buffer.read(); // we do not use this parameter
         int pointer = readIndex(buffer);
@@ -810,7 +803,7 @@ public final class Function implements ParserListener {
         emit(GetElementPointerInstruction.fromSymbols(scope.getSymbols(), type, pointer, indices, isInbounds));
     }
 
-    private void createGetElementPointerOld(RecordBuffer buffer, boolean isInbounds) {
+    private void createGetElementPointerOld(LLVMBitcodeRecord buffer, boolean isInbounds) {
         int pointer = readIndex(buffer);
         Type base = readValueType(buffer, pointer);
         int[] indices = readIndices(buffer);
@@ -818,7 +811,7 @@ public final class Function implements ParserListener {
         emit(GetElementPointerInstruction.fromSymbols(scope.getSymbols(), type, pointer, indices, isInbounds));
     }
 
-    private void createIndirectBranch(RecordBuffer buffer) {
+    private void createIndirectBranch(LLVMBitcodeRecord buffer) {
         buffer.read(); // skipped
         int address = readIndex(buffer);
         int[] successors = new int[buffer.size() - 2];
@@ -830,7 +823,7 @@ public final class Function implements ParserListener {
         isLastBlockTerminated = true;
     }
 
-    private void createInsertElement(RecordBuffer buffer) {
+    private void createInsertElement(LLVMBitcodeRecord buffer) {
         int vector = readIndex(buffer);
         Type type = readValueType(buffer, vector);
         int value = readIndex(buffer);
@@ -839,7 +832,7 @@ public final class Function implements ParserListener {
         emit(InsertElementInstruction.fromSymbols(scope.getSymbols(), type, vector, index, value));
     }
 
-    private void createInsertValue(RecordBuffer buffer) {
+    private void createInsertValue(LLVMBitcodeRecord buffer) {
         int aggregate = readIndex(buffer);
         Type type = readValueType(buffer, aggregate);
         int value = readIndexSkipType(buffer);
@@ -849,7 +842,7 @@ public final class Function implements ParserListener {
         emit(InsertValueInstruction.fromSymbols(scope.getSymbols(), type, aggregate, index, value));
     }
 
-    private void createPhi(RecordBuffer buffer) {
+    private void createPhi(LLVMBitcodeRecord buffer) {
         Type type = readType(buffer);
         int count = (buffer.size() - 1) >> 1;
         int[] values = new int[count];
@@ -862,7 +855,7 @@ public final class Function implements ParserListener {
         emit(PhiInstruction.generate(scope.getSymbols(), type, values, blocks));
     }
 
-    private void createReturn(RecordBuffer buffer) {
+    private void createReturn(LLVMBitcodeRecord buffer) {
         if (buffer.size() == 0 || buffer.getAt(0) == 0) {
             emit(ReturnInstruction.generate());
         } else {
@@ -872,7 +865,7 @@ public final class Function implements ParserListener {
         isLastBlockTerminated = true;
     }
 
-    private void createSelect(RecordBuffer buffer) {
+    private void createSelect(LLVMBitcodeRecord buffer) {
         int trueValue = readIndex(buffer);
         Type type = readValueType(buffer, trueValue);
         int falseValue = readIndex(buffer);
@@ -881,20 +874,20 @@ public final class Function implements ParserListener {
         emit(SelectInstruction.fromSymbols(scope.getSymbols(), type, condition, trueValue, falseValue));
     }
 
-    private void createShuffleVector(RecordBuffer buffer) {
+    private void createShuffleVector(LLVMBitcodeRecord buffer) {
         int vector1 = readIndex(buffer);
         Type vectorType = readValueType(buffer, vector1);
         int vector2 = readIndex(buffer);
         int mask = readIndex(buffer);
 
-        Type subtype = Types.castToVector(vectorType).getElementType();
-        int length = Types.castToVector(scope.getValueType(mask)).getNumberOfElementsInt();
+        Type subtype = BCTypeBlock.castToVector(vectorType).getElementType();
+        int length = BCTypeBlock.castToVector(scope.getValueType(mask)).getNumberOfElementsInt();
         Type type = new VectorType(subtype, length);
 
         emit(ShuffleVectorInstruction.fromSymbols(scope.getSymbols(), type, vector1, vector2, mask));
     }
 
-    private void createStore(RecordBuffer buffer) {
+    private void createStore(LLVMBitcodeRecord buffer) {
         int destination = readIndexSkipType(buffer);
         int source = readIndexSkipType(buffer);
         int align = getAlign(buffer.read());
@@ -903,7 +896,7 @@ public final class Function implements ParserListener {
         emit(StoreInstruction.fromSymbols(scope.getSymbols(), destination, source, align, isVolatile));
     }
 
-    private void createStoreOld(RecordBuffer buffer) {
+    private void createStoreOld(LLVMBitcodeRecord buffer) {
         int destination = readIndexSkipType(buffer);
         int source = readIndex(buffer);
         int align = getAlign(buffer.read());
@@ -912,7 +905,7 @@ public final class Function implements ParserListener {
         emit(StoreInstruction.fromSymbols(scope.getSymbols(), destination, source, align, isVolatile));
     }
 
-    private void createUnreachable(@SuppressWarnings("unused") RecordBuffer buffer) {
+    private void createUnreachable(@SuppressWarnings("unused") LLVMBitcodeRecord buffer) {
         emit(UnreachableInstruction.generate());
         isLastBlockTerminated = true;
     }
@@ -940,7 +933,7 @@ public final class Function implements ParserListener {
                     throw new LLVMParserException("Cannot infer structure element from " + indexType);
                 }
                 Number indexNumber = (Number) ((PrimitiveType) indexType).getConstant();
-                assert ((PrimitiveType) indexType).getPrimitiveKind() == PrimitiveKind.I32;
+                assert ((PrimitiveType) indexType).getPrimitiveKind() == PrimitiveType.PrimitiveKind.I32;
                 elementType = structure.getElementType(indexNumber.intValue());
             } else {
                 throw new LLVMParserException("Cannot index type: " + elementType);
@@ -967,21 +960,21 @@ public final class Function implements ParserListener {
         }
     }
 
-    private int readIndex(RecordBuffer buffer) {
+    private int readIndex(LLVMBitcodeRecord buffer) {
         return getIndex(buffer.read());
     }
 
-    private int readIndexSkipType(RecordBuffer buffer) {
-        int value = Function.this.getIndex(buffer.read());
+    private int readIndexSkipType(LLVMBitcodeRecord buffer) {
+        int value = getIndex(buffer.read());
         if (scope.isValueForwardRef(value)) {
             buffer.read();
         }
         return value;
     }
 
-    private Type readValueType(RecordBuffer buffer, int valueIndex) {
+    private Type readValueType(LLVMBitcodeRecord buffer, int valueIndex) {
         if (scope.isValueForwardRef(valueIndex)) {
-            return types.get(buffer.read());
+            return types[buffer.readInt()];
         } else {
             return scope.getValueType(valueIndex);
         }
@@ -1011,7 +1004,7 @@ public final class Function implements ParserListener {
         return (int) actualIndex;
     }
 
-    private int[] readIndices(RecordBuffer buffer) {
+    private int[] readIndices(LLVMBitcodeRecord buffer) {
         int[] indices = new int[buffer.remaining()];
         int pos = 0;
         while (buffer.remaining() > 0) {
@@ -1020,15 +1013,7 @@ public final class Function implements ParserListener {
         return pos == indices.length ? indices : Arrays.copyOf(indices, pos);
     }
 
-    private Type readType(RecordBuffer buffer) {
-        return types.get(buffer.read());
-    }
-
-    public FunctionDefinition getFunction() {
-        return function;
-    }
-
-    public IRScope getScope() {
-        return scope;
+    private Type readType(LLVMBitcodeRecord buffer) {
+        return types[buffer.readInt()];
     }
 }

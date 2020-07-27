@@ -37,7 +37,7 @@ import com.oracle.truffle.llvm.parser.elf.ElfSectionHeaderTable;
 import com.oracle.truffle.llvm.parser.macho.MachOFile;
 import com.oracle.truffle.llvm.parser.macho.MachOLibraryLocator;
 import com.oracle.truffle.llvm.parser.macho.Xar;
-import com.oracle.truffle.llvm.parser.scanner.BitStream;
+import com.oracle.truffle.llvm.parser.bitcode.blocks.BitStream;
 import com.oracle.truffle.llvm.runtime.DefaultLibraryLocator;
 import com.oracle.truffle.llvm.runtime.LLVMContext;
 import com.oracle.truffle.llvm.runtime.LibraryLocator;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,7 +29,8 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
+import com.oracle.truffle.llvm.parser.model.IRScope;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class MDNamespace extends MDNamedLocation implements MDBaseNode {
 
@@ -73,13 +74,13 @@ public final class MDNamespace extends MDNamedLocation implements MDBaseNode {
     private static final int ARGINDEX_32_FILE = 3;
     private static final int ARGINDEX_32_LINE = 4;
 
-    public static MDNamespace create32(long[] args, Metadata md) {
-        final long line = ParseUtil.asLong(args, ARGINDEX_32_LINE, md);
+    public static MDNamespace create32(long[] args, Type[] types, IRScope scope) {
+        final long line = ParseUtil.asLong(args, ARGINDEX_32_LINE, types, scope);
         final MDNamespace namespace = new MDNamespace(line);
 
-        namespace.setScope(ParseUtil.resolveReference(args, ARGINDEX_SCOPE, namespace, md));
-        namespace.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, namespace, md));
-        namespace.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, namespace, md));
+        namespace.setScope(ParseUtil.resolveReference(args, ARGINDEX_SCOPE, namespace, types, scope));
+        namespace.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, namespace, types, scope));
+        namespace.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, namespace, types, scope));
 
         return namespace;
     }

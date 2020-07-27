@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,7 +29,8 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
+import com.oracle.truffle.llvm.parser.model.IRScope;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class MDLocalVariable extends MDVariable implements MDBaseNode {
 
@@ -95,18 +96,18 @@ public final class MDLocalVariable extends MDVariable implements MDBaseNode {
     private static final int ARGINDEX_32_TYPE = 5;
     private static final int ARGINDEX_32_FLAGS = 6;
 
-    public static MDLocalVariable create32(long[] args, Metadata md) {
-        final long lineAndArg = ParseUtil.asInt(args, ARGINDEX_32_LINEARG, md);
+    public static MDLocalVariable create32(long[] args, Type[] types, IRScope scope) {
+        final long lineAndArg = ParseUtil.asInt(args, ARGINDEX_32_LINEARG, types, scope);
         final long line = lineAndArg & DW_TAG_LOCAL_VARIABLE_LINE_MASK;
         final long arg = (lineAndArg & DW_TAG_LOCAL_VARIABLE_ARG_MASK) >> DW_TAG_LOCAL_VARIABLE_ARG_SHIFT;
-        final long flags = ParseUtil.asInt(args, ARGINDEX_32_FLAGS, md);
+        final long flags = ParseUtil.asInt(args, ARGINDEX_32_FLAGS, types, scope);
 
         final MDLocalVariable localVariable = new MDLocalVariable(line, arg, flags);
 
-        localVariable.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, localVariable, md));
-        localVariable.setScope(ParseUtil.resolveReference(args, ARGINDEX_32_SCOPE, localVariable, md));
-        localVariable.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, localVariable, md));
-        localVariable.setType(ParseUtil.resolveReference(args, ARGINDEX_32_TYPE, localVariable, md));
+        localVariable.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, localVariable, types, scope));
+        localVariable.setScope(ParseUtil.resolveReference(args, ARGINDEX_32_SCOPE, localVariable, types, scope));
+        localVariable.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, localVariable, types, scope));
+        localVariable.setType(ParseUtil.resolveReference(args, ARGINDEX_32_TYPE, localVariable, types, scope));
 
         return localVariable;
     }

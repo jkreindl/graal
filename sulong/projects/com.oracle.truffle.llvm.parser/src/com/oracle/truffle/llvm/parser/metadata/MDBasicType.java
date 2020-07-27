@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,8 +29,9 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
+import com.oracle.truffle.llvm.parser.model.IRScope;
 import com.oracle.truffle.llvm.parser.records.DwTagRecord;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class MDBasicType extends MDType implements MDBaseNode {
     // http://llvm.org/releases/3.2/docs/SourceLevelDebugging.html#format_basic_type
@@ -107,18 +108,18 @@ public final class MDBasicType extends MDType implements MDBaseNode {
     private static final int ARGINDEX_32_FLAGS = 8;
     private static final int ARGINDEX_32_ENCODING = 9;
 
-    public static MDBasicType create32(long[] args, Metadata md) {
+    public static MDBasicType create32(long[] args, Type[] types, IRScope scope) {
         // final MDReference scope = metadata.getReference(args[1]);
-        final long line = ParseUtil.asInt(args, ARGINDEX_32_LINE, md);
-        final long size = ParseUtil.asLong(args, ARGINDEX_32_SIZE, md);
-        final long align = ParseUtil.asLong(args, ARGINDEX_32_ALIGN, md);
-        final long offset = ParseUtil.asLong(args, ARGINDEX_32_OFFSET, md);
-        final long flags = ParseUtil.asInt(args, ARGINDEX_32_FLAGS, md);
-        final long encoding = ParseUtil.asInt(args, ARGINDEX_32_ENCODING, md);
+        final long line = ParseUtil.asInt(args, ARGINDEX_32_LINE, types, scope);
+        final long size = ParseUtil.asLong(args, ARGINDEX_32_SIZE, types, scope);
+        final long align = ParseUtil.asLong(args, ARGINDEX_32_ALIGN, types, scope);
+        final long offset = ParseUtil.asLong(args, ARGINDEX_32_OFFSET, types, scope);
+        final long flags = ParseUtil.asInt(args, ARGINDEX_32_FLAGS, types, scope);
+        final long encoding = ParseUtil.asInt(args, ARGINDEX_32_ENCODING, types, scope);
 
         final MDBasicType basicType = new MDBasicType(DwTagRecord.DW_TAG_BASE_TYPE.code(), line, size, align, offset, flags, encoding);
-        basicType.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, basicType, md));
-        basicType.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, basicType, md));
+        basicType.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, basicType, types, scope));
+        basicType.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, basicType, types, scope));
         return basicType;
     }
 }

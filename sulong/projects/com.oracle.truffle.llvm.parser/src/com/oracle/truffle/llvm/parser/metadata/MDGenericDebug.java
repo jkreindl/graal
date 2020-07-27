@@ -29,7 +29,7 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
+import com.oracle.truffle.llvm.parser.bitcode.blocks.LLVMBitcodeRecord;
 
 public final class MDGenericDebug extends MDAggregateNode {
 
@@ -75,7 +75,7 @@ public final class MDGenericDebug extends MDAggregateNode {
     // private static final int ARGINDEX_HEADER = 3;
     // private static final int ARGINDEX_DATASTART = 4;
 
-    public static MDGenericDebug create38(RecordBuffer buffer, MetadataValueList md) {
+    public static MDGenericDebug create38(LLVMBitcodeRecord buffer, MetadataValueList md) {
         buffer.skip();
         final long tag = buffer.read();
         final long version = buffer.read();

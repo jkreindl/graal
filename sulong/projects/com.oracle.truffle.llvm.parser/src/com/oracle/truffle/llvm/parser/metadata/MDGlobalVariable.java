@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,7 +29,8 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
+import com.oracle.truffle.llvm.parser.model.IRScope;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class MDGlobalVariable extends MDVariable implements MDBaseNode {
 
@@ -161,21 +162,21 @@ public final class MDGlobalVariable extends MDVariable implements MDBaseNode {
     private static final int ARGINDEX_32_DEFINEDINCOMPILEUNIT = 10;
     private static final int ARGINDEX_32_VARIABLE = 11;
 
-    public static MDGlobalVariable create32(long[] args, Metadata md) {
-        final long line = ParseUtil.asInt(args, ARGINDEX_32_LINE, md);
-        final boolean localToCompileUnit = ParseUtil.asBoolean(args, ARGINDEX_32_LOCALTOCOMPILEUNIT, md);
-        final boolean inCompileUnit = ParseUtil.asBoolean(args, ARGINDEX_32_DEFINEDINCOMPILEUNIT, md);
+    public static MDGlobalVariable create32(long[] args, Type[] types, IRScope scope) {
+        final long line = ParseUtil.asInt(args, ARGINDEX_32_LINE, types, scope);
+        final boolean localToCompileUnit = ParseUtil.asBoolean(args, ARGINDEX_32_LOCALTOCOMPILEUNIT, types, scope);
+        final boolean inCompileUnit = ParseUtil.asBoolean(args, ARGINDEX_32_DEFINEDINCOMPILEUNIT, types, scope);
 
         final MDGlobalVariable globalVariable = new MDGlobalVariable(line, localToCompileUnit, inCompileUnit);
 
-        globalVariable.setScope(ParseUtil.resolveReference(args, ARGINDEX_32_SCOPE, globalVariable, md));
-        globalVariable.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, globalVariable, md));
-        globalVariable.setType(ParseUtil.resolveReference(args, ARGINDEX_32_TYPE, globalVariable, md));
-        globalVariable.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, globalVariable, md));
+        globalVariable.setScope(ParseUtil.resolveReference(args, ARGINDEX_32_SCOPE, globalVariable, types, scope));
+        globalVariable.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, globalVariable, types, scope));
+        globalVariable.setType(ParseUtil.resolveReference(args, ARGINDEX_32_TYPE, globalVariable, types, scope));
+        globalVariable.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, globalVariable, types, scope));
 
-        globalVariable.displayName = ParseUtil.resolveReference(args, ARGINDEX_32_DISPLAYNAME, globalVariable, md);
-        globalVariable.linkageName = ParseUtil.resolveReference(args, ARGINDEX_32_LINKAGENAME, globalVariable, md);
-        globalVariable.variable = ParseUtil.resolveSymbol(args, ARGINDEX_32_VARIABLE, md);
+        globalVariable.displayName = ParseUtil.resolveReference(args, ARGINDEX_32_DISPLAYNAME, globalVariable, types, scope);
+        globalVariable.linkageName = ParseUtil.resolveReference(args, ARGINDEX_32_LINKAGENAME, globalVariable, types, scope);
+        globalVariable.variable = ParseUtil.resolveSymbol(args, ARGINDEX_32_VARIABLE, types, scope);
 
         return globalVariable;
     }

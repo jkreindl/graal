@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -34,10 +34,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.oracle.truffle.llvm.parser.bitcode.blocks.LazyBitcodeFunctionBlockParser;
 import com.oracle.truffle.llvm.parser.metadata.debuginfo.DebugInfoFunctionProcessor;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDeclaration;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDefinition;
-import com.oracle.truffle.llvm.parser.model.functions.LazyFunctionParser;
 import com.oracle.truffle.llvm.parser.model.symbols.globals.GlobalAlias;
 import com.oracle.truffle.llvm.parser.model.symbols.globals.GlobalVariable;
 import com.oracle.truffle.llvm.parser.model.target.TargetDataLayout;
@@ -60,7 +60,7 @@ public final class ModelModule {
     private final ArrayList<TargetInformation> targetInfo = new ArrayList<>();
     private final HashMap<LLVMSourceSymbol, SymbolImpl> sourceGlobals = new HashMap<>();
     private final HashMap<LLVMSourceStaticMemberType, SymbolImpl> sourceStaticMembers = new HashMap<>();
-    private final HashMap<FunctionDefinition, LazyFunctionParser> lazyFunctionParsers = new HashMap<>();
+    private final HashMap<FunctionDefinition, LazyBitcodeFunctionBlockParser> lazyFunctionParsers = new HashMap<>();
     private TargetDataLayout targetDataLayout = defaultLayout;
     private DebugInfoFunctionProcessor functionProcessor = null;
 
@@ -91,11 +91,11 @@ public final class ModelModule {
         return defines;
     }
 
-    public void addFunctionParser(FunctionDefinition definition, LazyFunctionParser parser) {
+    public void addFunctionParser(FunctionDefinition definition, LazyBitcodeFunctionBlockParser parser) {
         lazyFunctionParsers.put(definition, parser);
     }
 
-    public LazyFunctionParser getFunctionParser(FunctionDefinition functionDefinition) {
+    public LazyBitcodeFunctionBlockParser getFunctionParser(FunctionDefinition functionDefinition) {
         return lazyFunctionParsers.get(functionDefinition);
     }
 

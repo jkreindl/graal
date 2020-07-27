@@ -29,7 +29,7 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
+import com.oracle.truffle.llvm.parser.bitcode.blocks.LLVMBitcodeRecord;
 
 public final class MDLocation implements MDBaseNode {
 
@@ -89,7 +89,7 @@ public final class MDLocation implements MDBaseNode {
     // private static final int MDNODE_SCOPE = 3;
     // private static final int MDNODE_INLINEDAT = 4;
 
-    public static MDLocation create38(RecordBuffer buffer, MetadataValueList md) {
+    public static MDLocation create38(LLVMBitcodeRecord buffer, MetadataValueList md) {
         // [distinct, line, col, scope, inlined-at?]
         buffer.skip();
         final long line = buffer.read();
@@ -107,7 +107,7 @@ public final class MDLocation implements MDBaseNode {
     // private static final int ARG_SCOPE = 2;
     // private static final int ARG_INLINEDAT = 3;
 
-    public static MDLocation createFromFunctionArgs(RecordBuffer buffer, MetadataValueList md) {
+    public static MDLocation createFromFunctionArgs(LLVMBitcodeRecord buffer, MetadataValueList md) {
         final long line = buffer.read();
         final long col = buffer.read();
 

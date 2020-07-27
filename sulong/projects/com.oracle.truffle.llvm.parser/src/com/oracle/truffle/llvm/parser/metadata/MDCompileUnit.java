@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,8 +29,9 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
+import com.oracle.truffle.llvm.parser.model.IRScope;
 import com.oracle.truffle.llvm.runtime.types.DwLangNameRecord;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class MDCompileUnit implements MDBaseNode {
 
@@ -230,23 +231,23 @@ public final class MDCompileUnit implements MDBaseNode {
     private static final int ARGINDEX_32_SUBPROGRAMS = 12;
     private static final int ARGINDEX_32_GLOBALVARIABLES = 13;
 
-    public static MDCompileUnit create32(long[] args, Metadata md) {
+    public static MDCompileUnit create32(long[] args, Type[] types, IRScope scope) {
         // TODO can splitdebugfilename be created from file and directory?
-        final DwLangNameRecord language = DwLangNameRecord.decode(ParseUtil.asInt(args, ARGINDEX_32_LANGUAGE, md));
-        final boolean optimized = ParseUtil.asBoolean(args, ARGINDEX_32_OPTIMIZED, md);
-        final long runtimeVersion = ParseUtil.asInt(args, ARGINDEX_32_RUNTIMEVERSION, md);
+        final DwLangNameRecord language = DwLangNameRecord.decode(ParseUtil.asInt(args, ARGINDEX_32_LANGUAGE, types, scope));
+        final boolean optimized = ParseUtil.asBoolean(args, ARGINDEX_32_OPTIMIZED, types, scope);
+        final long runtimeVersion = ParseUtil.asInt(args, ARGINDEX_32_RUNTIMEVERSION, types, scope);
 
         final MDCompileUnit compileUnit = new MDCompileUnit(language, optimized, runtimeVersion, -1L, -1L);
 
-        compileUnit.file = ParseUtil.resolveReference(args, ARGINDEX_32_FILE, compileUnit, md);
-        compileUnit.directory = ParseUtil.resolveReference(args, ARGINDEX_32_DIRECTORY, compileUnit, md);
-        compileUnit.producer = ParseUtil.resolveReference(args, ARGINDEX_32_PRODUCER, compileUnit, md);
-        compileUnit.flags = ParseUtil.resolveReference(args, ARGINDEX_32_FLAGS, compileUnit, md);
+        compileUnit.file = ParseUtil.resolveReference(args, ARGINDEX_32_FILE, compileUnit, types, scope);
+        compileUnit.directory = ParseUtil.resolveReference(args, ARGINDEX_32_DIRECTORY, compileUnit, types, scope);
+        compileUnit.producer = ParseUtil.resolveReference(args, ARGINDEX_32_PRODUCER, compileUnit, types, scope);
+        compileUnit.flags = ParseUtil.resolveReference(args, ARGINDEX_32_FLAGS, compileUnit, types, scope);
 
-        compileUnit.enums = ParseUtil.resolveReference(args, ARGINDEX_32_ENUMS, compileUnit, md);
-        compileUnit.retainedTypes = ParseUtil.resolveReference(args, ARGINDEX_32_RETAINEDTYPES, compileUnit, md);
-        compileUnit.subprograms = ParseUtil.resolveReference(args, ARGINDEX_32_SUBPROGRAMS, compileUnit, md);
-        compileUnit.globalVariables = ParseUtil.resolveReference(args, ARGINDEX_32_GLOBALVARIABLES, compileUnit, md);
+        compileUnit.enums = ParseUtil.resolveReference(args, ARGINDEX_32_ENUMS, compileUnit, types, scope);
+        compileUnit.retainedTypes = ParseUtil.resolveReference(args, ARGINDEX_32_RETAINEDTYPES, compileUnit, types, scope);
+        compileUnit.subprograms = ParseUtil.resolveReference(args, ARGINDEX_32_SUBPROGRAMS, compileUnit, types, scope);
+        compileUnit.globalVariables = ParseUtil.resolveReference(args, ARGINDEX_32_GLOBALVARIABLES, compileUnit, types, scope);
         // final boolean isMainCompileUnit = ParseUtil.asInt1(args[6]);
 
         return compileUnit;

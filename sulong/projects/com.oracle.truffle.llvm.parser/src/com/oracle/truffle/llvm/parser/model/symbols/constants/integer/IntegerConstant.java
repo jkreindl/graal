@@ -32,7 +32,7 @@ package com.oracle.truffle.llvm.parser.model.symbols.constants.integer;
 import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.AbstractConstant;
 import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
+import com.oracle.truffle.llvm.parser.bitcode.blocks.LLVMBitcodeRecord;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
 import com.oracle.truffle.llvm.runtime.types.Type;
 import com.oracle.truffle.llvm.runtime.types.Type.TypeOverflowException;
@@ -72,7 +72,7 @@ public final class IntegerConstant extends AbstractConstant {
         return String.valueOf(value);
     }
 
-    public static IntegerConstant createFromData(Type type, RecordBuffer buffer) {
+    public static IntegerConstant createFromData(Type type, LLVMBitcodeRecord buffer) {
         // Sign extend for everything except i1 (boolean)
         assert type instanceof PrimitiveType || type instanceof VariableBitWidthType;
         try {

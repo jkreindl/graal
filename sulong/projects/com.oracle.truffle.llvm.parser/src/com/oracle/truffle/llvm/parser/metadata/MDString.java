@@ -29,8 +29,8 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.scanner.BitStream;
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
+import com.oracle.truffle.llvm.parser.bitcode.blocks.BitStream;
+import com.oracle.truffle.llvm.parser.bitcode.blocks.LLVMBitcodeRecord;
 
 public final class MDString implements MDBaseNode {
 
@@ -58,7 +58,7 @@ public final class MDString implements MDBaseNode {
         return String.format("!\"%s\"", s);
     }
 
-    public static MDString create(RecordBuffer buffer) {
+    public static MDString create(LLVMBitcodeRecord buffer) {
         return new MDString(buffer.readUnicodeString());
     }
 

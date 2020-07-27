@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,8 +29,8 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.model.IRScope;
 import com.oracle.truffle.llvm.parser.model.SymbolImpl;
+import com.oracle.truffle.llvm.parser.model.SymbolTable;
 
 public final class MDValue implements MDBaseNode {
 
@@ -57,9 +57,9 @@ public final class MDValue implements MDBaseNode {
         return String.format("Value (%s)", value);
     }
 
-    public static MDBaseNode create(long arg, IRScope scope) {
+    public static MDBaseNode create(long arg, SymbolTable symbolTable) {
         final MDValue value = new MDValue();
-        scope.getSymbols().onParse((int) arg, s -> value.value = s);
+        symbolTable.onParse((int) arg, s -> value.value = s);
         return value;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,44 +27,33 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.listeners;
+package com.oracle.truffle.llvm.parser.bitcode.blocks;
 
-import com.oracle.truffle.llvm.parser.model.IRScope;
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
+final class BCStrTabBlock extends BCBlockParser {
 
-public final class ValueSymbolTable implements ParserListener {
+    static final int BLOCK_ID = 23;
 
-    private static final int VALUE_SYMTAB_ENTRY = 1;
-    private static final int VALUE_SYMTAB_BASIC_BLOCK_ENTRY = 2;
-    private static final int VALUE_SYMTAB_FUNCTION_ENTRY = 3;
-    // private static final int VALUE_SYMTAB_COMBINED_FNENTRY = 4;
+    private static final long BYTE_MASK = 0xffL;
 
-    private final IRScope container;
+    private final StringTable target;
 
-    ValueSymbolTable(IRScope container) {
-        this.container = container;
+    BCStrTabBlock(StringTable target) {
+        this.target = target;
+        assert target != null;
     }
 
     @Override
-    public void record(RecordBuffer buffer) {
-        int id = buffer.getId();
-        int index = buffer.readInt();
-        switch (id) {
-            case VALUE_SYMTAB_ENTRY:
-                container.nameSymbol(index, buffer.readString());
-                break;
-
-            case VALUE_SYMTAB_BASIC_BLOCK_ENTRY:
-                container.nameBlock(index, buffer.readString());
-                break;
-
-            case VALUE_SYMTAB_FUNCTION_ENTRY:
-                buffer.skip(); // ignored
-                container.nameSymbol(index, buffer.readString());
-                break;
-
-            default:
-                break;
+    void parseRecord(LLVMBitcodeRecord record) {
+        byte[] bytes = new byte[record.size() * Long.BYTES];
+        int curByte = 0;
+        while (record.remaining() > 0) {
+            long l = record.read();
+            for (int j = 0; j < Long.BYTES; j++) {
+                bytes[curByte++] = (byte) (l & BYTE_MASK);
+                l >>>= Byte.SIZE;
+            }
         }
+        final String table = new String(bytes);
+        target.fillTable(table);
     }
 }

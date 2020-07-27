@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,8 +29,9 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
+import com.oracle.truffle.llvm.parser.model.IRScope;
 import com.oracle.truffle.llvm.parser.records.DwTagRecord;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class MDCompositeType extends MDType implements MDBaseNode {
 
@@ -154,25 +155,25 @@ public final class MDCompositeType extends MDType implements MDBaseNode {
     private static final int ARGINDEX_32_RUNTIMELANGUAGE = 11;
     private static final int ARGINDEX_32_TEMPLATEPARAMS = 13;
 
-    public static MDCompositeType create32(long[] args, Metadata md) {
-        final long tag = DwTagRecord.decode(ParseUtil.asLong(args, ARGINDEX_32_TAG, md)).code();
-        final long line = ParseUtil.asInt(args, ARGINDEX_32_LINE, md);
-        final long size = ParseUtil.asLong(args, ARGINDEX_32_SIZE, md);
-        final long align = ParseUtil.asLong(args, ARGINDEX_32_ALIGN, md);
-        final long offset = ParseUtil.asLong(args, ARGINDEX_32_OFFSET, md);
-        final long flags = ParseUtil.asInt(args, ARGINDEX_32_FLAGS, md);
-        final long lang = ParseUtil.asLong(args, ARGINDEX_32_RUNTIMELANGUAGE, md);
+    public static MDCompositeType create32(long[] args, Type[] types, IRScope scope) {
+        final long tag = DwTagRecord.decode(ParseUtil.asLong(args, ARGINDEX_32_TAG, types, scope)).code();
+        final long line = ParseUtil.asInt(args, ARGINDEX_32_LINE, types, scope);
+        final long size = ParseUtil.asLong(args, ARGINDEX_32_SIZE, types, scope);
+        final long align = ParseUtil.asLong(args, ARGINDEX_32_ALIGN, types, scope);
+        final long offset = ParseUtil.asLong(args, ARGINDEX_32_OFFSET, types, scope);
+        final long flags = ParseUtil.asInt(args, ARGINDEX_32_FLAGS, types, scope);
+        final long lang = ParseUtil.asLong(args, ARGINDEX_32_RUNTIMELANGUAGE, types, scope);
 
         final MDCompositeType compositeType = new MDCompositeType(tag, line, size, align, offset, flags, lang);
 
-        compositeType.scope = ParseUtil.resolveReference(args, ARGINDEX_32_SCOPE, compositeType, md);
-        compositeType.baseType = ParseUtil.resolveReference(args, ARGINDEX_32_BASETYPE, compositeType, md);
+        compositeType.scope = ParseUtil.resolveReference(args, ARGINDEX_32_SCOPE, compositeType, types, scope);
+        compositeType.baseType = ParseUtil.resolveReference(args, ARGINDEX_32_BASETYPE, compositeType, types, scope);
 
-        compositeType.members = ParseUtil.resolveReference(args, ARGINDEX_32_MEMBERS, compositeType, md);
-        compositeType.templateParams = ParseUtil.resolveReference(args, ARGINDEX_32_TEMPLATEPARAMS, compositeType, md);
+        compositeType.members = ParseUtil.resolveReference(args, ARGINDEX_32_MEMBERS, compositeType, types, scope);
+        compositeType.templateParams = ParseUtil.resolveReference(args, ARGINDEX_32_TEMPLATEPARAMS, compositeType, types, scope);
 
-        compositeType.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, compositeType, md));
-        compositeType.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, compositeType, md));
+        compositeType.setFile(ParseUtil.resolveReference(args, ARGINDEX_32_FILE, compositeType, types, scope));
+        compositeType.setName(ParseUtil.resolveReference(args, ARGINDEX_32_NAME, compositeType, types, scope));
 
         return compositeType;
     }

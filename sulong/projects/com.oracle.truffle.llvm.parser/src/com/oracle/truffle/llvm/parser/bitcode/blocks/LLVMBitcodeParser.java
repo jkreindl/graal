@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,11 +27,32 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.scanner;
+package com.oracle.truffle.llvm.parser.bitcode.blocks;
 
-@FunctionalInterface
-interface AbbreviatedRecord {
+import com.oracle.truffle.api.source.Source;
+import com.oracle.truffle.llvm.parser.model.ModelModule;
+import com.oracle.truffle.llvm.runtime.LLVMContext;
+import com.oracle.truffle.llvm.runtime.Magic;
+import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
+import org.graalvm.polyglot.io.ByteSequence;
 
-    void scan(LLVMScanner scanner);
+public final class LLVMBitcodeParser {
 
+    /* Each bitcode file starts with a magic word. The actual bitcode data comes only after that. */
+    private static final int BC_DATA_OFFSET = Integer.SIZE;
+
+    public static void parseBitcode(ByteSequence bitcode, ModelModule model, Source bcSource, LLVMContext context) {
+        final BitStream bitstream = BitStream.create(bitcode);
+
+        final long actualMagicWord = bitstream.read(0L, BC_DATA_OFFSET);
+        if (actualMagicWord != Magic.BC_MAGIC_WORD.magic) {
+            throw new LLVMParserException("Not a valid Bitcode File!");
+        }
+
+        final LLVMBitcodeReader bitcodeReader = new LLVMBitcodeReader(bitstream);
+        final BCImplicitRootBlock rootBlock = new BCImplicitRootBlock(model, bcSource, context);
+        final BCBlockScanner.ScannerData rootScannerData = BCBlockScanner.createScannerData(bitcodeReader, BC_DATA_OFFSET);
+
+        BCBlockScanner.scanBlock(rootScannerData, -1L, rootBlock);
+    }
 }

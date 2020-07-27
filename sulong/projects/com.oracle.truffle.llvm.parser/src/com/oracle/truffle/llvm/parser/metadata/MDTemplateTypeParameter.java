@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,7 +29,8 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
+import com.oracle.truffle.llvm.parser.model.IRScope;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class MDTemplateTypeParameter extends MDNamedLocation implements MDBaseNode {
 
@@ -72,16 +73,16 @@ public final class MDTemplateTypeParameter extends MDNamedLocation implements MD
     private static final int ARGINDEX_LINE = 5;
     private static final int ARGINDEX_COLUMN = 6;
 
-    public static MDTemplateTypeParameter create32(long[] args, Metadata md) {
-        final long line = ParseUtil.asLong(args, ARGINDEX_LINE, md);
-        final long column = ParseUtil.asLong(args, ARGINDEX_COLUMN, md);
+    public static MDTemplateTypeParameter create32(long[] args, Type[] types, IRScope scope) {
+        final long line = ParseUtil.asLong(args, ARGINDEX_LINE, types, scope);
+        final long column = ParseUtil.asLong(args, ARGINDEX_COLUMN, types, scope);
 
         final MDTemplateTypeParameter parameter = new MDTemplateTypeParameter(line, column);
 
-        parameter.setScope(ParseUtil.resolveReference(args, ARGINDEX_SCOPE, parameter, md));
-        parameter.baseType = ParseUtil.resolveReference(args, ARGINDEX_TYPE, parameter, md);
-        parameter.setFile(ParseUtil.resolveReference(args, ARGINDEX_FILE, parameter, md));
-        parameter.setName(ParseUtil.resolveReference(args, ARGINDEX_NAME, parameter, md));
+        parameter.setScope(ParseUtil.resolveReference(args, ARGINDEX_SCOPE, parameter, types, scope));
+        parameter.baseType = ParseUtil.resolveReference(args, ARGINDEX_TYPE, parameter, types, scope);
+        parameter.setFile(ParseUtil.resolveReference(args, ARGINDEX_FILE, parameter, types, scope));
+        parameter.setName(ParseUtil.resolveReference(args, ARGINDEX_NAME, parameter, types, scope));
 
         return parameter;
     }

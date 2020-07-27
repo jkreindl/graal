@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -29,7 +29,8 @@
  */
 package com.oracle.truffle.llvm.parser.metadata;
 
-import com.oracle.truffle.llvm.parser.listeners.Metadata;
+import com.oracle.truffle.llvm.parser.model.IRScope;
+import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class MDTemplateValue extends MDName implements MDBaseNode {
 
@@ -90,7 +91,7 @@ public final class MDTemplateValue extends MDName implements MDBaseNode {
         return templateValue;
     }
 
-    public static MDTemplateValue create32(long[] args, Metadata md) {
+    public static MDTemplateValue create32(long[] args, Type[] types, IRScope scope) {
         // final MDReference context = getReference(args[1]);
         // final MDReference file = getReference(args[5]);
         // final long line = ParseUtil.asInt64(args[6]);
@@ -98,9 +99,9 @@ public final class MDTemplateValue extends MDName implements MDBaseNode {
 
         final MDTemplateValue templateValue = new MDTemplateValue(-1L);
 
-        templateValue.type = ParseUtil.resolveReference(args, ARGINDEX_TYPE, templateValue, md);
-        templateValue.value = ParseUtil.resolveSymbol(args, ARGINDEX_VALUE, md);
-        templateValue.setName(ParseUtil.resolveReference(args, ARGINDEX_NAME, templateValue, md));
+        templateValue.type = ParseUtil.resolveReference(args, ARGINDEX_TYPE, templateValue, types, scope);
+        templateValue.value = ParseUtil.resolveSymbol(args, ARGINDEX_VALUE, types, scope);
+        templateValue.setName(ParseUtil.resolveReference(args, ARGINDEX_NAME, templateValue, types, scope));
 
         return templateValue;
     }

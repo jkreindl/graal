@@ -32,7 +32,7 @@ package com.oracle.truffle.llvm.parser.model.symbols.constants;
 import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 import com.oracle.truffle.llvm.parser.model.enums.AsmDialect;
 import com.oracle.truffle.llvm.parser.model.visitors.SymbolVisitor;
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
+import com.oracle.truffle.llvm.parser.bitcode.blocks.LLVMBitcodeRecord;
 import com.oracle.truffle.llvm.runtime.types.Type;
 
 public final class InlineAsmConstant extends AbstractConstant {
@@ -92,7 +92,7 @@ public final class InlineAsmConstant extends AbstractConstant {
     public void replace(SymbolImpl oldValue, SymbolImpl newValue) {
     }
 
-    public static InlineAsmConstant createFromData(Type type, RecordBuffer buffer) {
+    public static InlineAsmConstant createFromData(Type type, LLVMBitcodeRecord buffer) {
 
         final int flags = buffer.readInt();
         final boolean hasSideEffects = (flags & 0x1) == 0x1;

@@ -41,6 +41,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import com.oracle.truffle.llvm.parser.bitcode.blocks.LazyBitcodeFunctionBlockParser;
 import org.graalvm.options.OptionValues;
 
 import com.oracle.truffle.api.CompilerAsserts;
@@ -65,7 +66,6 @@ import com.oracle.truffle.llvm.parser.model.attributes.Attribute.KnownAttribute;
 import com.oracle.truffle.llvm.parser.model.blocks.InstructionBlock;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionDefinition;
 import com.oracle.truffle.llvm.parser.model.functions.FunctionParameter;
-import com.oracle.truffle.llvm.parser.model.functions.LazyFunctionParser;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.DbgDeclareInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.DbgValueInstruction;
 import com.oracle.truffle.llvm.parser.model.symbols.instructions.Instruction;
@@ -107,13 +107,13 @@ public class LazyToTruffleConverterImpl implements LazyToTruffleConverter {
     private final LLVMParserRuntime runtime;
     private final FunctionDefinition method;
     private final Source source;
-    private final LazyFunctionParser parser;
+    private final LazyBitcodeFunctionBlockParser parser;
     private final DebugInfoFunctionProcessor diProcessor;
     private final DataLayout dataLayout;
 
     private RootCallTarget resolved;
 
-    LazyToTruffleConverterImpl(LLVMParserRuntime runtime, FunctionDefinition method, Source source, LazyFunctionParser parser,
+    LazyToTruffleConverterImpl(LLVMParserRuntime runtime, FunctionDefinition method, Source source, LazyBitcodeFunctionBlockParser parser,
                     DebugInfoFunctionProcessor diProcessor, DataLayout dataLayout) {
         this.runtime = runtime;
         this.method = method;

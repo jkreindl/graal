@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,9 +27,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.listeners;
-
-import java.math.BigInteger;
+package com.oracle.truffle.llvm.parser.bitcode.blocks;
 
 import com.oracle.truffle.llvm.parser.model.IRScope;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.BinaryOperationConstant;
@@ -46,12 +44,17 @@ import com.oracle.truffle.llvm.parser.model.symbols.constants.aggregate.Aggregat
 import com.oracle.truffle.llvm.parser.model.symbols.constants.floatingpoint.FloatingPointConstant;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.integer.BigIntegerConstant;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.integer.IntegerConstant;
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.types.ArrayType;
 import com.oracle.truffle.llvm.runtime.types.Type;
 
-public final class Constants implements ParserListener {
+import java.math.BigInteger;
+import java.util.Arrays;
+import java.util.Objects;
+
+final class BCConstantsBlock extends BCBlockParser {
+
+    static final int BLOCK_ID = 11;
 
     private static final int CONSTANT_SETTYPE = 1;
     private static final int CONSTANT_NULL = 2;
@@ -80,24 +83,27 @@ public final class Constants implements ParserListener {
 
     private static final BigInteger WIDE_INTEGER_MASK = BigInteger.ONE.shiftLeft(Long.SIZE).subtract(BigInteger.ONE);
 
-    private final Types types;
-
+    private final Type[] types;
     private final IRScope scope;
 
     private Type type;
 
-    Constants(Types types, IRScope scope) {
+    BCConstantsBlock(Type[] types, IRScope scope) {
         this.types = types;
         this.scope = scope;
+        this.type = null;
+
+        assert types != null;
+        assert Arrays.stream(types).noneMatch(Objects::isNull);
     }
 
     @Override
-    public void record(RecordBuffer buffer) {
-        final int opCode = buffer.getId();
+    void parseRecord(LLVMBitcodeRecord record) {
+        final int opCode = record.getId();
 
         switch (opCode) {
             case CONSTANT_SETTYPE:
-                type = types.get(buffer.read());
+                type = types[record.readInt()];
                 return;
 
             case CONSTANT_NULL:
@@ -113,15 +119,15 @@ public final class Constants implements ParserListener {
                 return;
 
             case CONSTANT_INTEGER: {
-                long value = buffer.readSignedValue();
+                long value = record.readSignedValue();
                 scope.addSymbol(new IntegerConstant(type, value), Type.createConstantForType(type, value));
                 return;
             }
             case CONSTANT_WIDE_INTEGER: {
                 BigInteger value = BigInteger.ZERO;
 
-                for (int i = 0; i < buffer.size(); i++) {
-                    BigInteger temp = BigInteger.valueOf(buffer.readSignedValue());
+                for (int i = 0; i < record.size(); i++) {
+                    BigInteger temp = BigInteger.valueOf(record.readSignedValue());
                     temp = temp.and(WIDE_INTEGER_MASK);
                     temp = temp.shiftLeft(i * Long.SIZE);
                     value = value.add(temp);
@@ -130,73 +136,73 @@ public final class Constants implements ParserListener {
                 return;
             }
             case CONSTANT_FLOAT:
-                scope.addSymbol(FloatingPointConstant.create(type, buffer), type);
+                scope.addSymbol(FloatingPointConstant.create(type, record), type);
                 return;
 
             case CONSTANT_AGGREGATE: {
-                scope.addSymbol(AggregateConstant.createFromValues(scope.getSymbols(), type, buffer), type);
+                scope.addSymbol(AggregateConstant.createFromValues(scope.getSymbols(), type, record), type);
                 return;
             }
             case CONSTANT_STRING:
-                scope.addSymbol(new StringConstant((ArrayType) type, buffer.readString(), false), type);
+                scope.addSymbol(new StringConstant((ArrayType) type, record.readString(), false), type);
                 return;
 
             case CONSTANT_CSTRING:
-                scope.addSymbol(new StringConstant((ArrayType) type, buffer.readString(), true), type);
+                scope.addSymbol(new StringConstant((ArrayType) type, record.readString(), true), type);
                 return;
 
             case CONSTANT_CE_BINOP: {
-                int op = buffer.readInt();
-                int lhs = buffer.readInt();
-                int rhs = buffer.readInt();
+                int op = record.readInt();
+                int lhs = record.readInt();
+                int rhs = record.readInt();
                 scope.addSymbol(BinaryOperationConstant.fromSymbols(scope.getSymbols(), type, op, lhs, rhs), type);
                 return;
             }
 
             case CONSTANT_CE_CAST: {
-                int op = buffer.readInt();
-                buffer.skip(); // ignored
-                int value = buffer.readInt();
+                int op = record.readInt();
+                record.skip(); // ignored
+                int value = record.readInt();
                 scope.addSymbol(CastConstant.fromSymbols(scope.getSymbols(), type, op, value), type);
                 return;
             }
 
             case CONSTANT_CE_CMP: {
-                buffer.skip(); // ignored
-                int lhs = buffer.readInt();
-                int rhs = buffer.readInt();
-                int opcode = buffer.readInt();
+                record.skip(); // ignored
+                int lhs = record.readInt();
+                int rhs = record.readInt();
+                int opcode = record.readInt();
 
                 scope.addSymbol(CompareConstant.fromSymbols(scope.getSymbols(), type, opcode, lhs, rhs), type);
                 return;
             }
 
             case CONSTANT_BLOCKADDRESS: {
-                buffer.skip(); // ignored
-                int function = buffer.readInt();
-                int block = buffer.readInt();
+                record.skip(); // ignored
+                int function = record.readInt();
+                int block = record.readInt();
                 scope.addSymbol(BlockAddressConstant.fromSymbols(scope.getSymbols(), type, function, block), type);
                 return;
             }
 
             case CONSTANT_DATA:
-                scope.addSymbol(AggregateConstant.createFromData(type, buffer), type);
+                scope.addSymbol(AggregateConstant.createFromData(type, record), type);
                 return;
 
             case CONSTANT_INLINEASM:
-                scope.addSymbol(InlineAsmConstant.createFromData(type, buffer), type);
+                scope.addSymbol(InlineAsmConstant.createFromData(type, record), type);
                 return;
 
             case CONSTANT_CE_GEP:
             case CONSTANT_CE_INBOUNDS_GEP:
             case CONSTANT_CE_GEP_WITH_INRANGE_INDEX:
-                createGetElementPointerExpression(buffer);
+                createGetElementPointerExpression(record);
                 return;
 
             case CONSTANT_CE_SELECT: {
-                final int condition = buffer.readInt();
-                final int trueValue = buffer.readInt();
-                final int falseValue = buffer.readInt();
+                final int condition = record.readInt();
+                final int trueValue = record.readInt();
+                final int falseValue = record.readInt();
                 scope.addSymbol(SelectConstant.fromSymbols(scope.getSymbols(), type, condition, trueValue, falseValue), type);
                 break;
             }
@@ -206,27 +212,27 @@ public final class Constants implements ParserListener {
         }
     }
 
-    private void createGetElementPointerExpression(RecordBuffer buffer) {
-        int opCode = buffer.getId();
-        if (opCode == CONSTANT_CE_GEP_WITH_INRANGE_INDEX || buffer.size() % 2 != 0) {
-            buffer.skip(); // type of pointee
+    private void createGetElementPointerExpression(LLVMBitcodeRecord record) {
+        int opCode = record.getId();
+        if (opCode == CONSTANT_CE_GEP_WITH_INRANGE_INDEX || record.size() % 2 != 0) {
+            record.skip(); // type of pointee
         }
 
         boolean isInbounds;
         if (opCode == CONSTANT_CE_GEP_WITH_INRANGE_INDEX) {
-            long op = buffer.read();
+            long op = record.read();
             isInbounds = (op & 0x1) != 0;
         } else {
             isInbounds = opCode == CONSTANT_CE_INBOUNDS_GEP;
         }
 
-        buffer.skip(); // type of pointer
-        int pointer = buffer.readInt();
+        record.skip(); // type of pointer
+        int pointer = record.readInt();
 
-        final int[] indices = new int[buffer.remaining() >> 1];
+        final int[] indices = new int[record.remaining() >> 1];
         for (int j = 0; j < indices.length; j++) {
-            buffer.skip(); // index type
-            indices[j] = buffer.readInt();
+            record.skip(); // index type
+            indices[j] = record.readInt();
         }
 
         scope.addSymbol(GetElementPointerConstant.fromSymbols(scope.getSymbols(), type, pointer, indices, isInbounds), type);

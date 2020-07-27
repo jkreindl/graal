@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates.
  *
  * All rights reserved.
  *
@@ -27,39 +27,47 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.truffle.llvm.parser.scanner;
+package com.oracle.truffle.llvm.parser.bitcode.blocks;
 
-import java.util.List;
+/**
+ * Base class for parsers for the individual blocks that may occur in an LLVM bitcode file.
+ */
+abstract class BCBlockParser {
 
-import com.oracle.truffle.llvm.parser.listeners.ParserListener;
-
-final class ScannerState {
-
-    private final List<AbbreviatedRecord[]> abbreviatedRecords;
-    private final Block block;
-    private final int idSize;
-    private final ParserListener parser;
-
-    ScannerState(List<AbbreviatedRecord[]> abbreviatedRecords, Block block, int idSize, ParserListener parser) {
-        this.abbreviatedRecords = abbreviatedRecords;
-        this.block = block;
-        this.idSize = idSize;
-        this.parser = parser;
+    BCBlockParser() {
     }
 
-    List<AbbreviatedRecord[]> getAbbreviatedRecords() {
-        return abbreviatedRecords;
+    /**
+     * Callback that is invoked once before the records and subblocks of this block
+     * {@link BCBlockScanner#scanBlock} () block are parsed}.
+     */
+    void onEnter() {
     }
 
-    Block getBlock() {
-        return block;
+    /**
+     * Callback that is invoked for each record of the parsed block.
+     *
+     * @param record the scanned record
+     */
+    abstract void parseRecord(LLVMBitcodeRecord record);
+
+    /**
+     * Returns a parser for a specific subblock of the parsed block. As each subblock is parsed
+     * using a separate block parser, the returned block parser may contain contextual data such as
+     * current scope information. Implementations of this method may return null for blocks they
+     * wish to skip rather than parse.
+     *
+     * @param blockId id of the subblock to parse
+     * @return a parser for the specific subblock
+     */
+    BCBlockParser getParserForSubblock(@SuppressWarnings("unused") BCBlockScanner.ScannerData scannerData, @SuppressWarnings("unused") int blockId) {
+        return null;
     }
 
-    int getIdSize() {
-        return idSize;
-    }
-
-    ParserListener getParser() {
-        return parser;
+    /**
+     * Callback that is invoked once after all records and subblocks of this block
+     * {@link BCBlockScanner#scanBlock block have been parsed}.
+     */
+    void onExit() {
     }
 }

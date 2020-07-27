@@ -33,7 +33,7 @@ import java.nio.ByteBuffer;
 
 import com.oracle.truffle.llvm.parser.model.SymbolImpl;
 import com.oracle.truffle.llvm.parser.model.symbols.constants.AbstractConstant;
-import com.oracle.truffle.llvm.parser.scanner.RecordBuffer;
+import com.oracle.truffle.llvm.parser.bitcode.blocks.LLVMBitcodeRecord;
 import com.oracle.truffle.llvm.runtime.except.LLVMParserException;
 import com.oracle.truffle.llvm.runtime.types.PrimitiveType;
 import com.oracle.truffle.llvm.runtime.types.Type;
@@ -48,7 +48,7 @@ public abstract class FloatingPointConstant extends AbstractConstant {
 
     public abstract String getStringValue();
 
-    public static FloatingPointConstant create(Type type, RecordBuffer buffer) {
+    public static FloatingPointConstant create(Type type, LLVMBitcodeRecord buffer) {
         switch (((PrimitiveType) type).getPrimitiveKind()) {
             case FLOAT:
                 return new FloatConstant(Float.intBitsToFloat(buffer.readInt()));
