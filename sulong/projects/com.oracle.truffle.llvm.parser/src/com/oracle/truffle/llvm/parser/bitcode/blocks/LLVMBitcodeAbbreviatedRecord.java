@@ -79,7 +79,7 @@ abstract class LLVMBitcodeAbbreviatedRecord {
             final boolean isLiteral = reader.readFixed(USER_OPERAND_LITERALBIT_WIDTH) == 1;
             if (isLiteral) {
                 final long fixedValue = reader.readVBR(USER_OPERAND_LITERAL_WIDTH);
-                operandScanners[i] = new ConstantAbbreviatedRecord(fixedValue);
+                operandScanners[i] = ConstantAbbreviatedRecord.create(fixedValue);
 
             } else {
 
@@ -88,13 +88,13 @@ abstract class LLVMBitcodeAbbreviatedRecord {
                 switch ((int) recordType) {
                     case DEFINITION_TYPE_FIXED: {
                         final int width = Math.toIntExact(reader.readVBR(USER_OPERAND_DATA_WIDTH));
-                        operandScanners[i] = new FixedAbbreviatedRecord(width);
+                        operandScanners[i] = FixedAbbreviatedRecord.create(width);
                         break;
                     }
 
                     case DEFINITION_TYPE_VBR: {
                         final int width = Math.toIntExact(reader.readVBR(USER_OPERAND_DATA_WIDTH));
-                        operandScanners[i] = new VBRAbbreviatedRecord(width);
+                        operandScanners[i] = VBRAbbreviatedRecord.create(width);
                         break;
                     }
 
@@ -133,10 +133,36 @@ abstract class LLVMBitcodeAbbreviatedRecord {
      */
     private static final class ConstantAbbreviatedRecord extends LLVMBitcodeAbbreviatedRecord {
 
+        /*
+         * Record Ids are usually encoded using constant records. As a result, most constant-value
+         * record parsers contain only the possible record ids. In practice, function blocks have
+         * the highest number of records. At the time of this comment, the highest possible record
+         * id was 56. As new record ids get added only rarely, we cache the numbers of the interval
+         * [0, 59] to be safe for the foreseeable future. Since not all numbers in that interval are
+         * actually used (due to, e.g., deprecation of certain instructions) we cache the ones that
+         * are used rather than preallocating them all.
+         */
+        private static final ConstantAbbreviatedRecord[] CONSTANT_INSTANCES = new ConstantAbbreviatedRecord[60];
+
         private final long value;
 
-        ConstantAbbreviatedRecord(long value) {
+        private ConstantAbbreviatedRecord(long value) {
             this.value = value;
+        }
+
+        static ConstantAbbreviatedRecord create(long value) {
+            assert value >= 0;
+
+            if (value < CONSTANT_INSTANCES.length) {
+                final int idx = (int) value;
+                ConstantAbbreviatedRecord parser = CONSTANT_INSTANCES[idx];
+                if (parser == null) {
+                    CONSTANT_INSTANCES[idx] = parser = new ConstantAbbreviatedRecord(value);
+                }
+                return parser;
+            }
+
+            return new ConstantAbbreviatedRecord(value);
         }
 
         @Override
@@ -155,10 +181,37 @@ abstract class LLVMBitcodeAbbreviatedRecord {
      */
     private static final class FixedAbbreviatedRecord extends LLVMBitcodeAbbreviatedRecord {
 
+        /*
+         * Fixed-width record components seem to fall either below 14 bit width or at exactly 32
+         * bits.
+         */
+        private static final FixedAbbreviatedRecord[] CACHED_INSTANCES = new FixedAbbreviatedRecord[14];
+        private static final FixedAbbreviatedRecord INT_INSTANCE = new FixedAbbreviatedRecord(32);
+
         private final int width;
 
-        FixedAbbreviatedRecord(int width) {
+        private FixedAbbreviatedRecord(int width) {
             this.width = width;
+        }
+
+        static FixedAbbreviatedRecord create(int value) {
+            /*
+             * For some reason, bitcode files actually contain parsers for a 0-bit value. However,
+             * while these are allocated, they are never actually executed.
+             */
+            assert value >= 0;
+
+            if (value < CACHED_INSTANCES.length) {
+                FixedAbbreviatedRecord parser = CACHED_INSTANCES[value];
+                if (parser == null) {
+                    CACHED_INSTANCES[value] = parser = new FixedAbbreviatedRecord(value);
+                }
+                return parser;
+            } else if (value == INT_INSTANCE.width) {
+                return INT_INSTANCE;
+            }
+
+            return new FixedAbbreviatedRecord(value);
         }
 
         @Override
@@ -177,10 +230,28 @@ abstract class LLVMBitcodeAbbreviatedRecord {
      */
     private static final class VBRAbbreviatedRecord extends LLVMBitcodeAbbreviatedRecord {
 
+        /* Sulong's various test suites only ever allocate parsers for 4, 6, or 8-bit VBR values. */
+        private static final VBRAbbreviatedRecord VBR4 = new VBRAbbreviatedRecord(4);
+        private static final VBRAbbreviatedRecord VBR6 = new VBRAbbreviatedRecord(6);
+        private static final VBRAbbreviatedRecord VBR8 = new VBRAbbreviatedRecord(8);
+
         private final int width;
 
-        VBRAbbreviatedRecord(int width) {
+        private VBRAbbreviatedRecord(int width) {
             this.width = width;
+        }
+
+        static VBRAbbreviatedRecord create(int value) {
+            switch (value) {
+                case 4:
+                    return VBR4;
+                case 6:
+                    return VBR6;
+                case 8:
+                    return VBR8;
+                default:
+                    return new VBRAbbreviatedRecord(value);
+            }
         }
 
         @Override
