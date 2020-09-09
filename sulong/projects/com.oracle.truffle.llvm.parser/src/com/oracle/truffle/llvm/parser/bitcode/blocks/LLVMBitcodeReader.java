@@ -106,8 +106,15 @@ final class LLVMBitcodeReader {
      * @return the next value in the stream zero-extended to a long
      */
     long readVBR(int width) {
-        final long value = bitstream.readVBR(offset, width);
-        offset += BitStream.widthVBR(value, width);
+        long value = 0;
+        long shift = 0;
+        long datum;
+        long dmask = 1 << (width - 1);
+        do {
+            datum = readFixed(width);
+            value += (datum & (dmask - 1)) << shift;
+            shift += width - 1;
+        } while ((datum & dmask) != 0);
         return value;
     }
 
